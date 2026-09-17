@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CategoriaEditorDialog — crear/editar categoría (popup).
+    Campos: nombre, color (presets modernos + libre), icono
+    (grilla curada radial) + vista previa del botón. Eficiente:
+    todo en un solo diálogo con Guardar validado.
+-->
+<ContentDialog
+    x:Class="BebeRadio.Controls.Console.CategoriaEditorDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:BebeRadio.Controls"
+    xmlns:fluent="using:FluentIcons.WinUI"
+    Title="Categoría"
+    PrimaryButtonText="Guardar"
+    CloseButtonText="Cancelar"
+    DefaultButton="Primary"
+    Style="{StaticResource BebeDialogStyle}">
+
+    <ContentDialog.Resources>
+        <controls:CategoryBrushConverter x:Key="CategoryBrush" />
+        <controls:ColorALetraConverter x:Key="LetraAdaptativa" />
+        <CornerRadius x:Key="ControlCornerRadius">10,10,10,10</CornerRadius>
+    </ContentDialog.Resources>
+
+    <!-- Formulario: nombre + color + icono + previa -->
+    <ScrollViewer MaxHeight="520">
+        <StackPanel Spacing="10" MinWidth="520">
+            <TextBox
+                x:Name="NombreBox"
+                Header="Nombre"
+                MaxLength="24"
+                PlaceholderText="P. ej. Deportes" />
+
+            <!-- Color: presets modernos + libre -->
+            <TextBlock
+                FontSize="12"
+                Foreground="{StaticResource TextSecondary}"
+                Text="Color" />
+            <GridView
+                x:Name="ColoresGrid"
+                MaxHeight="72"
+                SelectionMode="Single"
+                ItemsSource="{x:Bind Colores, Mode=OneTime}">
+                <GridView.ItemTemplate>
+                    <DataTemplate>
+                        <Ellipse
+                            Width="18"
+                            Height="18"
+                            Fill="{Binding Converter={StaticResource CategoryBrush}}" />
+                    </DataTemplate>
+                </GridView.ItemTemplate>
+            </GridView>
+            <ColorPicker
+                x:Name="LibrePicker"
+                IsAlphaEnabled="False"
+                IsColorChannelTextInputVisible="False"
+                IsHexInputVisible="True" />
+
+            <!-- Icono: grilla curada radial -->
+            <TextBlock
+                FontSize="12"
+                Foreground="{StaticResource TextSecondary}"
+                Text="Icono" />
+            <GridView
+                x:Name="IconosGrid"
+                MaxHeight="180"
+                SelectionMode="Single"
+                ItemsSource="{x:Bind Iconos, Mode=OneTime}">
+                <GridView.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Spacing="2" Width="64">
+                            <fluent:SymbolIcon
+                                HorizontalAlignment="Center"
+                                FontSize="24"
+                                Symbol="{Binding}" />
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                FontSize="9"
+                                Foreground="{StaticResource TextSecondary}"
+                                Text="{Binding}"
+                                TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </DataTemplate>
+                </GridView.ItemTemplate>
+            </GridView>
+
+            <!-- Vista previa del botón -->
+            <TextBlock
+                FontSize="12"
+                Foreground="{StaticResource TextSecondary}"
+                Text="Vista previa" />
+            <Button
+                x:Name="PreviaBoton"
+                MinHeight="76"
+                Padding="0"
+                HorizontalAlignment="Stretch"
+                IsHitTestVisible="False"
+                Style="{StaticResource BebeCategoryButtonStyle}">
+                <StackPanel Spacing="2" Padding="0,6,0,6">
+                    <fluent:SymbolIcon
+                        x:Name="PreviaIcono"
+                        HorizontalAlignment="Center"
+                        FontSize="22"
+                        Foreground="{StaticResource TextPrimary}"
+                        Symbol="MusicNote2" />
+                    <TextBlock
+                        x:Name="PreviaNombre"
+                        HorizontalAlignment="Center"
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        Text="Nombre" />
+                </StackPanel>
+            </Button>
+
+            <!-- Error de validación -->
+            <TextBlock
+                x:Name="ErrorText"
+                FontSize="12"
+                Foreground="{StaticResource StateOnAir}"
+                Visibility="Collapsed" />
+
+            <!-- Atajos: crear y gestionar sin salir del flujo -->
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button
+                    AutomationProperties.Name="Nueva categoría"
+                    Click="OnNuevaClick"
+                    Content="Nueva categoría…" />
+                <Button
+                    AutomationProperties.Name="Gestionar categorías"
+                    Click="OnGestionarClick"
+                    Content="Gestionar…" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>

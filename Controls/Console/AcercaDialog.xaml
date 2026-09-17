@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    AcercaDialog — Baby Radio: versión + actualizaciones (popup moderno).
+    Buscar actualizaciones: ActualizadorBaby (Velopack + GitHub Releases).
+-->
+<ContentDialog
+    x:Class="BebeRadio.Controls.Console.AcercaDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Acerca de Baby Radio"
+    CloseButtonText="Cerrar"
+    DefaultButton="Close"
+    Style="{StaticResource BebeDialogStyle}">
+
+    <ContentDialog.Resources>
+        <CornerRadius x:Key="ControlCornerRadius">10,10,10,10</CornerRadius>
+    </ContentDialog.Resources>
+
+    <!-- App: nombre + versión + updates -->
+    <StackPanel Spacing="10" MinWidth="300" HorizontalAlignment="Center">
+        <TextBlock
+            HorizontalAlignment="Center"
+            FontSize="18"
+            FontWeight="SemiBold"
+            Foreground="{StaticResource TextPrimary}"
+            Text="Baby Radio" />
+        <TextBlock
+            x:Name="VersionText"
+            HorizontalAlignment="Center"
+            FontSize="12"
+            Foreground="{StaticResource TextSecondary}" />
+        <Button
+            HorizontalAlignment="Stretch"
+            AutomationProperties.Name="Buscar actualizaciones"
+            Click="OnBuscarClick"
+            Content="Buscar actualizaciones" />
+        <TextBlock
+            x:Name="EstadoText"
+            HorizontalAlignment="Center"
+            FontSize="11"
+            Foreground="{StaticResource TextSecondary}"
+            TextWrapping="Wrap" />
+    </StackPanel>
+</ContentDialog>

@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    CategoriasRailPanel — riel derecho de 7 categorías fijas (176px).
+    Vacía = esqueleto al tono del tema (solo bordes, sin color);
+    con audio = botón 3D macizo (fondo del color, logo blanco, letras
+    adaptativas si el color es claro). Click despliega; click derecho abre
+    Editar/Eliminar/Restaurar. Aviso "Vacío" si no tiene audios.
+    Misma selección que la paleta (instancias compartidas).
+-->
+<UserControl
+    x:Class="BebeRadio.Controls.Console.CategoriasRailPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:BebeRadio.Controls"
+    xmlns:fluent="using:FluentIcons.WinUI"
+    xmlns:vm="using:BebeRadio.ViewModels">
+
+    <UserControl.Resources>
+        <controls:CategoryBrushConverter x:Key="CategoryBrush" />
+        <controls:ColorALetraConverter x:Key="LetraAdaptativa" />
+        <controls:BoolToOpacityConverter x:Key="DimOpacity" />
+        <controls:BoolAVisibilidadConverter x:Key="VacioVisible" Invertir="True" />
+        <controls:BoolAVisibilidadConverter x:Key="LlenoVisible" />
+    </UserControl.Resources>
+
+    <!-- Riel lateral: header + categorías con scroll + nueva -->
+    <Border
+        Background="{StaticResource BackgroundPanel}"
+        BorderBrush="{StaticResource BorderSubtle}"
+        BorderThickness="1"
+        CornerRadius="12"
+        Padding="8">
+        <StackPanel Spacing="8">
+            <TextBlock
+                FontSize="13"
+                FontWeight="SemiBold"
+                Foreground="{StaticResource TextPrimary}"
+                Text="Categorías" />
+            <ItemsControl x:Name="SideList" ItemsSource="{x:Bind ViewModel.SideCategories, Mode=OneWay}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <ItemsStackPanel Orientation="Vertical" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SelectableCategory">
+                            <Button
+                                Margin="0,0,0,2"
+                                MinHeight="68"
+                                Padding="8,4"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.Name="{Binding Swatch.Label}"
+                                Command="{Binding SelectCommand}"
+                                Opacity="{Binding IsSelected, Converter={StaticResource DimOpacity}}"
+                                controls:BebeButtonHelper.CategoryColor="{Binding ColorFantasma, Converter={StaticResource CategoryBrush}}"
+                                Style="{StaticResource BebeCategoryButtonStyle}">
+                                <Button.ContextFlyout>
+                                    <MenuFlyout Opening="OnMenuOpening">
+                                        <MenuFlyoutItem
+                                            CommandParameter="{Binding}"
+                                            Text="Editar…"
+                                            Click="OnEditarCategoriaClick" />
+                                        <MenuFlyoutItem
+                                            x:Name="EliminarItem"
+                                            CommandParameter="{Binding}"
+                                            Text="Eliminar"
+                                            Click="OnEliminarCategoriaClick" />
+                                        <MenuFlyoutItem
+                                            x:Name="RestaurarItem"
+                                            CommandParameter="{Binding}"
+                                            Text="Restaurar valores"
+                                            Click="OnRestaurarCategoriaClick" />
+                                    </MenuFlyout>
+                                </Button.ContextFlyout>
+                                <!-- Vacía = esqueleto al tono del tema; llena = 3D a color -->
+                                <Grid>
+                                    <Border
+                                        Background="Transparent"
+                                        BorderBrush="{StaticResource BorderSubtle}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Visibility="{Binding TieneAudio, Converter={StaticResource VacioVisible}}" />
+                                    <StackPanel Spacing="2" Padding="0,4,0,4">
+                                        <!-- Logo blanco sobre color -->
+                                        <fluent:SymbolIcon
+                                            HorizontalAlignment="Center"
+                                            FontSize="22"
+                                            Foreground="{StaticResource TextPrimary}"
+                                            Symbol="{Binding Icono}"
+                                            Visibility="{Binding TieneAudio, Converter={StaticResource LlenoVisible}}" />
+                                        <!-- Logo tenue en esqueleto -->
+                                        <fluent:SymbolIcon
+                                            HorizontalAlignment="Center"
+                                            FontSize="22"
+                                            Foreground="{StaticResource TextDisabled}"
+                                            Opacity="0.8"
+                                            Symbol="{Binding Icono}"
+                                            Visibility="{Binding TieneAudio, Converter={StaticResource VacioVisible}}" />
+                                        <TextBlock
+                                            HorizontalAlignment="Center"
+                                            FontSize="11"
+                                            FontWeight="SemiBold"
+                                            Foreground="{Binding Swatch.BrushKey, Converter={StaticResource LetraAdaptativa}}"
+                                            Text="{Binding Swatch.Label}"
+                                            Visibility="{Binding TieneAudio, Converter={StaticResource LlenoVisible}}" />
+                                        <TextBlock
+                                            HorizontalAlignment="Center"
+                                            FontSize="11"
+                                            Foreground="{StaticResource TextDisabled}"
+                                            Text="{Binding Swatch.Label}"
+                                            Visibility="{Binding TieneAudio, Converter={StaticResource VacioVisible}}" />
+                                        <!-- Aviso: solo si no tiene audios -->
+                                        <TextBlock
+                                            HorizontalAlignment="Center"
+                                            FontSize="10"
+                                            Foreground="{StaticResource TextDisabled}"
+                                            Text="Vacío"
+                                            Visibility="{Binding TieneAudio, Converter={StaticResource VacioVisible}}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            <!-- Ayuda: usuario · soporte · acerca (fijo, sin desborde) -->
+            <StackPanel
+                Orientation="Horizontal"
+                Spacing="16"
+                HorizontalAlignment="Center">
+                <fluent:SymbolIcon
+                    FontSize="16"
+                    Foreground="{StaticResource TextDisabled}"
+                    Opacity="0.7"
+                    PointerPressed="OnUsuarioClick"
+                    Symbol="Person"
+                    ToolTipService.ToolTip="Mi cuenta" />
+                <fluent:SymbolIcon
+                    FontSize="16"
+                    Foreground="{StaticResource TextDisabled}"
+                    Opacity="0.7"
+                    PointerPressed="OnSoporteClick"
+                    Symbol="Chat"
+                    ToolTipService.ToolTip="Soporte" />
+                <fluent:SymbolIcon
+                    FontSize="16"
+                    Foreground="{StaticResource TextDisabled}"
+                    Opacity="0.7"
+                    PointerPressed="OnAcercaClick"
+                    Symbol="Info"
+                    ToolTipService.ToolTip="Acerca de Baby Radio" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

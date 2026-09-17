@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    PaletaPanel — parrilla de 40 slots por categoría (2 páginas de 20, centro).
+    Sin mocks: el slot vacío es un fantasma elegante (tenue + guía) listo
+    para llenar por arrastre o editor. Clic reproduce por el mezclador y el
+    cart titila mientras suena (segundo clic lo detiene; sin audio pulso).
+    Click derecho abre Editar/Limpiar. El iconito tenue de la esquina
+    exporta/importa la configuración portable. Tiempos en Cascadia Mono.
+-->
+<UserControl
+    x:Class="BebeRadio.Controls.Console.PaletaPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:BebeRadio.Controls"
+    xmlns:fluent="using:FluentIcons.WinUI"
+    xmlns:models="using:BebeRadio.Models">
+
+    <UserControl.Resources>
+        <controls:CategoryBrushConverter x:Key="CategoryBrush" />
+        <controls:SlotAEstiloConverter x:Key="SlotEstilo" />
+        <controls:BoolAVisibilidadConverter x:Key="VacioVisible" Invertir="True" />
+        <controls:BoolAVisibilidadConverter x:Key="SinCategoriaVisible" />
+        <controls:BoolToOpacityConverter x:Key="LlenoOpaco" DimOpacity="0.85" />
+    </UserControl.Resources>
+
+    <!-- Paleta: header (Auto) + grilla uniforme 5 col (fila * para repartir alto) -->
+    <Grid RowSpacing="6">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid Visibility="{x:Bind MostrarEncabezado, Mode=OneWay, Converter={StaticResource SinCategoriaVisible}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock
+                VerticalAlignment="Center"
+                FontSize="13"
+                Foreground="{StaticResource TextSecondary}"
+                Visibility="{x:Bind ViewModel.SinCategoria, Mode=OneWay, Converter={StaticResource VacioVisible}}">
+                <Run Text="Paleta: " />
+                <Run
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource TextPrimary}"
+                    Text="{x:Bind ViewModel.Selected.Swatch.Label, Mode=OneWay}" />
+            </TextBlock>
+            <!-- Header guía: sin categoría desplegada -->
+            <TextBlock
+                VerticalAlignment="Center"
+                FontSize="13"
+                Foreground="{StaticResource TextSecondary}"
+                Visibility="{x:Bind ViewModel.SinCategoria, Mode=OneWay, Converter={StaticResource SinCategoriaVisible}}">
+                <Run Text="Paleta: " />
+                <Run
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource TextPrimary}"
+                    Text="Sin categoría" />
+            </TextBlock>
+            <!-- Config portable: iconito tenue de esquina (sin chrome de botón) -->
+            <fluent:SymbolIcon
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                FontSize="14"
+                Foreground="{StaticResource TextDisabled}"
+                Opacity="0.6"
+                PointerPressed="OnPortablePressed"
+                Symbol="ArrowDownload"
+                ToolTipService.ToolTip="Exportar / importar configuración">
+                <fluent:SymbolIcon.ContextFlyout>
+                    <MenuFlyout>
+                        <MenuFlyoutItem Text="Exportar configuración…" Click="OnExportarClick" />
+                        <MenuFlyoutItem Text="Importar configuración…" Click="OnImportarClick" />
+                    </MenuFlyout>
+                </fluent:SymbolIcon.ContextFlyout>
+            </fluent:SymbolIcon>
+        </Grid>
+        <Grid Grid.Row="1">
+            <ItemsControl x:Name="PaletteList" ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <controls:UniformGridPanel Columns="5" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:PaletteItem">
+                    <Button
+                        MinHeight="88"
+                        HorizontalAlignment="Stretch"
+                        AllowDrop="True"
+                        AutomationProperties.Name="{Binding Title}"
+                        Click="OnPaletteFlashClick"
+                        DragOver="OnCartDragOver"
+                        Drop="OnCartDrop"
+                        Opacity="{Binding TieneAudio, Converter={StaticResource LlenoOpaco}}"
+                        controls:BebeButtonHelper.CategoryColor="{Binding ColorFantasma, Converter={StaticResource CategoryBrush}}"
+                        Style="{Binding TieneAudio, Converter={StaticResource SlotEstilo}}">
+                        <Button.ContextFlyout>
+                            <MenuFlyout Opening="OnCartMenuOpening">
+                                <MenuFlyoutItem
+                                    x:Name="CargarItem"
+                                    CommandParameter="{Binding}"
+                                    Text="Cargar audio…"
+                                    Click="OnCargarAudioClick" />
+                                <MenuFlyoutItem
+                                    x:Name="EditarItem"
+                                    CommandParameter="{Binding}"
+                                    Text="Editar…"
+                                    Click="OnEditarCartClick" />
+                                <MenuFlyoutItem
+                                    x:Name="LimpiarItem"
+                                    CommandParameter="{Binding}"
+                                    Text="Limpiar"
+                                    Click="OnLimpiarCartClick" />
+                                <!-- Guía: slots vacíos no abren acciones -->
+                                <MenuFlyoutItem
+                                    x:Name="GuiaItem"
+                                    IsEnabled="False"
+                                    Text="Arrastre un audio para cargar" />
+                            </MenuFlyout>
+                        </Button.ContextFlyout>
+                        <StackPanel Spacing="3" Margin="0,6,0,6">
+                            <!-- Guía fantasma: solo en slots vacíos -->
+                            <fluent:SymbolIcon
+                                HorizontalAlignment="Center"
+                                FontSize="20"
+                                Foreground="{StaticResource LightInk}"
+                                Opacity="0.6"
+                                Symbol="Add"
+                                Visibility="{Binding TieneAudio, Converter={StaticResource VacioVisible}}" />
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                FontSize="12"
+                                FontWeight="SemiBold"
+                                Foreground="{Binding TintaCart, Converter={StaticResource CategoryBrush}}"
+                                Text="{Binding Title}"
+                                TextTrimming="CharacterEllipsis" />
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                FontFamily="Cascadia Mono, Consolas"
+                                FontSize="11"
+                                Foreground="{Binding TintaCart, Converter={StaticResource CategoryBrush}}"
+                                Opacity="0.75"
+                                Text="{Binding DisplayMeta}"
+                                TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <!-- Guía vacía: crear categoría es el primer paso del flujo -->
+            <Border
+                MinHeight="200"
+                Padding="24"
+                Background="{StaticResource BackgroundPanel}"
+                BorderBrush="{StaticResource BorderSubtle}"
+                BorderThickness="1"
+                CornerRadius="12"
+                Visibility="{x:Bind ViewModel.SinCategoria, Mode=OneWay, Converter={StaticResource SinCategoriaVisible}}">
+                <StackPanel
+                    Spacing="8"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        FontSize="28"
+                        Foreground="{StaticResource TextDisabled}"
+                        Symbol="Add" />
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        FontSize="15"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource TextPrimary}"
+                        Text="Sin categoría" />
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{StaticResource TextSecondary}"
+                        Text="Cree una categoría primero: es el primer paso para llenar su paleta de efectos."
+                        TextWrapping="WrapWholeWords" />
+                    <Button
+                        MinHeight="40"
+                        MinWidth="160"
+                        HorizontalAlignment="Center"
+                        AutomationProperties.Name="Crear categoría"
+                        Click="OnCrearCategoriaClick"
+                        controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryCommercial}"
+                        Style="{StaticResource BebeLightButtonStyle}">
+                        <TextBlock
+                            FontSize="12"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource LightInk}"
+                            Text="Crear categoría" />
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

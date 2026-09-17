@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        Paleta A — Studio Console (única autorizada en Fase 1).
+        Todos los colores de la app salen de aquí vía {StaticResource Token}.
+        Prohibido hardcodear hex en otros XAML o en C# (el VU los lee vía
+        Application.Current.Resources con fallback solo para diseñador).
+        Convención: Color "NombreColor" + brush "Nombre" que lo envuelve;
+        los gradientes referencian Colors, los controles referencian brushes.
+        Secciones: fondos · botones (dark/aluminio/transporte) · 10 categorías ·
+        estado · display LED · texto · VU.
+    -->
+
+    <!-- Fondos: jerarquía de profundidad sobre Mica oscuro -->
+    <Color x:Key="BackgroundBaseColor">#121316</Color>
+    <Color x:Key="BackgroundPanelColor">#1A1C1F</Color>
+    <!-- Fondo exacto del logo Baby Radio (LOGO-BABY RADIO-FONDOOK.jpg):
+         zona de canciones para fusion total con la marca de agua. -->
+    <Color x:Key="BackgroundListaColor">#1B1F22</Color>
+    <Color x:Key="BackgroundCardColor">#23262B</Color>
+    <Color x:Key="BackgroundCardPressedColor">#1D2025</Color>
+    <Color x:Key="BorderSubtleColor">#2E3238</Color>
+
+    <SolidColorBrush x:Key="BackgroundBase" Color="{StaticResource BackgroundBaseColor}" />
+    <SolidColorBrush x:Key="BackgroundPanel" Color="{StaticResource BackgroundPanelColor}" />
+    <SolidColorBrush x:Key="BackgroundLista" Color="{StaticResource BackgroundListaColor}" />
+    <!-- Glass sutil de tarjetas de cola: mismo card con 85% de opacidad;
+         deja asomar apenas el fondo exacto + marca de agua (efecto vidrio). -->
+    <SolidColorBrush x:Key="QueueCardGlass" Color="{StaticResource BackgroundCardColor}" Opacity="0.85" />
+    <SolidColorBrush x:Key="BackgroundCard" Color="{StaticResource BackgroundCardColor}" />
+    <SolidColorBrush x:Key="BackgroundCardPressed" Color="{StaticResource BackgroundCardPressedColor}" />
+    <SolidColorBrush x:Key="BorderSubtle" Color="{StaticResource BorderSubtleColor}" />
+
+    <!-- Superficie de botón físico: gradiente + highlight superior -->
+    <LinearGradientBrush x:Key="ButtonSurfaceGradient" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#2A2E34" />
+        <GradientStop Offset="1" Color="#23262B" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="HighlightTop" Color="#FFFFFF" Opacity="0.08" />
+    <SolidColorBrush x:Key="BottomEdge" Color="#000000" Opacity="0.25" />
+    <SolidColorBrush x:Key="HoverOverlay" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="PressedOverlay" Color="#000000" Opacity="0.35" />
+
+    <!-- Relieve sobre color pleno: luz cenital + peso inferior (botones de categoría) -->
+    <LinearGradientBrush x:Key="GlossTopBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#47FFFFFF" />
+        <GradientStop Offset="0.45" Color="#00FFFFFF" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="ShadeBottomBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0.55" Color="#00000000" />
+        <GradientStop Offset="1" Color="#61000000" />
+    </LinearGradientBrush>
+
+    <!-- PRUEBA visual reversible: carts claros (revertir = borrar bloque + estilo) -->
+    <LinearGradientBrush x:Key="CartClaroSurfacePrueba" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#F4F6F8" />
+        <GradientStop Offset="1" Color="#EDEFF2" />
+    </LinearGradientBrush>
+
+    <!-- Botones claros de consola (aluminio): iconos/tinta oscura -->
+    <Color x:Key="AluminumTopColor">#F2F4F6</Color>
+    <Color x:Key="AluminumMidColor">#D5DAE0</Color>
+    <Color x:Key="AluminumBottomColor">#B9BFC7</Color>
+    <Color x:Key="LightInkColor">#1A1C1F</Color>
+    <Color x:Key="LightDishCenterColor">#FBFCFD</Color>
+    <Color x:Key="LightDishEdgeColor">#C2C7CD</Color>
+    <Color x:Key="LightRimColor">#71767E</Color>
+
+    <LinearGradientBrush x:Key="AluminumSurfaceGradient" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="{StaticResource AluminumTopColor}" />
+        <GradientStop Offset="0.55" Color="{StaticResource AluminumMidColor}" />
+        <GradientStop Offset="1" Color="{StaticResource AluminumBottomColor}" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="LightInk" Color="{StaticResource LightInkColor}" />
+    <SolidColorBrush x:Key="LightRim" Color="{StaticResource LightRimColor}" />
+    <RadialGradientBrush
+        x:Key="LightDishBrush"
+        Center="0.5,0.42"
+        GradientOrigin="0.5,0.42"
+        RadiusX="0.75"
+        RadiusY="0.75">
+        <GradientStop Offset="0" Color="{StaticResource LightDishCenterColor}" />
+        <GradientStop Offset="1" Color="{StaticResource LightDishEdgeColor}" />
+    </RadialGradientBrush>
+    <SolidColorBrush x:Key="AluminumEdge" Color="#FFFFFF" Opacity="0.5" />
+    <SolidColorBrush x:Key="AluminumTop" Color="{StaticResource AluminumTopColor}" />
+
+    <!-- Transporte pad DJ: aro + plato cóncavo + specular (todo radial) -->
+    <Color x:Key="TransportRimTopColor">#3A4049</Color>
+    <Color x:Key="TransportRimBottomColor">#17191D</Color>
+    <Color x:Key="TransportDishCenterColor">#1B1E23</Color>
+    <Color x:Key="TransportDishEdgeColor">#2B3038</Color>
+
+    <LinearGradientBrush x:Key="TransportRimGradient" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="{StaticResource TransportRimTopColor}" />
+        <GradientStop Offset="1" Color="{StaticResource TransportRimBottomColor}" />
+    </LinearGradientBrush>
+    <RadialGradientBrush
+        x:Key="TransportDishBrush"
+        Center="0.5,0.5"
+        GradientOrigin="0.5,0.5"
+        RadiusX="0.5"
+        RadiusY="0.5">
+        <GradientStop Offset="0" Color="{StaticResource TransportDishCenterColor}" />
+        <GradientStop Offset="1" Color="{StaticResource TransportDishEdgeColor}" />
+    </RadialGradientBrush>
+    <RadialGradientBrush
+        x:Key="SpecularBrush"
+        Center="0.5,0.5"
+        GradientOrigin="0.5,0.5"
+        RadiusX="0.5"
+        RadiusY="0.5">
+        <GradientStop Offset="0" Color="#FFFFFF" />
+        <GradientStop Offset="1" Color="#00FFFFFF" />
+    </RadialGradientBrush>
+
+    <!-- Categorías: solo como acento (franja/dot), nunca fondo completo -->
+    <Color x:Key="CategoryMusicColor">#22D3EE</Color>
+    <Color x:Key="CategoryJingleColor">#A78BFA</Color>
+    <Color x:Key="CategoryCommercialColor">#FACC15</Color>
+    <Color x:Key="CategoryIdColor">#34D399</Color>
+
+    <SolidColorBrush x:Key="CategoryMusic" Color="{StaticResource CategoryMusicColor}" />
+    <SolidColorBrush x:Key="CategoryJingle" Color="{StaticResource CategoryJingleColor}" />
+    <SolidColorBrush x:Key="CategoryCommercial" Color="{StaticResource CategoryCommercialColor}" />
+    <SolidColorBrush x:Key="CategoryId" Color="{StaticResource CategoryIdColor}" />
+
+    <!-- Segunda fila de la parrilla Jazler (tonos distintos, mismo croma sobre oscuro) -->
+    <Color x:Key="CategorySweeperColor">#FB7185</Color>
+    <Color x:Key="CategoryBedColor">#818CF8</Color>
+    <Color x:Key="CategoryNewsColor">#F97316</Color>
+    <Color x:Key="CategoryPromoColor">#84CC16</Color>
+    <Color x:Key="CategoryProgramColor">#2DD4BF</Color>
+    <Color x:Key="CategoryFillerColor">#7DD3FC</Color>
+
+    <SolidColorBrush x:Key="CategorySweeper" Color="{StaticResource CategorySweeperColor}" />
+    <SolidColorBrush x:Key="CategoryBed" Color="{StaticResource CategoryBedColor}" />
+    <SolidColorBrush x:Key="CategoryNews" Color="{StaticResource CategoryNewsColor}" />
+    <SolidColorBrush x:Key="CategoryPromo" Color="{StaticResource CategoryPromoColor}" />
+    <SolidColorBrush x:Key="CategoryProgram" Color="{StaticResource CategoryProgramColor}" />
+    <SolidColorBrush x:Key="CategoryFiller" Color="{StaticResource CategoryFillerColor}" />
+
+    <!-- Estado on-air / reproduciendo -->
+    <Color x:Key="StateOnAirColor">#FF453A</Color>
+    <SolidColorBrush x:Key="StateOnAir" Color="{StaticResource StateOnAirColor}" />
+
+    <!-- Display digital LED -->
+    <Color x:Key="DigitalAmberColor">#FFB000</Color>
+    <SolidColorBrush x:Key="DigitalAmber" Color="{StaticResource DigitalAmberColor}" />
+    <Color x:Key="DisplaySecondaryColor">#A1A7B3</Color>
+    <SolidColorBrush x:Key="DisplaySecondary" Color="{StaticResource DisplaySecondaryColor}" />
+
+    <!-- Texto -->
+    <Color x:Key="TextPrimaryColor">#F2F3F5</Color>
+    <Color x:Key="TextSecondaryColor">#A1A7B3</Color>
+    <Color x:Key="TextDisabledColor">#5A606B</Color>
+
+    <SolidColorBrush x:Key="TextPrimary" Color="{StaticResource TextPrimaryColor}" />
+    <SolidColorBrush x:Key="TextSecondary" Color="{StaticResource TextSecondaryColor}" />
+    <SolidColorBrush x:Key="TextDisabled" Color="{StaticResource TextDisabledColor}" />
+
+    <!-- VU meter: stops del gradiente verde → amarillo → rojo -->
+    <Color x:Key="VuGreenColor">#30D158</Color>
+    <Color x:Key="VuYellowColor">#FFD60A</Color>
+    <Color x:Key="VuRedColor">#FF453A</Color>
+    <Color x:Key="VuTrackColor">#101214</Color>
+    <Color x:Key="VuPeakColor">#FFFFFF</Color>
+    <SolidColorBrush x:Key="VuTrack" Color="{StaticResource VuTrackColor}" />
+</ResourceDictionary>

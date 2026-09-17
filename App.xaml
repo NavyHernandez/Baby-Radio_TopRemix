@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    App.xaml — recursos globales de Baby Radio.
+    Fusiona (en orden): estilos base de WinUI + paleta de color + botones 3D.
+    Toda la UI consume colores vía {StaticResource Token} definidos en Themes/.
+-->
+<Application
+    x:Class="BebeRadio.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:BebeRadio">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Base de controles WinUI (imprescindible primero) -->
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <!-- Paleta A-Studio Console: único archivo con hex -->
+                <ResourceDictionary Source="Themes/ColorPalette.xaml" />
+                <!-- Sistema de botones físico 3D (transporte/carts/aluminio) -->
+                <ResourceDictionary Source="Themes/ButtonStyles.xaml" />
+                <!-- Popups modernos (diálogos amplios, bordes suaves) -->
+                <ResourceDictionary Source="Themes/DialogStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

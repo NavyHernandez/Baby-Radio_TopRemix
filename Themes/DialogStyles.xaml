@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    DialogStyles.xaml — look moderno de popups (Baby Radio).
+    BebeDialogStyle: esquinas suaves (16), borde sutil, fondo panel,
+    botones con radio 10. No toca los botones 3D custom (templates propios).
+    Se fusiona en App.xaml después de ColorPalette/ButtonStyles.
+-->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Tope real del ContentDialog (el tema WinAppSDK lo capa a 548px
+         y recorta el contenido: ver generic.xaml ContentDialogMaxWidth).
+         920 permite diálogos amplios (~740) sin recorte. -->
+    <x:Double x:Key="ContentDialogMaxWidth">920</x:Double>
+
+    <!-- Popup moderno: rectangular amplio, bordes suaves -->
+    <Style x:Key="BebeDialogStyle" TargetType="ContentDialog">
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSubtle}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Background" Value="{StaticResource BackgroundPanel}" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+        <Setter Property="Padding" Value="20,20,20,16" />
+    </Style>
+
+</ResourceDictionary>

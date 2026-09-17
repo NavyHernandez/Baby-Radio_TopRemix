@@ -1,0 +1,9 @@
+Baby Radio v0.1.0 — primera versión instalable.
+
+- Consola estilo Jazler: lista de reproducción con audios reales (mp3, wav, m4a, wma).
+- Motor de audio real con normalización a −14 LUFS y VU consola.
+- Paletas de efectos (40 slots, 2 páginas) con mezclador polifónico y editor con onda.
+- Riel de categorías gestionable (crear, editar, eliminar, restaurar).
+- Modo operador fullscreen con 2 bancos independientes.
+- Marca de agua Baby Radio fusionada en la lista + tarjetas con glass sutil.
+- Auto-actualizaciones desde GitHub Releases (Acerca de → Buscar actualizaciones).

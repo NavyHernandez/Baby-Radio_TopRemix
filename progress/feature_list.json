@@ -1,0 +1,315 @@
+{
+  "project": "Baby Radio",
+  "description": "Automatización radial WinUI 3 (Windows App SDK): consola estilo Jazler con lista de reproducción, reproductor con motor NAudio real, paletas de efectos editables, categorías gestionables, temas claro/oscuro y configuración portable en JSON.",
+  "rules": {
+    "one_feature_at_a_time": true,
+    "require_build_to_close": true,
+    "valid_status": [
+      "pending",
+      "in_progress",
+      "done",
+      "blocked"
+    ]
+  },
+  "features": [
+    {
+      "id": 1,
+      "name": "consola-shell",
+      "title": "Shell modular de consola",
+      "description": "Phase1ShowcaseView adelgazada a shell de 3 columnas que compone 5 partes vía ConsolaViewModel (orquestador). Controles en Controls/Console, VMs en ViewModels/Console.",
+      "acceptance": [
+        "Phase1ShowcaseView < 100 líneas sin lógica de negocio",
+        "ConsolaViewModel compone Lista, Paleta, Categorias, Acciones y Reproductor",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 2,
+      "name": "app-rename",
+      "title": "Nombre visible Baby Radio",
+      "description": "DisplayName Baby Radio en manifiesto, ventana y titlebar. Namespace raíz BebeRadio sin cambios.",
+      "acceptance": [
+        "Package.appxmanifest, MainWindow y TitleBar dicen Baby Radio",
+        "Namespace y RootNamespace intactos",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 3,
+      "name": "lista-reproduccion",
+      "title": "Lista de reproducción",
+      "description": "Cola estilo Jazler: arrastre de audios/carpetas (recursivo), carga manual multi-archivo, reorden por arrastre, inserción en posición, menús Poner en vivo/Quitar, Limpiar todo con confirmación, badge EN VIVO, recorte de silencios finales.",
+      "acceptance": [
+        "Arranca vacía, sin mocks",
+        "Solo tipos reproducibles (mp3, wav, m4a, wma, aiff)",
+        "Dots de color aleatorio por carga",
+        "Fin efectivo sin silencio final (-45 dB)",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 4,
+      "name": "motor-audio",
+      "title": "Motor de audio real",
+      "description": "MotorAudio único (NAudio WaveOutEvent, latencia 150ms): modo Cola y modo Tramo, MedidorPicos a 25 Hz para el VU, auto-stop por cue/recorte, pausa/reanuda real. PlayerViewModel dirige la cola (auto-play, consume+avanza, previous 3s, Stop-al-fin con parpadeo).",
+      "acceptance": [
+        "La cola suena de verdad (mp3, wav, m4a, wma)",
+        "VU con niveles reales y tiempos reales",
+        "Pista sonada se consume; Next consume; Previous 3s",
+        "Stop-al-fin titila y detiene al fin",
+        "Stop resetea el VU a cero",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 5,
+      "name": "paleta-editor",
+      "title": "Paleta y editor de efectos",
+      "description": "Parrilla 20 carts con franja de color; menú Editar/Limpiar por cart; drop directo de audio; editor horizontal con onda Win2D arrastrable (inicio+fin), pre-escucha, color libre, ganancia y fundidos; export/import JSON portable.",
+      "acceptance": [
+        "Editar/Limpiar/drop por cart funcionales",
+        "Onda con marcadores + pre-escucha real",
+        "Persistencia en baby-radio-consola.json + portable",
+        "Popup amplio (780px) sin recortes",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 6,
+      "name": "categorias-gestor",
+      "title": "Categorías y gestor",
+      "description": "Riel fijo de 7 con menú Editar/Eliminar/Restaurar; editor con nombre, color (presets+libre con precedencia) e iconos (curada verificada, binding directo a enum); gestor con toggles máx 7, orden, nueva y confirmación de borrado; fijas editables como ajustes.",
+      "acceptance": [
+        "Riel siempre ≤ 7, sin scroll",
+        "Crear/editar/eliminar con persistencia",
+        "Grilla de iconos sin casas + nombres visibles",
+        "Color libre del picker sí se aplica",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 7,
+      "name": "temas-claro-oscuro",
+      "title": "Temas claro/oscuro + alias",
+      "description": "TemaConsola muta brushes compartidos en vivo (oscuro intacto + claro diseñado, detalles consola preservados); RequestedTheme en ventana y popups; alias en titlebar; perfil portable en JSON.",
+      "acceptance": [
+        "Toggle claro/oscuro en vivo sin perder detalles",
+        "Popups y reproductor legibles en claro",
+        "Alias en titlebar, persiste reinicios",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 8,
+      "name": "estilos-3d-dialogos",
+      "title": "Estilos 3D y diálogos",
+      "description": "Botones físico 3D (transporte/carts/aluminio) con sombra GPU y glows; BebeDialogStyle moderno (radio 16, amplios); ContentDialogMaxWidth elevado a 920; iconos FluentIcons + tooltips.",
+      "acceptance": [
+        "Pressed desplaza 1-2px, glows y parpadeos",
+        "Popups amplios sin recorte",
+        "Cero hex fuera de la paleta (salvo specular/overlays)",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 9,
+      "name": "ayuda-qr",
+      "title": "Ayuda: cuenta, soporte y acerca de",
+      "description": "Fila de 3 iconos bajo categorías con popups modernos (QR + chat + web, versión + buscar updates). Datos centralizados en ContactoInfo.",
+      "acceptance": [
+        "3 popups abren sin desbordar el riel",
+        "Fallback QR pendiente sin PNGs",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 10,
+      "name": "tooling-opencode",
+      "title": "Tooling opencode + progress",
+      "description": "Plugin shunt (bulk_read + hook >350 líneas), opencode.json con env, progress/ con feature_list + history y sección en AGENTS.md.",
+      "acceptance": [
+        "npm install OK en .opencode/",
+        "Hook bloquea read >350 y bulk_read resume",
+        "feature_list.json válido",
+        "Reiniciar opencode para activar"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 11,
+      "name": "qr-assets-whatsapp",
+      "title": "QRs y número WhatsApp",
+      "description": "Owner: subir Assets/usuario-qr.png y Assets/soporte-qr.png + número en ContactoInfo.WhatsAppNumero.",
+      "acceptance": [
+        "QRs visibles en sus popups",
+        "Chat directo habilitado"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 12,
+      "name": "updates-github-velopack",
+      "title": "Instalador v0.1.0 + auto-actualizaciones GitHub + Velopack",
+      "description": "Instalador Velopack 1.2.* vía publish.ps1 (unpackaged self-contained) a GitHub Releases NavyHernandez/Baby-Radio_TopRemix; ActualizadorBaby (check/descarga/aplica) cableado al botón Buscar actualizaciones de AcercaDialog; VelopackApp auto-apply al arrancar.",
+      "acceptance": [
+        "publish.ps1 -SkipUpload genera releases/BabyRadio-win-Setup.exe",
+        "Buscar detecta versión nueva contra GitHub, descarga con progreso y aplica",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 13,
+      "name": "docs-agents-sync",
+      "title": "Sincronizar AGENTS.md",
+      "description": "Actualizar mapa §1 + inventario + tabla de paleta con todo lo construido (temas, motor, editor, gestor, ayuda, progress, normalización LUFS, modo operador, tema único oscuro).",
+      "acceptance": [
+        "Cada archivo nuevo aparece en §1 e inventario",
+        "Tokens y decisiones de tema documentados",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 14,
+      "name": "paletas-40-mix",
+      "title": "Paletas 40 sin mocks + páginas + Mix polifónico",
+      "description": "40 slots vacíos elegantes por categoría (2 páginas de 20, Arriba/Abajo pagina); mezclador de 6 voces (Mix ON mezcla, OFF exclusivo); Stop corta solo efectos; Mix titila y fija ámbar; riel fantasma por conteo de audios.",
+      "acceptance": [
+        "Cero mocks en paletas (legado compila con vacíos)",
+        "Header con indicador 1/2, persistencia de 40 slots",
+        "Mix ON suma voces (titilan), OFF exclusivo, Stop corta todo efecto sin tocar cola",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 15,
+      "name": "esqueletos-blindaje-guia",
+      "title": "Esqueletos sin color + blindaje diálogos + guía crear",
+      "description": "Slots y categorías vacías en esqueleto al tono del tema (ColorFantasma transparente, solo bordes); blindaje anti-cierre en Editar/eliminar/popups con log baby-radio-error.log; Borrador con INPC; guía 'Cree una categoría primero' con botón que abre la creación.",
+      "acceptance": [
+        "Vacío sin color en paleta y riel, lleno recupera color",
+        "Editar con try/catch + reentrancia + log (no cierra app)",
+        "Guía sin categoría abre crear y despliega sola",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 16,
+      "name": "transporte-display",
+      "title": "Transporte homogéneo + display 3x3 con reloj",
+      "description": "6º pad Repetir (replay sin consumir, excluyente con StopAlFin); pausa con icono pausa titilando; titileo homogéneo sin bordes (repeat/stop/🏁); display en grilla (reloj C1 HH:mm:ss + fecha, título A2 span, artista, avisos); VU combinado cola+efectos.",
+      "acceptance": [
+        "Repeat re-empieza sin consumir; toggles excluyentes",
+        "Titileo = estado en los 6 pads, cero glows extra",
+        "Display 3x3 con reloj corriendo y marquee retirado",
+        "VU se mueve con cola y con efectos",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 17,
+      "name": "paleta-riel-cola-refino",
+      "title": "Paleta, riel y cola: refinamientos",
+      "description": "Riel 3D macizo a color si tiene audio (logo blanco, letras adaptativas) y esqueleto si vacío; carts pegados con estilo por contenido + TintaCart; sin subtítulo (modelo+JSON); arranque en background 80ms; re-pulsar reinicia; navegar no corta (voces por clave); Next anti-doble-consumo (generación + rebote); menú vacíos con Cargar; tira 112x103 iconos 26.",
+      "acceptance": [
+        "Vacío esqueleto / lleno color 3D en riel y carts",
+        "Cero subtítulo en UI, modelo y JSON (compatible)",
+        "Clic = titileo + audio inmediato; navegar conserva voces",
+        "Next avanza de a una con N pistas; cola se consume al terminar",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 18,
+      "name": "pantallita-primer-cue",
+      "title": "Pantallita: primera canción en cue sin sonar",
+      "description": "Al cargar/arrastrar la primera canción con la cola vacía, la pantallita (PlayerBar) muestra Título/Artista y queda lista para Play sin arrancar el motor. Separación previsualizar vs sonar en PlayerViewModel (parcial Cue) + evento ReproduccionPedida en la lista; clic/Next/fin natural siguen sonando.",
+      "acceptance": [
+        "Arrastrar 1ª canción muestra nombre sin audio; Play suena desde 0",
+        "Clic/Poner en vivo suena inmediato; Next/fin natural auto-avanzan",
+        "Vaciar vuelve a 'Sin pista en cola'",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 19,
+      "name": "normalizacion-lufs",
+      "title": "Normalización de volumen a −14 LUFS (BS.1770)",
+      "description": "Loudness integrado BS.1770 (K-filtros, 48 kHz, bloques 400 ms/hop 100 ms, gating −70/−10 LU) analizado UNA vez por archivo y cacheado en baby-radio-loudness.json; worker único BelowNormal con Channel deduplicado; en reproducción se aplica solo la ganancia cacheada (±12 dB con techo por pico) vía VolumeSampleProvider en MotorAudio, sin tocar los archivos originales.",
+      "acceptance": [
+        "Target −14 LUFS; análisis una vez + caché con debounce",
+        "Background no bloquea UI ni audio; skip si ya cacheado",
+        "Ganancia solo en reproducción; sin reanálisis al sonar",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 20,
+      "name": "rendimiento-cambio-categoria",
+      "title": "Cambio de categoría fluido (pool estable + caché)",
+      "description": "Pool estable de 40 PaletteItem mutados en el lugar (Vaciar) + MostrarPagina que no toca la colección si la página no cambia (cero regeneración de contenedores); ConsolaStore con caché en memoria; EnsureShadow que reanexa sombras al re-templarse; trazas Paleta.Desplegar/Paleta.Layout para medir.",
+      "acceptance": [
+        "Cambio de categoría < 100 ms (medido: Desplegar 13–26 ms, layout 23–61 ms)",
+        "Sombras y titileo se conservan al cambiar/paginar",
+        "Sin Clear+Add masivos en Items",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 21,
+      "name": "modo-operador",
+      "title": "Modo operador 2 bancos fullscreen",
+      "description": "Dos bancos paginados lado a lado (TamanoPagina 30 → 5×6, páginas 30+10), cada uno con selector de categoría independiente (tira de iconos), páginas propias y gestionar; pantalla completa al entrar (TitleBar oculta) y restauración al salir; tira compacta Config·Categorías·Stop·Mix en Grid 4×*; Mix titila sin glow (TitileoArmado compartido) con bevel en iconos y relieve en textos; Stop corta todos los bancos; brush AluminumTop; ValidadorRecursos al arranque + RefrescarModo blindado; salir con botón y Esc; bancos recuerdan categoría/página en sesión.",
+      "acceptance": [
+        "Fullscreen con 2 bancos, sin player ni cola; salir restaura todo",
+        "Cada banco: categoría, páginas, disparos y edición independientes",
+        "Mix titila sin borde; iconos/textos con relieve; sombras presentes",
+        "Filas 1fr sin corte en la última; tira al 100 % sin huecos",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 22,
+      "name": "tema-unico-oscuro",
+      "title": "Tema único oscuro (elimina modo Claro)",
+      "description": "Mi cuenta queda solo con alias + Guardar (placeholder 'Navy Mix Dj'); TemaConsola sin tablas Claro/Oscuro ni params claro (TemaActual siempre Dark, Cambio como Action); PerfilOperador sin TemaClaro (JSON viejos compatibles); titlebar principal fija en 'Baby Radio'. Se conservan: tokens oscuros, carts por contenido (BebeCartButtonStyleClaro), ColorALetraConverter y RequestedTheme de popups.",
+      "acceptance": [
+        "Sin selector de tema en Mi cuenta; modo único oscuro",
+        "Cero referencias a Claro/TemaClaro en código vivo",
+        "Titlebar siempre 'Baby Radio'; alias sigue en JSON",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 23,
+      "name": "titulo-operador-alias",
+      "title": "Título del operador con alias",
+      "description": "ConsolaViewModel.TituloOperador refrescado en cada ingreso al modo (PrepararOperador) desde el alias guardado: 'OPERADOR nombre' sin comillas, o 'OPERADOR' si está vacío. Bindeado en la barra del panel operador. No toca la titlebar principal.",
+      "acceptance": [
+        "Con alias: OPERADOR Navy Mix Dj; vacío: OPERADOR",
+        "Se refresca en cada ingreso; alias persiste en JSON",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    }
+  ]
+}

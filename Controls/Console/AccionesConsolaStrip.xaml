@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    AccionesConsolaStrip — franja inferior de 7 botones aluminio
+    (Config·Operador·Mix·Ganancia·Stop·Arriba·Abajo), 1/7 del ancho c/u.
+    Botones altos (72) sin separadores: ocupan todo el ancho disponible.
+    Mix titila continuo armado (sin glow ni bordes: parpadeo = armado);
+    Stop corta solo los efectos; Arriba/Abajo cambian de página (20+20).
+    Operador con glow persistente; resto con pulso de 300 ms.
+    Config/Ganancia→diálogo/fader en Fase 2.
+-->
+<UserControl
+    x:Class="BebeRadio.Controls.Console.AccionesConsolaStrip"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:BebeRadio.Controls"
+    xmlns:fluent="using:FluentIcons.WinUI">
+
+    <!-- Tira de acciones: grilla uniforme 7 col (sin ScrollViewer: estira al ancho) -->
+    <controls:UniformGridPanel Columns="7">
+        <!-- FUTURO: Config → diálogo de configuración (hoy solo pulso) -->
+        <Button
+            MinHeight="112"
+            MinWidth="103"
+            Margin="0,0,2,0"
+            AutomationProperties.Name="Configuración"
+            Click="OnConsolaFlashClick"
+            controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryFiller}"
+            Style="{StaticResource BebeLightButtonStyle}">
+            <StackPanel Spacing="2">
+                <Grid HorizontalAlignment="Center">
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        FontSize="26"
+                        Foreground="{StaticResource PressedOverlay}"
+                        Margin="0,1,0,-1"
+                        Symbol="Settings" />
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        FontSize="26"
+                        Foreground="{StaticResource CategoryFiller}"
+                        Symbol="Settings" />
+                </Grid>
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    FontSize="12"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource LightInk}"
+                    Text="Config" />
+            </StackPanel>
+        </Button>
+        <!-- Operador: toggle con glow (mezcla futura con motor) -->
+        <Button
+            MinHeight="112"
+            MinWidth="103"
+            Margin="0,0,2,0"
+            AutomationProperties.Name="Modo operador"
+            Command="{x:Bind ViewModel.ToggleOperatorModeCommand, Mode=OneWay}"
+            controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryCommercial}"
+            controls:BebeButtonHelper.IsActive="{x:Bind ViewModel.IsOperatorMode, Mode=OneWay}"
+            Style="{StaticResource BebeLightButtonStyle}">
+            <StackPanel Spacing="2">
+                <Grid HorizontalAlignment="Center">
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        FontSize="26"
+                        Foreground="{StaticResource PressedOverlay}"
+                        Margin="0,1,0,-1"
+                        Symbol="Headset" />
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        FontSize="26"
+                        Foreground="{StaticResource CategoryCommercial}"
+                        Symbol="Headset" />
+                </Grid>
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    FontSize="12"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource LightInk}"
+                    Text="Operador" />
+            </StackPanel>
+        </Button>
+            <!-- Mix: titila continuo armado (sin glow: armado = parpadeo) -->
+            <Button
+                x:Name="MixButton"
+                MinHeight="112"
+                MinWidth="103"
+                Margin="0,0,2,0"
+                AutomationProperties.Name="Mezcla"
+                Command="{x:Bind ViewModel.ToggleMixCommand, Mode=OneWay}"
+                controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryCommercial}"
+                Style="{StaticResource BebeLightButtonStyle}"
+                ToolTipService.ToolTip="Mezcla de efectos (titila armado)">
+            <StackPanel Spacing="2">
+                <Grid HorizontalAlignment="Center">
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        FontSize="26"
+                        Foreground="{StaticResource PressedOverlay}"
+                        Margin="0,1,0,-1"
+                        Symbol="Options" />
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        FontSize="26"
+                        Foreground="{StaticResource CategoryCommercial}"
+                        Symbol="Options" />
+                </Grid>
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    FontSize="12"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource LightInk}"
+                    Text="Mix" />
+            </StackPanel>
+        </Button>
+        <!-- FUTURO: Ganancia → fader del motor (hoy solo pulso) -->
+        <Button
+            MinHeight="112"
+            MinWidth="103"
+            Margin="0,0,2,0"
+            AutomationProperties.Name="Ganancia"
+            Click="OnConsolaFlashClick"
+            controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryMusic}"
+            Style="{StaticResource BebeLightButtonStyle}">
+            <StackPanel Spacing="2">
+                <Grid HorizontalAlignment="Center">
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        FontSize="26"
+                        Foreground="{StaticResource PressedOverlay}"
+                        Margin="0,1,0,-1"
+                        Symbol="Gauge" />
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        FontSize="26"
+                        Foreground="{StaticResource CategoryMusic}"
+                        Symbol="Gauge" />
+                </Grid>
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    FontSize="12"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource LightInk}"
+                    Text="Ganancia" />
+            </StackPanel>
+        </Button>
+            <!-- Stop: corta solo los efectos que suenan -->
+            <Button
+                MinHeight="112"
+                MinWidth="103"
+                Margin="0,0,2,0"
+                AutomationProperties.Name="Detener efectos"
+                Command="{x:Bind ViewModel.DetenerCommand, Mode=OneWay}"
+                Click="OnConsolaFlashClick"
+                controls:BebeButtonHelper.CategoryColor="{StaticResource StateOnAir}"
+                Style="{StaticResource BebeLightButtonStyle}"
+                ToolTipService.ToolTip="Detener efectos">
+            <StackPanel Spacing="2">
+                <Grid HorizontalAlignment="Center">
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        FontSize="26"
+                        Foreground="{StaticResource PressedOverlay}"
+                        Margin="0,1,0,-1"
+                        Symbol="Stop" />
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        FontSize="26"
+                        Foreground="{StaticResource StateOnAir}"
+                        Symbol="Stop" />
+                </Grid>
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    FontSize="12"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource LightInk}"
+                    Text="Stop" />
+            </StackPanel>
+        </Button>
+            <!-- Página anterior de la paleta (20+20) -->
+            <Button
+                MinHeight="112"
+                MinWidth="103"
+                Margin="0,0,2,0"
+                AutomationProperties.Name="Página anterior"
+                Command="{x:Bind ViewModel.SubirCommand, Mode=OneWay}"
+                Click="OnConsolaFlashClick"
+                controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryProgram}"
+                Style="{StaticResource BebeLightButtonStyle}"
+                ToolTipService.ToolTip="Página anterior">
+            <StackPanel Spacing="2">
+                <Grid HorizontalAlignment="Center">
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        FontSize="26"
+                        Foreground="{StaticResource PressedOverlay}"
+                        Margin="0,1,0,-1"
+                        Symbol="ArrowUp" />
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        FontSize="26"
+                        Foreground="{StaticResource CategoryProgram}"
+                        Symbol="ArrowUp" />
+                </Grid>
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    FontSize="12"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource LightInk}"
+                    Text="Arriba" />
+            </StackPanel>
+        </Button>
+            <!-- Página siguiente de la paleta (20+20) -->
+            <Button
+                MinHeight="112"
+                MinWidth="103"
+                Margin="0,0,2,0"
+                AutomationProperties.Name="Página siguiente"
+                Command="{x:Bind ViewModel.BajarCommand, Mode=OneWay}"
+                Click="OnConsolaFlashClick"
+                controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryProgram}"
+                Style="{StaticResource BebeLightButtonStyle}"
+                ToolTipService.ToolTip="Página siguiente">
+            <StackPanel Spacing="2">
+                <Grid HorizontalAlignment="Center">
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        FontSize="26"
+                        Foreground="{StaticResource PressedOverlay}"
+                        Margin="0,1,0,-1"
+                        Symbol="ArrowDown" />
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        FontSize="26"
+                        Foreground="{StaticResource CategoryProgram}"
+                        Symbol="ArrowDown" />
+                </Grid>
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    FontSize="12"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource LightInk}"
+                    Text="Abajo" />
+            </StackPanel>
+        </Button>
+    </controls:UniformGridPanel>
+</UserControl>

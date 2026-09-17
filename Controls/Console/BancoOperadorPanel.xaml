@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    BancoOperadorPanel — un banco del modo operador: tira compacta de
+    categorías (independiente por banco) + indicador de página con flechas
+    propias + grilla de 20 carts (reusa PaletaPanel sin su encabezado).
+    Click dispara el efecto; click derecho edita/limpia; arrastre carga.
+-->
+<UserControl
+    x:Class="BebeRadio.Controls.Console.BancoOperadorPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:console="using:BebeRadio.Controls.Console"
+    xmlns:consolevm="using:BebeRadio.ViewModels.Console"
+    xmlns:controls="using:BebeRadio.Controls"
+    xmlns:fluent="using:FluentIcons.WinUI">
+
+    <UserControl.Resources>
+        <controls:CategoryBrushConverter x:Key="CategoryBrush" />
+        <controls:BoolToOpacityConverter x:Key="DimSegunSeleccion" />
+    </UserControl.Resources>
+
+    <Border
+        Background="{StaticResource BackgroundPanel}"
+        BorderBrush="{StaticResource BorderSubtle}"
+        BorderThickness="1"
+        CornerRadius="12"
+        Padding="8">
+        <Grid RowSpacing="6">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <!-- Header del banco: selector + páginas + gestionar -->
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <ItemsControl ItemsSource="{x:Bind Selector.Opciones, Mode=OneWay}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controls:UniformGridPanel Columns="7" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="consolevm:OpcionCategoria">
+                            <Button
+                                MinHeight="58"
+                                Padding="2"
+                                HorizontalAlignment="Stretch"
+                                Margin="0,0,2,0"
+                                AutomationProperties.Name="{x:Bind Categoria.Swatch.Label, Mode=OneWay}"
+                                Click="OnCategoriaClick"
+                                Opacity="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource DimSegunSeleccion}}"
+                                controls:BebeButtonHelper.CategoryColor="{x:Bind Categoria.ColorFantasma, Mode=OneWay, Converter={StaticResource CategoryBrush}}"
+                                Style="{StaticResource BebeCategoryButtonStyle}"
+                                ToolTipService.ToolTip="{x:Bind Categoria.Swatch.Label, Mode=OneWay}">
+                                <StackPanel Spacing="0">
+                                    <fluent:SymbolIcon
+                                        HorizontalAlignment="Center"
+                                        FontSize="18"
+                                        Foreground="{StaticResource TextPrimary}"
+                                        Symbol="{x:Bind Categoria.Icono, Mode=OneWay}" />
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        FontSize="9"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource TextPrimary}"
+                                        Text="{x:Bind Categoria.Swatch.Label, Mode=OneWay}"
+                                        TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <StackPanel
+                    Grid.Column="1"
+                    Orientation="Horizontal"
+                    Spacing="4"
+                    VerticalAlignment="Center">
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontFamily="Cascadia Mono, Consolas"
+                        FontSize="12"
+                        Foreground="{StaticResource TextSecondary}"
+                        Text="{x:Bind PaletaVM.IndicadorPagina, Mode=OneWay}" />
+                    <Button
+                        MinHeight="40"
+                        MinWidth="44"
+                        AutomationProperties.Name="Página anterior del banco"
+                        Click="OnPaginaAnterior"
+                        Style="{StaticResource BebeLightButtonStyle}">
+                        <fluent:SymbolIcon FontSize="18" Foreground="{StaticResource CategoryProgram}" Symbol="ArrowUp" />
+                    </Button>
+                    <Button
+                        MinHeight="40"
+                        MinWidth="44"
+                        AutomationProperties.Name="Página siguiente del banco"
+                        Click="OnPaginaSiguiente"
+                        Style="{StaticResource BebeLightButtonStyle}">
+                        <fluent:SymbolIcon FontSize="18" Foreground="{StaticResource CategoryProgram}" Symbol="ArrowDown" />
+                    </Button>
+                    <Button
+                        MinHeight="40"
+                        MinWidth="44"
+                        AutomationProperties.Name="Gestionar categorías"
+                        Click="OnGestionarClick"
+                        Style="{StaticResource BebeLightButtonStyle}"
+                        ToolTipService.ToolTip="Gestionar categorías">
+                        <fluent:SymbolIcon FontSize="18" Foreground="{StaticResource CategoryFiller}" Symbol="Options" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- Grilla de 30 carts (reusa la paleta sin su encabezado) -->
+            <console:PaletaPanel
+                x:Name="PaletaInterna"
+                Grid.Row="1"
+                MostrarEncabezado="False"
+                ViewModel="{x:Bind PaletaVM, Mode=OneWay}" />
+        </Grid>
+    </Border>
+</UserControl>

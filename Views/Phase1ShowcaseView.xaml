@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="BebeRadio.Views.Phase1ShowcaseView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:console="using:BebeRadio.Controls.Console"
+    xmlns:controls="using:BebeRadio.Controls">
+
+    <!--
+        Consola Baby Radio Fase 1 (shell delgada, 3 columnas, sin scroll general):
+        - Izq (320): ListaReproduccionPanel (cola + EN VIVO + drag&drop).
+        - Centro (*): PlayerBar + PaletaPanel (20 carts 5×4) + AccionesConsolaStrip (7).
+        - Der (176): CategoriasRailPanel (7 fijas, sincronizada con paleta).
+        La mezcla vive en ConsolaViewModel (ver ViewModels/Console/):
+        categoría→paleta, acciones→lista. Esta vista no contiene lógica.
+    -->
+    <Grid x:Name="Raiz" Background="{StaticResource BackgroundBase}" Padding="12">
+    <Grid x:Name="LayoutNormal" ColumnSpacing="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="176" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Parte 1: cola de reproducción -->
+        <console:ListaReproduccionPanel
+            Grid.Column="0"
+            ViewModel="{x:Bind ViewModel.Lista, Mode=OneWay}" />
+
+        <!-- Parte central: reproductor + paleta + acciones -->
+        <StackPanel Grid.Column="1" Spacing="6">
+            <controls:PlayerBar
+                x:Name="Player"
+                ViewModel="{x:Bind ViewModel.Reproductor, Mode=OneWay}" />
+            <console:PaletaPanel
+                x:Name="Paleta"
+                ConfiguracionImportada="OnConfiguracionImportada"
+                PideNuevaCategoria="OnPideNuevaCategoria"
+                ViewModel="{x:Bind ViewModel.Paleta, Mode=OneWay}" />
+            <console:AccionesConsolaStrip Margin="0,-4,0,0" ViewModel="{x:Bind ViewModel.Acciones, Mode=OneWay}" />
+        </StackPanel>
+
+        <!-- Parte 4: riel de categorías -->
+        <console:CategoriasRailPanel
+            x:Name="Riel"
+            Grid.Column="2"
+            ViewModel="{x:Bind ViewModel.Categorias, Mode=OneWay}" />
+    </Grid>
+    <!-- El panel operador se crea en código al primer ingreso (arranque intacto). -->
+    </Grid>
+</Page>

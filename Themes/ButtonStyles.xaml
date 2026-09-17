@@ -1,0 +1,759 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:BebeRadio.Controls">
+
+    <!--
+        Botones físico 3D estilo consola de mezcla (AGENTS.md §3.3).
+        Capas (atrás→adelante): glow de actividad (sin hit-test), sombra GPU
+        (code-behind, una vez en Loaded), cuerpo con gradiente cenital, tinte
+        de categoría (carts), filo de luz superior + filo oscuro inferior,
+        overlay de hundido, contenido (-1px en reposo, +2px en pressed).
+        Estados: Normal · PointerOver (100ms) · Pressed (80ms) · Disabled ·
+        Active/Inactive custom (grupo ActivityStates, vía IsActive).
+        Estilos: BebeTransportButtonStyle (pads circulares con elipses) ·
+        BebeCartButtonStyle (rectangular, CornerRadius 4) ·
+        BebeLightButtonStyle (aluminio claro, tinta oscura).
+        La sombra GPU se anexa con BebeButtonHelper.AttachShadow() en Loaded.
+    -->
+
+    <!-- Gradiente de transporte: más contraste (elemento principal de la UI) -->
+    <LinearGradientBrush x:Key="TransportSurfaceGradient" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#333943" />
+        <GradientStop Offset="0.55" Color="#262B33" />
+        <GradientStop Offset="1" Color="#1E2127" />
+    </LinearGradientBrush>
+
+    <!-- Sombra de luz invertida: simula hundido (oscuro arriba) en Pressed -->
+    <LinearGradientBrush x:Key="PressedShadeBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#000000" />
+        <GradientStop Offset="0.6" Color="#000000" />
+        <GradientStop Offset="1" Color="#FFFFFF" />
+    </LinearGradientBrush>
+
+    <!-- Transporte circular: play / pausa / stop / siguiente -->
+    <Style x:Key="BebeTransportButtonStyle" TargetType="Button">
+        <Setter Property="Width" Value="52" />
+        <Setter Property="Height" Value="52" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="controls:BebeButtonHelper.IsCircular" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid x:Name="Root" Background="Transparent">
+                        <Ellipse
+                            x:Name="GlowWash"
+                            IsHitTestVisible="False"
+                            Margin="-2"
+                            Fill="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                            Opacity="0" />
+                        <Ellipse
+                            x:Name="GlowBorder"
+                            IsHitTestVisible="False"
+                            Margin="-6"
+                            Opacity="0"
+                            Stroke="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                            StrokeThickness="2" />
+                        <!-- Pad DJ: aro elevado + plato cóncavo + specular (elipses: escalan) -->
+                        <Ellipse
+                            x:Name="SurfaceBorder"
+                            Fill="{StaticResource TransportRimGradient}"
+                            Stroke="{StaticResource BorderSubtle}"
+                            StrokeThickness="1" />
+                        <Ellipse
+                            x:Name="BevelLight"
+                            Margin="1.5"
+                            Opacity="0.9"
+                            Stroke="{StaticResource HighlightTop}"
+                            StrokeThickness="1" />
+                        <Ellipse
+                            x:Name="Dish"
+                            Margin="5"
+                            Fill="{StaticResource TransportDishBrush}"
+                            Stroke="{StaticResource BottomEdge}"
+                            StrokeThickness="1" />
+                        <Ellipse
+                            x:Name="Specular"
+                            Width="26"
+                            Height="12"
+                            Margin="0,9,0,0"
+                            VerticalAlignment="Top"
+                            Fill="{StaticResource SpecularBrush}"
+                            Opacity="0.5" />
+                        <Ellipse
+                            x:Name="HoverOverlay"
+                            Margin="5"
+                            Fill="{StaticResource HoverOverlay}"
+                            Opacity="0" />
+                        <Ellipse
+                            x:Name="PressedShade"
+                            Margin="5"
+                            Fill="{StaticResource PressedShadeBrush}"
+                            Opacity="0" />
+                        <ContentPresenter
+                            x:Name="Presenter"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Foreground="{StaticResource TextPrimary}">
+                            <ContentPresenter.RenderTransform>
+                                <TranslateTransform x:Name="PresenterShift" Y="-1" />
+                            </ContentPresenter.RenderTransform>
+                        </ContentPresenter>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition To="PointerOver" GeneratedDuration="0:0:0.1" />
+                                    <VisualTransition To="Normal" GeneratedDuration="0:0:0.1" />
+                                    <VisualTransition To="Pressed" GeneratedDuration="0:0:0.08" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="HoverOverlay"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.03"
+                                            Duration="0:0:0.1" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PressedShade"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.5"
+                                            Duration="0:0:0.08" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="Specular"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0"
+                                            Duration="0:0:0.08" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="BevelLight"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0"
+                                            Duration="0:0:0.08" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PresenterShift"
+                                            Storyboard.TargetProperty="Y"
+                                            To="2"
+                                            Duration="0:0:0.08" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="Root"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.4"
+                                            Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="ActivityStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition To="Active" GeneratedDuration="0:0:0.1" />
+                                    <VisualTransition To="Inactive" GeneratedDuration="0:0:0.15" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Inactive" />
+                                <VisualState x:Name="Active">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="GlowBorder"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.55"
+                                            Duration="0:0:0.1" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="GlowWash"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.14"
+                                            Duration="0:0:0.1" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Cart rectangular con tinte de categoría + glow de actividad -->
+    <Style x:Key="BebeCartButtonStyle" TargetType="Button">
+        <Setter Property="MinHeight" Value="72" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid x:Name="Root" Background="Transparent">
+                        <Border
+                            x:Name="GlowWash"
+                            IsHitTestVisible="False"
+                            Margin="-2"
+                            Background="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                            CornerRadius="6"
+                            Opacity="0" />
+                        <Border
+                            x:Name="GlowBorder"
+                            IsHitTestVisible="False"
+                            Margin="-6"
+                            BorderBrush="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                            BorderThickness="2"
+                            CornerRadius="10"
+                            Opacity="0" />
+                        <Border
+                            x:Name="SurfaceBorder"
+                            Background="{StaticResource ButtonSurfaceGradient}"
+                            BorderBrush="{StaticResource BorderSubtle}"
+                            BorderThickness="1"
+                            CornerRadius="4">
+                            <Grid>
+                                <Rectangle
+                                    x:Name="CategoryTint"
+                                    Fill="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                                    Opacity="0.3" />
+                                <Rectangle
+                                    x:Name="CategoryStripe"
+                                    Height="3"
+                                    Margin="4,0,4,0"
+                                    VerticalAlignment="Top"
+                                    RadiusX="1.5"
+                                    RadiusY="1.5"
+                                    Fill="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}" />
+                                <Rectangle
+                                    x:Name="TopEdge"
+                                    Height="1"
+                                    Margin="12,1,12,0"
+                                    VerticalAlignment="Top"
+                                    Fill="{StaticResource HighlightTop}" />
+                                <Rectangle
+                                    x:Name="BottomEdge"
+                                    Height="1"
+                                    Margin="12,0,12,1"
+                                    VerticalAlignment="Bottom"
+                                    Fill="{StaticResource BottomEdge}" />
+                                <Rectangle
+                                    x:Name="HoverOverlay"
+                                    Fill="{StaticResource HoverOverlay}"
+                                    Opacity="0" />
+                                <Rectangle
+                                    x:Name="PressedShade"
+                                    Fill="{StaticResource PressedShadeBrush}"
+                                    Opacity="0" />
+                                <ContentPresenter
+                                    x:Name="Presenter"
+                                    Margin="0,10,0,0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Foreground="{StaticResource TextPrimary}">
+                                    <ContentPresenter.RenderTransform>
+                                        <TranslateTransform x:Name="PresenterShift" Y="-1" />
+                                    </ContentPresenter.RenderTransform>
+                                </ContentPresenter>
+                            </Grid>
+                        </Border>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition To="PointerOver" GeneratedDuration="0:0:0.1" />
+                                    <VisualTransition To="Normal" GeneratedDuration="0:0:0.1" />
+                                    <VisualTransition To="Pressed" GeneratedDuration="0:0:0.08" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="HoverOverlay"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.03"
+                                            Duration="0:0:0.1" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PressedShade"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.45"
+                                            Duration="0:0:0.08" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="TopEdge"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0"
+                                            Duration="0:0:0.08" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PresenterShift"
+                                            Storyboard.TargetProperty="Y"
+                                            To="2"
+                                            Duration="0:0:0.08" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="Root"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.4"
+                                            Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="ActivityStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition To="Active" GeneratedDuration="0:0:0.1" />
+                                    <VisualTransition To="Inactive" GeneratedDuration="0:0:0.15" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Inactive" />
+                                <VisualState x:Name="Active">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="GlowBorder"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.55"
+                                            Duration="0:0:0.1" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="GlowWash"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.14"
+                                            Duration="0:0:0.1" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- PRUEBA visual reversible: cart claro (cara aluminio, franja de color intacta) -->
+    <Style x:Key="BebeCartButtonStyleClaro" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid x:Name="Root" Background="Transparent">
+                        <Border
+                            x:Name="GlowWash"
+                            IsHitTestVisible="False"
+                            Margin="-2"
+                            Background="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                            CornerRadius="10"
+                            Opacity="0" />
+                        <Border
+                            x:Name="GlowBorder"
+                            IsHitTestVisible="False"
+                            Margin="-6"
+                            BorderBrush="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                            BorderThickness="2"
+                            CornerRadius="10"
+                            Opacity="0" />
+                        <Border
+                            x:Name="SurfaceBorder"
+                            Background="{StaticResource CartClaroSurfacePrueba}"
+                            BorderBrush="{StaticResource BorderSubtle}"
+                            BorderThickness="1"
+                            CornerRadius="4">
+                            <Grid>
+                                <Rectangle
+                                    x:Name="CategoryTint"
+                                    Fill="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                                    Opacity="0.3" />
+                                <Rectangle
+                                    x:Name="CategoryStripe"
+                                    Height="3"
+                                    Margin="4,0,4,0"
+                                    VerticalAlignment="Top"
+                                    RadiusX="1.5"
+                                    RadiusY="1.5"
+                                    Fill="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}" />
+                                <Rectangle
+                                    x:Name="TopEdge"
+                                    Height="1"
+                                    Margin="12,1,12,0"
+                                    VerticalAlignment="Top"
+                                    Fill="{StaticResource HighlightTop}" />
+                                <Rectangle
+                                    x:Name="BottomEdge"
+                                    Height="1"
+                                    Margin="12,0,12,1"
+                                    VerticalAlignment="Bottom"
+                                    Fill="{StaticResource BottomEdge}" />
+                                <Rectangle
+                                    x:Name="HoverOverlay"
+                                    Fill="{StaticResource HoverOverlay}"
+                                    Opacity="0" />
+                                <Rectangle
+                                    x:Name="PressedShade"
+                                    Fill="{StaticResource PressedShadeBrush}"
+                                    Opacity="0" />
+                                <ContentPresenter
+                                    x:Name="Presenter"
+                                    Margin="0,10,0,0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Foreground="{StaticResource LightInk}">
+                                    <ContentPresenter.RenderTransform>
+                                        <TranslateTransform x:Name="PresenterShift" Y="-1" />
+                                    </ContentPresenter.RenderTransform>
+                                </ContentPresenter>
+                            </Grid>
+                        </Border>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition To="PointerOver" GeneratedDuration="0:0:0.1" />
+                                    <VisualTransition To="Normal" GeneratedDuration="0:0:0.1" />
+                                    <VisualTransition To="Pressed" GeneratedDuration="0:0:0.08" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="HoverOverlay"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.03"
+                                            Duration="0:0:0.1" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PressedShade"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.45"
+                                            Duration="0:0:0.08" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="TopEdge"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0"
+                                            Duration="0:0:0.08" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PresenterShift"
+                                            Storyboard.TargetProperty="Y"
+                                            To="2"
+                                            Duration="0:0:0.08" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="Root"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.4"
+                                            Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="ActivityStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition To="Active" GeneratedDuration="0:0:0.1" />
+                                    <VisualTransition To="Inactive" GeneratedDuration="0:0:0.15" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Inactive" />
+                                <VisualState x:Name="Active">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="GlowBorder"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.55"
+                                            Duration="0:0:0.1" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="GlowWash"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.14"
+                                            Duration="0:0:0.1" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Riel de categorías: botón macizo del color (relieve realista) -->
+    <Style x:Key="BebeCategoryButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid x:Name="Root" Background="Transparent">
+                        <Border
+                            x:Name="GlowWash"
+                            IsHitTestVisible="False"
+                            Margin="-2"
+                            Background="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                            CornerRadius="10"
+                            Opacity="0" />
+                        <Border
+                            x:Name="GlowBorder"
+                            IsHitTestVisible="False"
+                            Margin="-6"
+                            BorderBrush="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                            BorderThickness="2"
+                            CornerRadius="10"
+                            Opacity="0" />
+                        <Border
+                            x:Name="SurfaceBorder"
+                            Background="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                            BorderBrush="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                            BorderThickness="1"
+                            CornerRadius="6">
+                            <Grid>
+                                <!-- Relieve: luz cenital + peso inferior sobre el color pleno -->
+                                <Rectangle Fill="{StaticResource GlossTopBrush}" />
+                                <Rectangle Fill="{StaticResource ShadeBottomBrush}" />
+                                <Rectangle
+                                    x:Name="TopEdge"
+                                    Height="1"
+                                    Margin="12,1,12,0"
+                                    VerticalAlignment="Top"
+                                    Fill="{StaticResource HighlightTop}" />
+                                <Rectangle
+                                    x:Name="BottomEdge"
+                                    Height="1"
+                                    Margin="12,0,12,1"
+                                    VerticalAlignment="Bottom"
+                                    Fill="{StaticResource BottomEdge}" />
+                                <Rectangle
+                                    x:Name="HoverOverlay"
+                                    Fill="{StaticResource HoverOverlay}"
+                                    Opacity="0" />
+                                <Rectangle
+                                    x:Name="PressedShade"
+                                    Fill="{StaticResource PressedShadeBrush}"
+                                    Opacity="0" />
+                                <ContentPresenter
+                                    x:Name="Presenter"
+                                    Margin="0,10,0,0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Foreground="{StaticResource TextPrimary}">
+                                    <ContentPresenter.RenderTransform>
+                                        <TranslateTransform x:Name="PresenterShift" Y="-1" />
+                                    </ContentPresenter.RenderTransform>
+                                </ContentPresenter>
+                            </Grid>
+                        </Border>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition To="PointerOver" GeneratedDuration="0:0:0.1" />
+                                    <VisualTransition To="Normal" GeneratedDuration="0:0:0.1" />
+                                    <VisualTransition To="Pressed" GeneratedDuration="0:0:0.08" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="HoverOverlay"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.03"
+                                            Duration="0:0:0.1" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PressedShade"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.45"
+                                            Duration="0:0:0.08" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="TopEdge"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0"
+                                            Duration="0:0:0.08" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PresenterShift"
+                                            Storyboard.TargetProperty="Y"
+                                            To="2"
+                                            Duration="0:0:0.08" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="Root"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.4"
+                                            Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="ActivityStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition To="Active" GeneratedDuration="0:0:0.1" />
+                                    <VisualTransition To="Inactive" GeneratedDuration="0:0:0.15" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Inactive" />
+                                <VisualState x:Name="Active">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="GlowBorder"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.55"
+                                            Duration="0:0:0.1" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="GlowWash"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.14"
+                                            Duration="0:0:0.1" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Consola inferior: botones claros de aluminio (tinta oscura) -->
+    <Style x:Key="BebeLightButtonStyle" TargetType="Button">
+        <Setter Property="MinHeight" Value="64" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid x:Name="Root" Background="Transparent">
+                        <Border
+                            x:Name="GlowWash"
+                            IsHitTestVisible="False"
+                            Margin="-2"
+                            Background="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                            CornerRadius="8"
+                            Opacity="0" />
+                        <Border
+                            x:Name="GlowBorder"
+                            IsHitTestVisible="False"
+                            Margin="-6"
+                            BorderBrush="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                            BorderThickness="2"
+                            CornerRadius="12"
+                            Opacity="0" />
+                        <Border
+                            x:Name="SurfaceBorder"
+                            Background="{StaticResource LightDishBrush}"
+                            BorderBrush="{StaticResource LightRim}"
+                            BorderThickness="2"
+                            CornerRadius="6">
+                            <Grid>
+                                <Rectangle
+                                    x:Name="TopEdge"
+                                    Height="1"
+                                    Margin="10,1,10,0"
+                                    VerticalAlignment="Top"
+                                    Fill="{StaticResource AluminumEdge}" />
+                                <Rectangle
+                                    x:Name="BottomEdge"
+                                    Height="1"
+                                    Margin="10,0,10,1"
+                                    VerticalAlignment="Bottom"
+                                    Fill="{StaticResource BottomEdge}" />
+                                <Rectangle
+                                    x:Name="HoverOverlay"
+                                    Fill="{StaticResource PressedOverlay}"
+                                    Opacity="0" />
+                                <Rectangle
+                                    x:Name="PressedShade"
+                                    Fill="{StaticResource PressedShadeBrush}"
+                                    Opacity="0" />
+                                <ContentPresenter
+                                    x:Name="Presenter"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Foreground="{StaticResource LightInk}">
+                                    <ContentPresenter.RenderTransform>
+                                        <TranslateTransform x:Name="PresenterShift" Y="-1" />
+                                    </ContentPresenter.RenderTransform>
+                                </ContentPresenter>
+                            </Grid>
+                        </Border>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition To="PointerOver" GeneratedDuration="0:0:0.1" />
+                                    <VisualTransition To="Normal" GeneratedDuration="0:0:0.1" />
+                                    <VisualTransition To="Pressed" GeneratedDuration="0:0:0.08" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="HoverOverlay"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.08"
+                                            Duration="0:0:0.1" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PressedShade"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.35"
+                                            Duration="0:0:0.08" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="TopEdge"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0"
+                                            Duration="0:0:0.08" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PresenterShift"
+                                            Storyboard.TargetProperty="Y"
+                                            To="2"
+                                            Duration="0:0:0.08" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="Root"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.4"
+                                            Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="ActivityStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition To="Active" GeneratedDuration="0:0:0.1" />
+                                    <VisualTransition To="Inactive" GeneratedDuration="0:0:0.15" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Inactive" />
+                                <VisualState x:Name="Active">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="GlowBorder"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.55"
+                                            Duration="0:0:0.1" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="GlowWash"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.14"
+                                            Duration="0:0:0.1" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

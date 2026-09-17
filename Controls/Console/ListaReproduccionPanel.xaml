@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    ListaReproduccionPanel — cola izquierda estilo Jazler (320px).
+    Contenido: título + resumen + hint + ListView de cards (dot, título,
+    línea 2, duración tabular, badge EN VIVO) con drag&drop de audios reales.
+    Marca de agua: logo Baby Radio fusionado detrás de la cola (Grid Row 3,
+    centrado, bordes difuminados, sin hit-test para no romper drop/reorder).
+    Mezcla futura: Paleta→encolar aquí; Acciones→detener/mover aquí.
+    Colores vía {StaticResource}; lógica solo en su ViewModel.
+-->
+<UserControl
+    x:Class="BebeRadio.Controls.Console.ListaReproduccionPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:BebeRadio.Controls"
+    xmlns:fluent="using:FluentIcons.WinUI"
+    xmlns:models="using:BebeRadio.Models">
+
+    <UserControl.Resources>
+        <controls:CategoryBrushConverter x:Key="CategoryBrush" />
+        <controls:BoolToOpacityConverter x:Key="ZeroOpacity" DimOpacity="0" />
+    </UserControl.Resources>
+
+    <!-- Tarjeta contenedora del panel -->
+    <Border
+        Background="{StaticResource BackgroundPanel}"
+        BorderBrush="{StaticResource BorderSubtle}"
+        BorderThickness="1"
+        CornerRadius="12"
+        Padding="8">
+        <Grid RowSpacing="6">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Cabecera: título + limpiar todo -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    VerticalAlignment="Center"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource TextPrimary}"
+                    Text="Lista de Reproducción" />
+                <StackPanel
+                    Grid.Column="1"
+                    Orientation="Horizontal"
+                    Spacing="4">
+                    <fluent:SymbolIcon
+                        VerticalAlignment="Center"
+                        FontSize="14"
+                        Foreground="{StaticResource TextDisabled}"
+                        Opacity="0.6"
+                        PointerPressed="OnLimpiarTodoPressed"
+                        Symbol="Delete"
+                        ToolTipService.ToolTip="Limpiar toda la lista" />
+                </StackPanel>
+            </Grid>
+            <TextBlock
+                Grid.Row="1"
+                FontFamily="Segoe UI Variable"
+                FontSize="12"
+                FontWeight="SemiBold"
+                Foreground="{StaticResource TextSecondary}"
+                Text="{x:Bind ViewModel.QueueSummary, Mode=OneWay}"
+                Typography.NumeralAlignment="Tabular" />
+            <TextBlock
+                Grid.Row="2"
+                FontSize="10"
+                Foreground="{StaticResource TextDisabled}"
+                Text="Arrastra para ordenar · suelta mp3, wav o m4a donde quieras" />
+
+            <!-- Cola: marca de agua fusionada + cards con relieve, EN VIVO, reorden y drag&drop -->
+            <!-- Fondo exacto del logo (BackgroundLista #1B1F22): la zona de
+                 canciones y la marca de agua se ven como uno solo. -->
+            <Grid Grid.Row="3" Background="{StaticResource BackgroundLista}">
+                <!-- Marca de agua: logo grande centrado con bordes ya difuminados
+                     en el asset (fusión total con el panel, sin recorte visible).
+                     IsHitTestVisible=False: no roba drop, click ni reorder. -->
+                <Image
+                    MaxWidth="250"
+                    MaxHeight="260"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AccessibilityView="Raw"
+                    IsHitTestVisible="False"
+                    Opacity="0.55"
+                    Source="ms-appx:///Assets/Baby-Radio-Watermark.png"
+                    Stretch="Uniform"
+                    ToolTipService.ToolTip="Baby Radio" />
+            <ListView
+                x:Name="ColaList"
+                Background="Transparent"
+                AllowDrop="True"
+                CanReorderItems="True"
+                DragOver="OnQueueDragOver"
+                Drop="OnQueueDrop"
+                IsItemClickEnabled="True"
+                ItemClick="OnQueueItemClick"
+                ItemsSource="{x:Bind ViewModel.Queue, Mode=OneWay}"
+                ScrollViewer.HorizontalScrollMode="Disabled"
+                SelectionMode="None">
+                <ListView.ContextFlyout>
+                    <MenuFlyout>
+                        <MenuFlyoutItem Text="Agregar audios…" Click="OnAgregarClick" />
+                    </MenuFlyout>
+                </ListView.ContextFlyout>
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="models:QueueEntry">
+                        <Border
+                            Margin="0,0,0,8"
+                            Padding="12"
+                            Background="{StaticResource QueueCardGlass}"
+                            BorderBrush="{StaticResource BorderSubtle}"
+                            BorderThickness="1"
+                            CornerRadius="8">
+                            <Border.ContextFlyout>
+                                <MenuFlyout Opening="OnItemMenuOpening">
+                                    <MenuFlyoutItem
+                                        CommandParameter="{Binding}"
+                                        Text="Poner en vivo"
+                                        Click="OnPonerEnVivoClick" />
+                                    <MenuFlyoutItem
+                                        CommandParameter="{Binding}"
+                                        Text="Quitar de la lista"
+                                        Click="OnQuitarClick" />
+                                </MenuFlyout>
+                            </Border.ContextFlyout>
+                            <!-- Filo de vidrio: luz superior de 1px sobre la tarjeta -->
+                            <Border BorderBrush="{StaticResource HighlightTop}" BorderThickness="0,1,0,0" CornerRadius="6">
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Rectangle
+                                    Width="2"
+                                    RadiusX="1"
+                                    RadiusY="1"
+                                    Fill="{Binding BrushKey, Converter={StaticResource CategoryBrush}}" />
+                                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock
+                                        FontSize="14"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource TextPrimary}"
+                                        Text="{Binding Title}"
+                                        TextTrimming="CharacterEllipsis" />
+                                    <TextBlock
+                                        FontSize="12"
+                                        Foreground="{StaticResource TextSecondary}"
+                                        Text="{Binding Line2}"
+                                        TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="3" VerticalAlignment="Center">
+                                    <TextBlock
+                                        HorizontalAlignment="Right"
+                                        FontFamily="Segoe UI Variable"
+                                        FontSize="16"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource TextPrimary}"
+                                        Text="{Binding DisplayDuration}"
+                                        Typography.NumeralAlignment="Tabular" />
+                                    <Border
+                                        Padding="8,2"
+                                        HorizontalAlignment="Right"
+                                        Background="{StaticResource StateOnAir}"
+                                        CornerRadius="3"
+                                        Opacity="{Binding IsCurrent, Converter={StaticResource ZeroOpacity}}">
+                                        <TextBlock
+                                            FontSize="10"
+                                            FontWeight="Bold"
+                                            Foreground="{StaticResource TextPrimary}"
+                                            Text="EN VIVO" />
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                            </Border>
+                        </Border>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>
