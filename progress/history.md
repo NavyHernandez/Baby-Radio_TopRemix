@@ -212,3 +212,15 @@ Cada vez que se cierra una feature, su resumen se añade aquí. No edites entrad
 - `AGENTS.md`: stack Velopack 1.2.* + nota instalador unpackaged + restricción sin push sin orden.
 
 ---
+## 2026-09-17 — v0.1.1: fix Assets fuera del instalador + icono ventana
+
+1. **Falla detectada en instalada**: sin logo/marca de agua ni icono. Causa 1: `publish/` no contenía `Assets/` (los `Content` del csproj no tenían `CopyToOutputDirectory`). Causa 2: `ImageIconSource` con `.ico` (formato no soportado) + `SetIcon` con ruta relativa.
+2. **Fix**: `CopyToOutputDirectory=PreserveNewest` en todos los Assets; `TitleBar.IconSource` → PNG `Square44x44Logo.scale-200.png`; `Support/IconoVentana.cs` nuevo (P/Invoke `WM_SETICON` con ruta absoluta, nunca lanza); `SetIcon` con ruta absoluta.
+3. **Ejecutable versionado**: `Version 0.1.1` (FileVersion 0.1.1.0 verificada) + copia `releases/BabyRadio-0.1.1-Setup.exe`.
+4. **Verificado**: `Assets/` completo en `publish/` (watermark, ico, tiles, release_notes); `dotnet build` 0/0; `vpk pack` OK.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- Instalador local v0.1.1 pendiente de prueba en instalada + upload a Releases con orden del owner.
+
+---

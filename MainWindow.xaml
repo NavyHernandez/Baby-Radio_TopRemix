@@ -23,10 +23,12 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Barra de título personalizada (contenido extendido debajo) -->
+        <!-- Barra de título personalizada (contenido extendido debajo).
+             Icono PNG: ImageIconSource no soporta .ico; el icono de ventana
+             real (.ico, taskbar) lo fija IconoVentana en el code-behind. -->
         <TitleBar x:Name="AppTitleBar" Title="Baby Radio">
             <TitleBar.IconSource>
-                <ImageIconSource ImageSource="Assets/AppIcon.ico" />
+                <ImageIconSource ImageSource="Assets/Square44x44Logo.scale-200.png" />
             </TitleBar.IconSource>
         </TitleBar>
 

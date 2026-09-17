@@ -1,4 +1,8 @@
-Baby Radio v0.1.0 — primera versión instalable.
+Baby Radio v0.1.1 — fix de empaquetado + icono.
+
+- FIX: los Assets ahora sí viajan en el instalador (marca de agua visible en la lista).
+- FIX: icono de ventana y titlebar visibles en la app instalada (PNG + P/Invoke).
+- Instalador con número de versión 0.1.1 en el ejecutable y en Acerca de.
 
 - Consola estilo Jazler: lista de reproducción con audios reales (mp3, wav, m4a, wma).
 - Motor de audio real con normalización a −14 LUFS y VU consola.

@@ -21,7 +21,8 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
 
-        AppWindow.SetIcon("Assets/AppIcon.ico");
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico"));
+        Support.IconoVentana.Aplicar(this);
 
         // Tema único oscuro; el título queda fijo en "Baby Radio" (sin alias).
         TemaConsola.AplicarGuardado(this);
