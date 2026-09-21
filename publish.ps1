@@ -104,11 +104,12 @@ if (-not $Token) {
     $Token = $env:GH_TOKEN
 }
 if (-not $Token) {
-    Write-Host "`n==> No se proporcionó token. Saltando upload a GitHub." -ForegroundColor DarkYellow
+    Write-Host "`n==> ERROR: no se proporcionó token de GitHub. No se puede subir la release." -ForegroundColor Red
     Write-Host "    Para subir, ejecuta: .\publish.ps1 -Token TU_TOKEN" -ForegroundColor DarkYellow
     Write-Host "    O configura: `$env:GH_TOKEN = 'tu_token'" -ForegroundColor DarkYellow
-    Write-Host "`n==> ¡Listo! Paquete en: $ReleaseDir" -ForegroundColor Green
-    exit 0
+    Write-Host "    (En CI el secret debe llamarse GH_TOKEN.)" -ForegroundColor DarkYellow
+    Write-Host "    Si solo quieres empaquetar sin subir, usa: .\publish.ps1 -SkipUpload" -ForegroundColor DarkYellow
+    exit 1
 }
 
 $Tag = "v$Version"

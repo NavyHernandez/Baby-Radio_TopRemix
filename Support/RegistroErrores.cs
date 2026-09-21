@@ -29,7 +29,7 @@ public static class RegistroErrores
             lock (_candado)
             {
                 var ruta = System.IO.Path.Combine(
-                    Windows.Storage.ApplicationData.Current.LocalFolder.Path, NombreArchivo);
+                    ConsolaStore.CarpetaDatos(), NombreArchivo);
                 System.IO.File.AppendAllText(ruta, linea);
             }
         }
@@ -51,7 +51,7 @@ public static class RegistroErrores
             lock (_candado)
             {
                 var ruta = System.IO.Path.Combine(
-                    Windows.Storage.ApplicationData.Current.LocalFolder.Path, NombreArchivo);
+                    ConsolaStore.CarpetaDatos(), NombreArchivo);
                 System.IO.File.AppendAllText(ruta, linea);
             }
         }

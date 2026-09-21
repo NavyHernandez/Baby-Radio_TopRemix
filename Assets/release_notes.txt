@@ -1,4 +1,8 @@
-Baby Radio v0.1.1 — fix de empaquetado + icono.
+Baby Radio v0.1.2 — la configuración sí se guarda.
+
+- FIX: efectos de paletas y categorías creadas sobreviven al cerrar (datos en %LOCALAPPDATA%\BabyRadio, sin depender de identidad MSIX).
+- FIX: caché de normalización y log de errores también persisten en instalada.
+- Al abrir, la consola carga la configuración guardada si la hay.
 
 - FIX: los Assets ahora sí viajan en el instalador (marca de agua visible en la lista).
 - FIX: icono de ventana y titlebar visibles en la app instalada (PNG + P/Invoke).

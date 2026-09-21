@@ -57,10 +57,9 @@ public static class LoudnessCache
     }
 
     /// <summary>Ruta completa del archivo local de caché.</summary>
-    /// <returns>Ruta en ApplicationData LocalFolder.</returns>
+    /// <returns>Ruta en la carpeta de datos (independiente de identidad MSIX).</returns>
     public static string RutaArchivo() =>
-        System.IO.Path.Combine(
-            Windows.Storage.ApplicationData.Current.LocalFolder.Path, NombreArchivo);
+        System.IO.Path.Combine(ConsolaStore.CarpetaDatos(), NombreArchivo);
 
     /// <summary>
     /// Devuelve la ganancia de normalización cacheada de un archivo, si existe

@@ -24,11 +24,21 @@ public static class ConsolaStore
     private static readonly object CandadoConfig = new();
     private static ConsolaConfiguracion? _cache;
 
+    /// <summary>Carpeta de datos local (independiente de identidad MSIX).</summary>
+    /// <returns>Ruta en %LOCALAPPDATA%\BabyRadio (la crea si falta).</returns>
+    /// <remarks>Unpackaged (Velopack) no tiene ApplicationData: se usa System directo.</remarks>
+    public static string CarpetaDatos()
+    {
+        var carpeta = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BabyRadio");
+        System.IO.Directory.CreateDirectory(carpeta);
+        return carpeta;
+    }
+
     /// <summary>Ruta completa del archivo local.</summary>
-    /// <returns>Ruta en ApplicationData LocalFolder.</returns>
+    /// <returns>Ruta en la carpeta de datos.</returns>
     public static string RutaArchivo() =>
-        System.IO.Path.Combine(
-            Windows.Storage.ApplicationData.Current.LocalFolder.Path, NombreArchivo);
+        System.IO.Path.Combine(CarpetaDatos(), NombreArchivo);
 
     /// <summary>
     /// Carga la configuración (cacheada en memoria tras la primera lectura).
