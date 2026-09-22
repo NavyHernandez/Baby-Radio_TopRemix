@@ -80,8 +80,7 @@
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 AutomationProperties.Name="Configuración"
-                Command="{x:Bind Consola.Acciones.AbrirConfiguracionCommand, Mode=OneWay}"
-                Click="OnConsolaFlashClick"
+                Click="OnConfigClick"
                 controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryFiller}"
                 Style="{StaticResource BebeLightButtonStyle}">
                 <StackPanel Spacing="3">

@@ -18,6 +18,9 @@ public sealed class MotorAudio : IDisposable
 
     private WaveOutEvent? _salida;
     private WaveStream? _lector;
+    private VolumeSampleProvider? _volumenMaestro;
+    private float _maestroLineal = 1f;
+    private float _transicionLineal = 1f;
     private System.Threading.Timer? _parada;
     private bool _disposed;
     private bool _cierreManual;
@@ -43,6 +46,58 @@ public sealed class MotorAudio : IDisposable
 
     /// <summary>Niveles crudos L/R a 20 Hz (el VU suaviza).</summary>
     public event Action<float, float>? Niveles;
+
+    /// <summary>
+    /// Fija el volumen maestro en vivo (ducking de Ganancia).
+    /// </summary>
+    /// <param name="lineal">Factor 0…1 (1 = sin atenuar).</param>
+    /// <remarks>
+    /// Se aplica al instante si algo suena y se conserva para las próximas
+    /// reproducciones hasta que se vuelva a fijar. Asignación atómica de
+    /// float: segura desde cualquier hilo.
+    /// </remarks>
+    public void FijarMaestro(double lineal)
+    {
+        _maestroLineal = (float)Math.Clamp(lineal, 0, 1);
+        AplicarCombinado();
+    }
+
+    /// <summary>
+    /// Ejecuta la transición suave hacia un destino en el tiempo pedido (rampa ~20 Hz).
+    /// </summary>
+    /// <param name="destinoLineal">Factor final 0…1.</param>
+    /// <param name="duracion">Duración de la transición.</param>
+    /// <param name="cancelacion">Cancela la rampa (conserva lo alcanzado).</param>
+    /// <remarks>No toca el maestro (ducking): ambos factores se multiplican.</remarks>
+    public async Task TransicionAsync(double destinoLineal, TimeSpan duracion, CancellationToken cancelacion = default)
+    {
+        var destino = (float)Math.Clamp(destinoLineal, 0, 1);
+        const int pasosPorSegundo = 20;
+        var pasos = Math.Max(1, (int)(duracion.TotalSeconds * pasosPorSegundo));
+        var inicio = _transicionLineal;
+        try
+        {
+            for (var i = 1; i <= pasos; i++)
+            {
+                await Task.Delay(duracion / pasos, cancelacion);
+                _transicionLineal = inicio + ((destino - inicio) * i / pasos);
+                AplicarCombinado();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Se conserva el nivel alcanzado; el llamador decide.
+        }
+    }
+
+    /// <summary>Aplica maestro × transición al provider vigente (si hay).</summary>
+    private void AplicarCombinado()
+    {
+        if (_volumenMaestro is not null)
+        {
+            _volumenMaestro.Volume = Math.Clamp(_maestroLineal * _transicionLineal, 0f, 1f);
+        }
+    }
 
     /// <summary>Crea el motor (usar <see cref="Instancia"/>).</summary>
     public MotorAudio()
@@ -152,7 +207,15 @@ public sealed class MotorAudio : IDisposable
                 Volume = (float)Math.Clamp(Math.Pow(10, gananciaDb / 20), 0, 8),
             };
 
-            var medidor = new MedidorPicos(volumen);
+            // Etapa maestra en vivo (ducking × transición): multiplica a la
+            // ganancia de jugada sin tocarla; vive en campo para ajustarla.
+            // Toda apertura arranca a transición plena (la siguiente entra fuerte).
+            var maestro = new VolumeSampleProvider(volumen);
+            _volumenMaestro = maestro;
+            _transicionLineal = 1f;
+            AplicarCombinado();
+
+            var medidor = new MedidorPicos(maestro);
             medidor.Niveles += (izq, der) => Niveles?.Invoke(izq, der);
             _salida = new WaveOutEvent { DesiredLatency = 150 };
             _generacion++;
@@ -250,5 +313,6 @@ public sealed class MotorAudio : IDisposable
         _salida = null;
         _lector?.Dispose();
         _lector = null;
+        _volumenMaestro = null;
     }
 }

@@ -12,7 +12,7 @@ using Windows.Storage.Pickers;
 namespace BebeRadio.Controls.Console;
 
 /// <summary>
-/// Parrilla de paleta (40 slots, 2 páginas de 20). El code-behind dispara
+/// Parrilla de paleta (50 slots, 25+25). El code-behind dispara
 /// el efecto por el mezclador, titila los carts que suenan (opacidad
 /// 1 ↔ 0.35 cada 350 ms con un solo timer, como el Stop programado del
 /// PlayerBar), abre el editor, enruta el arrastre por cart y exporta/
@@ -45,24 +45,6 @@ public sealed partial class PaletaPanel : UserControl
         get => (PaletaViewModel?)GetValue(ViewModelProperty);
         set => SetValue(ViewModelProperty, value);
     }
-
-    /// <summary>Muestra el encabezado propio (título + exportar).</summary>
-    public static readonly DependencyProperty MostrarEncabezadoProperty =
-        DependencyProperty.Register(
-            nameof(MostrarEncabezado),
-            typeof(bool),
-            typeof(PaletaPanel),
-            new PropertyMetadata(true));
-
-    /// <summary>False al hospedar la grilla dentro de un banco operador (el banco trae su header).</summary>
-    public bool MostrarEncabezado
-    {
-        get => (bool)GetValue(MostrarEncabezadoProperty);
-        set => SetValue(MostrarEncabezadoProperty, value);
-    }
-
-    /// <summary>Se eleva al importar: el orquestador redespliega todo.</summary>
-    public event Action? ConfiguracionImportada;
 
     /// <summary>Se eleva al pedir crear categoría (guía sin categoría).</summary>
     public event Action? PideNuevaCategoria;
@@ -165,6 +147,16 @@ public sealed partial class PaletaPanel : UserControl
             SincronizarTitileo();
         }
     }
+
+    /// <summary>
+    /// Rearma el re-anexado de sombras tras mutar un slot (cargar/limpiar).
+    /// </summary>
+    /// <remarks>
+    /// Cambiar TieneAudio re-templa el cart y el nuevo SurfaceBorder nace sin
+    /// sombra GPU (se vería más plano/brillante); las próximas pasadas de
+    /// layout la reanexan (idempotente y barato).
+    /// </remarks>
+    private void RearmarSombras() => _pasadasSombras = 2;
 
     /// <summary>Re-engancha el titileo tras el pase de layout (botones recién creados).</summary>
     /// <param name="sender">Lista de carts.</param>
@@ -357,10 +349,18 @@ public sealed partial class PaletaPanel : UserControl
 
             InicializarPicker(picker);
             var archivo = await picker.PickSingleFileAsync();
-            if (archivo is not null && !ViewModel.SoltarAudio(item, archivo.Path))
+            if (archivo is null)
+            {
+                return;
+            }
+
+            if (!ViewModel.SoltarAudio(item, archivo.Path))
             {
                 await MostrarAvisoAsync("Ese archivo no es un audio legible.");
+                return;
             }
+
+            RearmarSombras();
         }
         catch (Exception ex)
         {
@@ -415,14 +415,16 @@ public sealed partial class PaletaPanel : UserControl
         }
 
         ViewModel.LimpiarSlot(item);
+        RearmarSombras();
     }
 
-    /// <summary>Acepta arrastre de archivos sobre un cart.</summary>
+    /// <summary>Acepta arrastre de archivos o de la lista sobre un cart.</summary>
     /// <param name="sender">Botón del cart.</param>
     /// <param name="e">Datos del arrastre.</param>
     private void OnCartDragOver(object sender, DragEventArgs e)
     {
-        if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+        if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems)
+            || e.DataView.Contains(FormatosArrastre.EntradaCola))
         {
             e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
             e.DragUIOverride.Caption = "Cargar efecto";
@@ -431,13 +433,23 @@ public sealed partial class PaletaPanel : UserControl
         }
     }
 
-    /// <summary>Carga el primer audio soltado sobre el cart.</summary>
+    /// <summary>Carga el primer audio soltado sobre el cart (persiste).</summary>
     /// <param name="sender">Botón del cart.</param>
-    /// <param name="e">Archivos soltados.</param>
+    /// <param name="e">Archivos soltados o entrada de la lista.</param>
+    /// <remarks>Ambas rutas terminan en SoltarAudio, que guarda en el JSON.</remarks>
     private async void OnCartDrop(object sender, DragEventArgs e)
     {
         if (ViewModel is null || (sender as Button)?.DataContext is not PaletteItem item)
         {
+            return;
+        }
+
+        if (e.DataView.Contains(FormatosArrastre.EntradaCola)
+            && await e.DataView.GetDataAsync(FormatosArrastre.EntradaCola) is string rutaLista
+            && !string.IsNullOrWhiteSpace(rutaLista))
+        {
+            ViewModel.SoltarAudio(item, rutaLista);
+            RearmarSombras();
             return;
         }
 
@@ -451,52 +463,7 @@ public sealed partial class PaletaPanel : UserControl
         if (audio is not null)
         {
             ViewModel.SoltarAudio(item, audio.Path);
-        }
-    }
-
-    /// <summary>Abre el menú portable con click izquierdo en el iconito.</summary>
-    /// <param name="sender">Iconito de esquina.</param>
-    /// <param name="e">Args del puntero.</param>
-    private void OnPortablePressed(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
-    {
-        if (sender is FrameworkElement icono && icono.ContextFlyout is MenuFlyout menu)
-        {
-            menu.ShowAt(icono);
-            e.Handled = true;
-        }
-    }
-
-    /// <summary>Exporta el JSON portable a la ruta elegida.</summary>
-    /// <param name="sender">Opción del menú ⋯.</param>
-    /// <param name="e">Args de enrutado.</param>
-    private async void OnExportarClick(object sender, RoutedEventArgs e)
-    {
-        var picker = new FileSavePicker
-        {
-            SuggestedFileName = "baby-radio-consola",
-        };
-        picker.FileTypeChoices.Add("Configuración Baby Radio", new List<string> { ".baby-consola.json" });
-        InicializarPicker(picker);
-        var archivo = await picker.PickSaveFileAsync();
-        if (archivo is not null)
-        {
-            ConsolaStore.Exportar(archivo.Path);
-        }
-    }
-
-    /// <summary>Importa un JSON portable y pide redesplegar.</summary>
-    /// <param name="sender">Opción del menú ⋯.</param>
-    /// <param name="e">Args de enrutado.</param>
-    private async void OnImportarClick(object sender, RoutedEventArgs e)
-    {
-        var picker = new FileOpenPicker();
-        picker.FileTypeFilter.Add(".baby-consola.json");
-        picker.FileTypeFilter.Add(".json");
-        InicializarPicker(picker);
-        var archivo = await picker.PickSingleFileAsync();
-        if (archivo is not null && ConsolaStore.Importar(archivo.Path))
-        {
-            ConfiguracionImportada?.Invoke();
+            RearmarSombras();
         }
     }
 

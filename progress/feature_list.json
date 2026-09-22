@@ -148,12 +148,13 @@
       "id": 11,
       "name": "qr-assets-whatsapp",
       "title": "QRs y número WhatsApp",
-      "description": "Owner: subir Assets/usuario-qr.png y Assets/soporte-qr.png + número en ContactoInfo.WhatsAppNumero.",
+      "description": "Número real en ContactoInfo.WhatsAppNumero (593982311600) y QR de soporte en Assets/SupportQr.jpeg (declarado en csproj). Soporte muestra QR + WhatsApp directo; Mi cuenta queda sin QR ni chat (alias + web + pie '© Derechos reservados por GH Dev Company').",
       "acceptance": [
-        "QRs visibles en sus popups",
-        "Chat directo habilitado"
+        "QR de soporte visible en su popup",
+        "WhatsApp directo habilitado",
+        "Mi cuenta sin QR/chat + pie de derechos GH Dev Company"
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 12,
@@ -307,6 +308,148 @@
       "acceptance": [
         "Con alias: OPERADOR Navy Mix Dj; vacío: OPERADOR",
         "Se refresca en cada ingreso; alias persiste en JSON",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 24,
+      "name": "update-check-honesto",
+      "title": "Buscar actualizaciones con consulta real verificable",
+      "description": "ResultadoActualizacion suma ConsultaOk + Detalle; ComprobarAsync distingue NotInstalledException (copia no instalada con Setup), HttpRequestException (sin red) y error genérico, cada uno con log propio; AcercaDialog muestra 3 estados (motivo real / al día con hora de consulta a GitHub / descarga-aplica). Nunca más un 'al día' falso.",
+      "acceptance": [
+        "Desde bin/VS informa copia no instalada (antes mentía al día)",
+        "Sin red informa causa; con red y al día muestra hora de consulta",
+        "Hay update → descarga con % y aplica como antes",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 25,
+      "name": "aviso-update-acerca",
+      "title": "Puntito de aviso en Acerca de cuando hay update",
+      "description": "CategoriasRailViewModel suma HayActualizacion + VersionActualizacion y ComprobarActualizacionAsync blindado (solo enciende con ConsultaOk); icono Info envuelto en Grid 20×20 con Ellipse 8px StateOnAir + Storyboard de pulso + tooltip con versión; chequeo silencioso diferido 8 s en OnLoaded del riel. Entrar abre AcercaDialog para actualizar.",
+      "acceptance": [
+        "Con versión mayor publicada el punto pulsa ~8 s tras abrir",
+        "Sin red o copia dev no hay punto ni fallos",
+        "Clic abre Acerca y Buscar descarga/aplica",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 26,
+      "name": "lista-a-paleta-drag",
+      "title": "Arrastrar canción de la Lista a la Paleta (con guardado)",
+      "description": "Support/FormatosArrastre.EntradaCola (formato privado con FilePath); ColaList con CanDragItems + OnColaDragStarting (solo entradas con audio real); OnQueueDrop ignora el formato propio (el reorden interno no duplica); OnCartDragOver/Drop aceptan el formato y encaminan por SoltarAudio (persiste en JSON). Hint de la lista actualizado.",
+      "acceptance": [
+        "Arrastrar entrada real a un cart lo carga, suena y persiste al reabrir",
+        "Reorden interno de la lista no duplica entradas",
+        "Mocks sin ruta no inician arrastre",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 27,
+      "name": "sombra-cart-recarga",
+      "title": "Sombra del cart recién cargado (fix de brillo)",
+      "description": "Causa: al cargar un efecto TieneAudio voltea el estilo, el template se recrea y el nuevo SurfaceBorder nace sin sombra GPU (se veía más plano/brillante); el re-anexado solo se armaba al cambiar categoría/página. Nuevo RearmarSombras() (_pasadasSombras = 2) llamado en OnCartDrop (2 rutas), OnCargarAudioClick y OnLimpiarCartClick.",
+      "acceptance": [
+        "Cart recién cargado iguala a los demás sin cambiar de categoría",
+        "Limpiar un slot tampoco deja diferencia visual",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 28,
+      "name": "ganancia-ducking",
+      "title": "Ganancia: prioriza efectos sobre la cola (ducking)",
+      "description": "Toggle IsGananciaArmada + TitileoArmado propio (espejo de Mix); hooks GananciaActiva/ColaSonando en Paleta (+A/B vía ConsolaViewModel); con armada + cola sonando el disparo atenúa la música −6 dB (AtenuacionColaDb) con etapa maestra en vivo en MotorAudio (FijarMaestro) y restaura a 1.0 al terminar la última voz, en Stop o si el arranque falla. Hallazgo: subir dB al efecto no servía (las voces recortan a 1.0 y los slots van a 0 dB).",
+      "acceptance": [
+        "Canción sonando + Ganancia armada + efecto → música baja, efecto domina",
+        "Al terminar el efecto (o Stop) la música vuelve sola",
+        "En silencio o desarmada no altera nada",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 29,
+      "name": "config-transicion-siguiente",
+      "title": "Config: ventana de ajustes + transición en Siguiente",
+      "description": "ConsolaConfiguracion suma TransicionSiguienteActivada (default true) + TransicionSiguienteSegundos (default 5); ConfiguracionViewModel (carga/guarda inmediato, valida 3/5/7, puente TransicionIndice); ConfiguracionDialog (ToggleSwitch + RadioButtons 3/5/7); tira y panel operador abren el diálogo; MotorAudio suma etapa de transición compuesta (maestro × transición) + TransicionAsync ~20 Hz; Next rampa-avanza con guard anti-doble y cancelación en Stop/Previous/fin natural. Incidente: borrar AbrirConfiguracionCommand rompió un x:Bind en OperadorConsolaPanel y el compilador XAML colapsó con WMC9999 (lección: grep x:Bind antes de borrar miembros del VM).",
+      "acceptance": [
+        "Config abre ventana pequeña; toggle ON + 5 s por defecto; persiste",
+        "Siguiente con música baja suave 3/5/7 s y avanza; OFF = corte actual",
+        "Stop/Previous/fin natural a mitad no duplican avance",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 30,
+      "name": "mini-pantalla-player-compacto",
+      "title": "Mini-pantalla 3×2 sobre la lista + PlayerBar compacto 60/40",
+      "description": "MiniPantallaControl nuevo (título+reloj / artista o restante + alias firma Segoe Script, marquee, reloj 1 s, DP Reproductor) sobre la cabecera de la lista; PlayerBar sin display (reloj/marquee retirados) en una fila 60/40 (transporte repartido pads 52/play 60 + progreso, VU estirado, fondo BackgroundPanel). El restante ocupa el lugar de artista ausente; sin artista previo hubo experimentos de onda revertidos (no documentados como feature).",
+      "acceptance": [
+        "Display vivo sobre la lista con marquee; alias se actualiza al guardar",
+        "Transporte + progreso + VU en una fila 60/40 sin huecos laterales",
+        "Sin artista muestra restante; artista normal como texto",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 31,
+      "name": "paleta-50-hint-portable",
+      "title": "Paleta 50 slots + guía vacía abajo + portable al riel",
+      "description": "SlotsPorCategoria 40→50 (25+25, guardados 0-39 intactos); carts MinHeight 81 con filas 1fr; hint de arrastre al fondo de la caja solo con ColaVacia (nueva prop en RefreshSummary); header 'Paleta:' eliminado (DP MostrarEncabezado y cadena ConfiguracionImportada limpiadas en paleta/banco/operador); exportar/importar junto a Acerca de en el riel con evento propio.",
+      "acceptance": [
+        "25+25 visibles; brillo parejo sin cambiar de categoría",
+        "Hint abajo solo con cola vacía; sin nombre sobre la parrilla",
+        "Exportar/importar desde el riel recarga todo",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 32,
+      "name": "confirmar-cierre-musica",
+      "title": "Confirmar cierre si suena la lista",
+      "description": "MainWindow intercepta AppWindow.Closing (sin deferral en WinAppSDK 2.2: cancela en síncrono y dialoga después, con flag anti-loop); ContentDialog '¿Seguro que quieres cerrar?' solo con Reproductor.IsPlaying; en silencio cierra directo; blindado con log.",
+      "acceptance": [
+        "Con música pide confirmación (Cancelar sigue sonando; Cerrar sale)",
+        "En silencio o detenida cierra sin preguntar",
+        "Funciona en modo operador (mismo XamlRoot)",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 33,
+      "name": "release-ci-deploy-local",
+      "title": "Release v0.1.2 por CI + correr en VS sin deploy",
+      "description": "Secret GH_TOKEN verificado; publish.ps1 con --publish (vpk dejaba drafts invisibles) y exit 1 sin token; release v0.1.2 publicada con assets Velopack; launchSettings solo perfil Unpackaged + EnableWinAppRunSupport=false (fix DEP1560: el perfil Package intentaba deploy MSIX sobre app unpackaged).",
+      "acceptance": [
+        "Release v0.1.2 pública con Setup/nupkg/RELEASES",
+        "CI falla ruidoso sin token (no más success falso)",
+        "F5 en VS corre sin DEP1560",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 34,
+      "name": "marquee-siempre-datos-roaming",
+      "title": "Marquee siempre visible + datos en roaming",
+      "description": "El marquee corre con overflow en cualquier estado (más re-evaluación post-layout y espera 0.9 s) + tooltip con el título completo; datos de usuario migrados a %APPDATA%\\BabyRadio (la raíz %LOCALAPPDATA%\\BabyRadio es de Velopack y se borra al desinstalar) con migración única best-effort de los 3 archivos.",
+      "acceptance": [
+        "Título largo da la vuelta sonando o no; corto queda fijo",
+        "Ajustes/paletas/caché sobreviven a update y reinstalación",
+        "Migración automática sin duplicar ni perder",
         "dotnet build sin warnings ni errores"
       ],
       "status": "done"

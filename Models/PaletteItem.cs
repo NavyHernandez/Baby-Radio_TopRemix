@@ -60,7 +60,7 @@ public sealed partial class PaletteItem : ObservableObject
     [ObservableProperty]
     public partial string PropietariaId { get; set; } = string.Empty;
 
-    /// <summary>Posición 0-39 dentro de su paleta.</summary>
+    /// <summary>Posición 0-49 dentro de su paleta.</summary>
     [ObservableProperty]
     public partial int SlotIndex { get; set; }
 
@@ -82,7 +82,7 @@ public sealed partial class PaletteItem : ObservableObject
 
     /// <summary>Crea un slot vacío de categoría personalizada.</summary>
     /// <param name="propietariaId">Id custom:id de la dueña.</param>
-    /// <param name="indice">Posición 0-39.</param>
+    /// <param name="indice">Posición 0-49.</param>
     /// <param name="colorKey">Color de la dueña (#hex).</param>
     /// <returns>Slot listo para recibir un audio por arrastre.</returns>
     public static PaletteItem SlotVacio(string propietariaId, int indice, string? colorKey) =>
@@ -101,7 +101,7 @@ public sealed partial class PaletteItem : ObservableObject
     /// Permite un pool estable de slots que no recrea contenedores de UI.
     /// </summary>
     /// <param name="propietariaId">Dueña actual.</param>
-    /// <param name="indice">Posición 0-39.</param>
+    /// <param name="indice">Posición 0-49.</param>
     /// <param name="colorKey">Color de la dueña (token o #hex) o null.</param>
     public void Vaciar(string propietariaId, int indice, string? colorKey)
     {

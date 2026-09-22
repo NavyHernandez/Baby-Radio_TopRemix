@@ -1,4 +1,6 @@
+using System.Net.Http;
 using Velopack;
+using Velopack.Exceptions;
 using Velopack.Sources;
 
 namespace BebeRadio.Support;
@@ -16,6 +18,12 @@ public sealed class ResultadoActualizacion
 
     /// <summary>True si la versión disponible es más nueva que la instalada.</summary>
     public bool HayActualizacion { get; init; }
+
+    /// <summary>True si la consulta a GitHub se completó sin errores.</summary>
+    public bool ConsultaOk { get; init; }
+
+    /// <summary>Motivo legible del resultado (fallo real o confirmación de consulta).</summary>
+    public string Detalle { get; init; } = string.Empty;
 
     /// <summary>Momento UTC de la comprobación.</summary>
     public DateTime ConsultadoUtc { get; init; }
@@ -71,6 +79,8 @@ public sealed class ActualizadorBaby
                     VersionInstalada = VersionInstalada,
                     VersionDisponible = VersionInstalada,
                     HayActualizacion = false,
+                    ConsultaOk = true,
+                    Detalle = $"Consultado a GitHub: estás al día (v{VersionInstalada}).",
                     ConsultadoUtc = DateTime.UtcNow,
                 };
             }
@@ -81,8 +91,36 @@ public sealed class ActualizadorBaby
                 VersionInstalada = VersionInstalada,
                 VersionDisponible = info.TargetFullRelease.Version.ToString(),
                 HayActualizacion = true,
+                ConsultaOk = true,
+                Detalle = $"Actualización disponible en GitHub: v{info.TargetFullRelease.Version}.",
                 ConsultadoUtc = DateTime.UtcNow,
                 InfoVelopack = info,
+            };
+        }
+        catch (NotInstalledException ex)
+        {
+            RegistroErrores.Registrar(ex, "Actualizador.Comprobar.NoInstalada");
+            return new ResultadoActualizacion
+            {
+                VersionInstalada = VersionInstalada,
+                VersionDisponible = VersionInstalada,
+                HayActualizacion = false,
+                ConsultaOk = false,
+                Detalle = "Esta copia no se instaló con el Setup de Baby Radio. Instala desde GitHub Releases para auto-actualizar.",
+                ConsultadoUtc = DateTime.UtcNow,
+            };
+        }
+        catch (HttpRequestException ex)
+        {
+            RegistroErrores.Registrar(ex, "Actualizador.Comprobar.Red");
+            return new ResultadoActualizacion
+            {
+                VersionInstalada = VersionInstalada,
+                VersionDisponible = VersionInstalada,
+                HayActualizacion = false,
+                ConsultaOk = false,
+                Detalle = "Sin conexión con GitHub. Revisa tu internet e inténtalo de nuevo.",
+                ConsultadoUtc = DateTime.UtcNow,
             };
         }
         catch (Exception ex)
@@ -93,6 +131,8 @@ public sealed class ActualizadorBaby
                 VersionInstalada = VersionInstalada,
                 VersionDisponible = VersionInstalada,
                 HayActualizacion = false,
+                ConsultaOk = false,
+                Detalle = "No se pudo consultar GitHub. Revisa tu conexión e inténtalo de nuevo.",
                 ConsultadoUtc = DateTime.UtcNow,
             };
         }

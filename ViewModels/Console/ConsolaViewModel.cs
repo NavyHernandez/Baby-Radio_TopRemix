@@ -71,6 +71,9 @@ public sealed partial class ConsolaViewModel : ObservableObject
     /// <summary>Mezcla armada (fachada de acciones).</summary>
     public bool IsMixArmed => Acciones.IsMixArmed;
 
+    /// <summary>Ganancia armada (fachada de acciones).</summary>
+    public bool IsGananciaArmada => Acciones.IsGananciaArmada;
+
     /// <summary>Título del modo operador (OPERADOR o OPERADOR "alias").</summary>
     [ObservableProperty]
     public partial string TituloOperador { get; set; } = "OPERADOR";
@@ -100,7 +103,7 @@ public sealed partial class ConsolaViewModel : ObservableObject
         };
 
         // Mezcla 2: franja de acciones → paleta (la cola va por su lado).
-        // Stop corta solo efectos; Arriba/Abajo cambian de página (20+20).
+        // Stop corta solo efectos; Arriba/Abajo cambian de página (25+15).
         // En operador, el Stop corta los efectos de AMBOS bancos (+ central).
         Acciones.AlPedirDetener = () =>
         {
@@ -113,6 +116,11 @@ public sealed partial class ConsolaViewModel : ObservableObject
 
         // Mezcla 3: la paleta pregunta si Mix está armado (mezcla o exclusivo).
         Paleta.MezclaActiva = () => Acciones.IsMixArmed;
+
+        // Mezcla 3b: Ganancia prioriza el efecto sobre la cola (ducking):
+        // solo atenúa si está armada y la cola suena; retoma sola al final.
+        Paleta.GananciaActiva = () => Acciones.IsGananciaArmada;
+        Paleta.ColaSonando = () => Reproductor.IsPlaying;
 
         // Mezcla 4: la paleta avisa cambios (el riel refresca lleno/fantasma).
         Paleta.PaletaCambio += Categorias.RefrescarConteos;
@@ -129,8 +137,12 @@ public sealed partial class ConsolaViewModel : ObservableObject
         SelectorA.SeleccionCambiada += PaletaA.Desplegar;
         SelectorB.SeleccionCambiada += PaletaB.Desplegar;
         PaletaA.MezclaActiva = () => Acciones.IsMixArmed;
+        PaletaA.GananciaActiva = () => Acciones.IsGananciaArmada;
+        PaletaA.ColaSonando = () => Reproductor.IsPlaying;
         PaletaA.PaletaCambio += Categorias.RefrescarConteos;
         PaletaB.MezclaActiva = () => Acciones.IsMixArmed;
+        PaletaB.GananciaActiva = () => Acciones.IsGananciaArmada;
+        PaletaB.ColaSonando = () => Reproductor.IsPlaying;
         PaletaB.PaletaCambio += Categorias.RefrescarConteos;
 
         // Propaga cambios de fachada a la vista (shell aún bindea al orquestador).
@@ -152,6 +164,10 @@ public sealed partial class ConsolaViewModel : ObservableObject
     /// <summary>Alterna la mezcla armada (delega a acciones).</summary>
     [RelayCommand]
     private void ToggleMix() => Acciones.ToggleMixCommand.Execute(null);
+
+    /// <summary>Alterna la ganancia armada (delega a acciones).</summary>
+    [RelayCommand]
+    private void ToggleGanancia() => Acciones.ToggleGananciaCommand.Execute(null);
 
     /// <summary>Carga archivos arrastrados al final de la cola.</summary>
     /// <param name="paths">Rutas soltadas sobre la cola.</param>

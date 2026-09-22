@@ -29,6 +29,14 @@ public sealed partial class CategoriasRailViewModel : ObservableObject
     [ObservableProperty]
     public partial SelectableCategory? Selected { get; set; }
 
+    /// <summary>True si hay una actualización disponible en GitHub (aviso "Acerca de").</summary>
+    [ObservableProperty]
+    public partial bool HayActualizacion { get; set; }
+
+    /// <summary>Versión disponible en GitHub (vacía si no hay aviso).</summary>
+    [ObservableProperty]
+    public partial string VersionActualizacion { get; set; } = string.Empty;
+
     /// <summary>Se eleva al desplegar una categoría (la paleta se suscribe).</summary>
     public event Action<SelectableCategory>? SeleccionCambiada;
 
@@ -42,6 +50,30 @@ public sealed partial class CategoriasRailViewModel : ObservableObject
         if (Categories.Count > 0)
         {
             Select(Categories[0]);
+        }
+    }
+
+    /// <summary>
+    /// Consulta GitHub en segundo plano y enciende el aviso si hay versión nueva.
+    /// </summary>
+    /// <remarks>
+    /// Blindado: sin red o copia no instalada no muestra aviso ni lanza
+    /// (<see cref="ActualizadorBaby.ComprobarAsync"/> devuelve ConsultaOk=false).
+    /// </remarks>
+    public async Task ComprobarActualizacionAsync()
+    {
+        try
+        {
+            var resultado = await ActualizadorBaby.Instancia.ComprobarAsync();
+            if (resultado.ConsultaOk && resultado.HayActualizacion)
+            {
+                VersionActualizacion = resultado.VersionDisponible;
+                HayActualizacion = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "Riel.AvisoUpdate");
         }
     }
 

@@ -24,15 +24,61 @@ public static class ConsolaStore
     private static readonly object CandadoConfig = new();
     private static ConsolaConfiguracion? _cache;
 
-    /// <summary>Carpeta de datos local (independiente de identidad MSIX).</summary>
-    /// <returns>Ruta en %LOCALAPPDATA%\BabyRadio (la crea si falta).</returns>
-    /// <remarks>Unpackaged (Velopack) no tiene ApplicationData: se usa System directo.</remarks>
+    /// <summary>Carpeta de datos roaming (sobrevive updates y reinstalaciones).</summary>
+    /// <returns>Ruta en %APPDATA%\BabyRadio (la crea si falta).</returns>
+    /// <remarks>
+    /// Unpackaged (Velopack) no tiene ApplicationData: se usa System directo.
+    /// %LOCALAPPDATA%\BabyRadio es la raíz de instalación de Velopack (se borra
+    /// al desinstalar): los datos viven en roaming + migración única desde ahí.
+    /// </remarks>
     public static string CarpetaDatos()
     {
         var carpeta = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BabyRadio");
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "BabyRadio");
         System.IO.Directory.CreateDirectory(carpeta);
+        MigrarDesdeInstalacion(carpeta);
         return carpeta;
+    }
+
+    /// <summary>Nombres de datos propios a migrar desde la carpeta vieja.</summary>
+    private static readonly string[] ArchivosMigrables =
+    [
+        NombreArchivo,
+        LoudnessCache.NombreArchivo,
+        RegistroErrores.NombreArchivo,
+    ];
+
+    /// <summary>
+    /// Mueve por única vez los datos de %LOCALAPPDATA%\BabyRadio (raíz Velopack).
+    /// </summary>
+    /// <param name="destino">Carpeta roaming ya creada.</param>
+    /// <remarks>Best-effort: solo mueve lo que existe y falta en destino.</remarks>
+    private static void MigrarDesdeInstalacion(string destino)
+    {
+        try
+        {
+            var origen = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BabyRadio");
+            if (string.Equals(origen, destino, StringComparison.OrdinalIgnoreCase)
+                || !System.IO.Directory.Exists(origen))
+            {
+                return;
+            }
+
+            foreach (var nombre in ArchivosMigrables)
+            {
+                var desde = System.IO.Path.Combine(origen, nombre);
+                var hacia = System.IO.Path.Combine(destino, nombre);
+                if (System.IO.File.Exists(desde) && !System.IO.File.Exists(hacia))
+                {
+                    System.IO.File.Move(desde, hacia);
+                }
+            }
+        }
+        catch
+        {
+            // La app sigue con datos frescos en roaming.
+        }
     }
 
     /// <summary>Ruta completa del archivo local.</summary>

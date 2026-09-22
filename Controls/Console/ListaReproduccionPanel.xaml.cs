@@ -1,5 +1,6 @@
 using BebeRadio.Models;
 using BebeRadio.Support;
+using BebeRadio.ViewModels;
 using BebeRadio.ViewModels.Console;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -26,6 +27,21 @@ public sealed partial class ListaReproduccionPanel : UserControl
     {
         get => (ListaReproduccionViewModel?)GetValue(ViewModelProperty);
         set => SetValue(ViewModelProperty, value);
+    }
+
+    /// <summary>Propiedad de dependencia del reproductor (mini-pantalla).</summary>
+    public static readonly DependencyProperty ReproductorProperty =
+        DependencyProperty.Register(
+            nameof(Reproductor),
+            typeof(PlayerViewModel),
+            typeof(ListaReproduccionPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Reproductor de la mini-pantalla (lo inyecta la shell).</summary>
+    public PlayerViewModel? Reproductor
+    {
+        get => (PlayerViewModel?)GetValue(ReproductorProperty);
+        set => SetValue(ReproductorProperty, value);
     }
 
     /// <summary>Inicializa el panel y anexa sombras al cargar.</summary>
@@ -68,12 +84,36 @@ public sealed partial class ListaReproduccionPanel : UserControl
         }
     }
 
+    /// <summary>Empaqueta la entrada arrastrada hacia la paleta (formato privado).</summary>
+    /// <param name="sender">Lista de cola.</param>
+    /// <param name="e">Items arrastrados.</param>
+    /// <remarks>Solo entradas con audio real; los mocks cancelan el arrastre.</remarks>
+    private void OnColaDragStarting(object sender, DragItemsStartingEventArgs e)
+    {
+        var entrada = e.Items.OfType<QueueEntry>()
+            .FirstOrDefault(item => !string.IsNullOrWhiteSpace(item.FilePath));
+        if (entrada?.FilePath is null)
+        {
+            e.Cancel = true;
+            return;
+        }
+
+        e.Data.SetData(FormatosArrastre.EntradaCola, entrada.FilePath);
+        e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
+    }
+
     /// <summary>Carga audios y carpetas soltados al final de la cola.</summary>
     /// <param name="sender">Lista de cola.</param>
     /// <param name="e">Archivos soltados.</param>
+    /// <remarks>Ignora el formato privado: es reorden interno (ya lo mueve la lista).</remarks>
     private async void OnQueueDrop(object sender, DragEventArgs e)
     {
         if (ViewModel is null)
+        {
+            return;
+        }
+
+        if (e.DataView.Contains(FormatosArrastre.EntradaCola))
         {
             return;
         }

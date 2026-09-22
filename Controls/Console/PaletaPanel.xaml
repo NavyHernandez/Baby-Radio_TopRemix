@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
-    PaletaPanel — parrilla de 40 slots por categoría (2 páginas de 20, centro).
+    PaletaPanel — parrilla de 50 slots por categoría (25+25, centro).
     Sin mocks: el slot vacío es un fantasma elegante (tenue + guía) listo
     para llenar por arrastre o editor. Clic reproduce por el mezclador y el
     cart titila mientras suena (segundo clic lo detiene; sin audio pulso).
-    Click derecho abre Editar/Limpiar. El iconito tenue de la esquina
-    exporta/importa la configuración portable. Tiempos en Cascadia Mono.
+    Click derecho abre Editar/Limpiar. Exportar/importar vive en el riel
+    (junto a Acerca de). Tiempos en Cascadia Mono.
 -->
 <UserControl
     x:Class="BebeRadio.Controls.Console.PaletaPanel"
@@ -23,60 +23,9 @@
         <controls:BoolToOpacityConverter x:Key="LlenoOpaco" DimOpacity="0.85" />
     </UserControl.Resources>
 
-    <!-- Paleta: header (Auto) + grilla uniforme 5 col (fila * para repartir alto) -->
-    <Grid RowSpacing="6">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-        <Grid Visibility="{x:Bind MostrarEncabezado, Mode=OneWay, Converter={StaticResource SinCategoriaVisible}}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <TextBlock
-                VerticalAlignment="Center"
-                FontSize="13"
-                Foreground="{StaticResource TextSecondary}"
-                Visibility="{x:Bind ViewModel.SinCategoria, Mode=OneWay, Converter={StaticResource VacioVisible}}">
-                <Run Text="Paleta: " />
-                <Run
-                    FontWeight="SemiBold"
-                    Foreground="{StaticResource TextPrimary}"
-                    Text="{x:Bind ViewModel.Selected.Swatch.Label, Mode=OneWay}" />
-            </TextBlock>
-            <!-- Header guía: sin categoría desplegada -->
-            <TextBlock
-                VerticalAlignment="Center"
-                FontSize="13"
-                Foreground="{StaticResource TextSecondary}"
-                Visibility="{x:Bind ViewModel.SinCategoria, Mode=OneWay, Converter={StaticResource SinCategoriaVisible}}">
-                <Run Text="Paleta: " />
-                <Run
-                    FontWeight="SemiBold"
-                    Foreground="{StaticResource TextPrimary}"
-                    Text="Sin categoría" />
-            </TextBlock>
-            <!-- Config portable: iconito tenue de esquina (sin chrome de botón) -->
-            <fluent:SymbolIcon
-                Grid.Column="1"
-                VerticalAlignment="Center"
-                FontSize="14"
-                Foreground="{StaticResource TextDisabled}"
-                Opacity="0.6"
-                PointerPressed="OnPortablePressed"
-                Symbol="ArrowDownload"
-                ToolTipService.ToolTip="Exportar / importar configuración">
-                <fluent:SymbolIcon.ContextFlyout>
-                    <MenuFlyout>
-                        <MenuFlyoutItem Text="Exportar configuración…" Click="OnExportarClick" />
-                        <MenuFlyoutItem Text="Importar configuración…" Click="OnImportarClick" />
-                    </MenuFlyout>
-                </fluent:SymbolIcon.ContextFlyout>
-            </fluent:SymbolIcon>
-        </Grid>
-        <Grid Grid.Row="1">
-            <ItemsControl x:Name="PaletteList" ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}">
+    <!-- Paleta: grilla uniforme 5 col (reparte alto) -->
+    <Grid>
+        <ItemsControl x:Name="PaletteList" ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                     <controls:UniformGridPanel Columns="5" />
@@ -85,7 +34,7 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:PaletteItem">
                     <Button
-                        MinHeight="88"
+                        MinHeight="82"
                         HorizontalAlignment="Stretch"
                         AllowDrop="True"
                         AutomationProperties.Name="{Binding Title}"
@@ -119,7 +68,7 @@
                                     Text="Arrastre un audio para cargar" />
                             </MenuFlyout>
                         </Button.ContextFlyout>
-                        <StackPanel Spacing="3" Margin="0,6,0,6">
+                        <StackPanel Spacing="3" Margin="0,4,0,4">
                             <!-- Guía fantasma: solo en slots vacíos -->
                             <fluent:SymbolIcon
                                 HorizontalAlignment="Center"
@@ -194,6 +143,5 @@
                     </Button>
                 </StackPanel>
             </Border>
-        </Grid>
     </Grid>
 </UserControl>

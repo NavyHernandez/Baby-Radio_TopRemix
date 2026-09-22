@@ -21,6 +21,17 @@
         <controls:BoolToOpacityConverter x:Key="DimOpacity" />
         <controls:BoolAVisibilidadConverter x:Key="VacioVisible" Invertir="True" />
         <controls:BoolAVisibilidadConverter x:Key="LlenoVisible" />
+        <!-- Pulso del punto de actualización (1 ↔ 0.35 en bucle) -->
+        <Storyboard x:Key="PulsoPunto">
+            <DoubleAnimation
+                Storyboard.TargetName="PuntoActualizacion"
+                Storyboard.TargetProperty="Opacity"
+                From="1"
+                To="0.35"
+                Duration="0:0:0.8"
+                AutoReverse="True"
+                RepeatBehavior="Forever" />
+        </Storyboard>
     </UserControl.Resources>
 
     <!-- Riel lateral: header + categorías con scroll + nueva -->
@@ -122,7 +133,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-            <!-- Ayuda: usuario · soporte · acerca (fijo, sin desborde) -->
+            <!-- Ayuda: usuario · soporte · acerca · portable (fijo, sin desborde) -->
             <StackPanel
                 Orientation="Horizontal"
                 Spacing="16"
@@ -141,13 +152,45 @@
                     PointerPressed="OnSoporteClick"
                     Symbol="Chat"
                     ToolTipService.ToolTip="Soporte" />
+                <!-- Acerca de + punto de aviso (pulsa si hay actualización) -->
+                <Grid
+                    x:Name="AcercaSlot"
+                    Width="20"
+                    Height="20"
+                    Background="Transparent"
+                    PointerPressed="OnAcercaClick"
+                    ToolTipService.ToolTip="Acerca de Baby Radio">
+                    <fluent:SymbolIcon
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        FontSize="16"
+                        Foreground="{StaticResource TextDisabled}"
+                        Opacity="0.7"
+                        Symbol="Info" />
+                    <Ellipse
+                        x:Name="PuntoActualizacion"
+                        Width="8"
+                        Height="8"
+                        Margin="0,0,-2,-2"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Fill="{StaticResource StateOnAir}"
+                        Visibility="{x:Bind ViewModel.HayActualizacion, Mode=OneWay, Converter={StaticResource LlenoVisible}}" />
+                </Grid>
                 <fluent:SymbolIcon
                     FontSize="16"
                     Foreground="{StaticResource TextDisabled}"
                     Opacity="0.7"
-                    PointerPressed="OnAcercaClick"
-                    Symbol="Info"
-                    ToolTipService.ToolTip="Acerca de Baby Radio" />
+                    PointerPressed="OnPortablePressed"
+                    Symbol="ArrowDownload"
+                    ToolTipService.ToolTip="Exportar / importar configuración">
+                    <fluent:SymbolIcon.ContextFlyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="Exportar configuración…" Click="OnExportarClick" />
+                            <MenuFlyoutItem Text="Importar configuración…" Click="OnImportarClick" />
+                        </MenuFlyout>
+                    </fluent:SymbolIcon.ContextFlyout>
+                </fluent:SymbolIcon>
             </StackPanel>
         </StackPanel>
     </Border>

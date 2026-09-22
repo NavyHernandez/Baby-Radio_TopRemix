@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    MiniPantallaControl — display digital compacto 3×2 (título+reloj / artista+restante).
+    Reloj 1 s + marquee del título + firma del DJ.
+    Se usa sobre la lista de reproducción (compacto). Colores vía StaticResource.
+-->
+<UserControl
+    x:Class="BebeRadio.Controls.MiniPantallaControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Mini-pantalla alta: F1 título span 2 + reloj · F2 artista span 2 + alias firma -->
+    <Border
+        Padding="10,13"
+        Background="{StaticResource VuTrack}"
+        BorderBrush="{StaticResource BorderSubtle}"
+        BorderThickness="1"
+        CornerRadius="6">
+        <Grid ColumnSpacing="8" RowSpacing="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <!-- Fila 1: título a dos columnas (marquee) + reloj -->
+            <Grid x:Name="TituloContenedor" Grid.Row="0" Grid.ColumnSpan="2">
+                <TextBlock
+                    x:Name="TituloTexto"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource DigitalAmber}"
+                    Text="{x:Bind Reproductor.Title, Mode=OneWay}"
+                    ToolTipService.ToolTip="{x:Bind Reproductor.Title, Mode=OneWay}"
+                    TextTrimming="CharacterEllipsis">
+                    <TextBlock.RenderTransform>
+                        <TranslateTransform x:Name="TituloDesplazamiento" />
+                    </TextBlock.RenderTransform>
+                </TextBlock>
+            </Grid>
+            <TextBlock
+                x:Name="RelojTexto"
+                Grid.Row="0"
+                Grid.Column="2"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                AutomationProperties.Name="Reloj"
+                FontFamily="Consolas"
+                FontSize="15"
+                FontWeight="SemiBold"
+                Foreground="{StaticResource DigitalAmber}"
+                Text="00:00:00" />
+            <!-- Fila 2: artista (o restante si falta) + alias firma -->
+            <TextBlock
+                x:Name="ArtistaTexto"
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                FontSize="11"
+                Foreground="{StaticResource DisplaySecondary}"
+                Text="{x:Bind Reproductor.Artist, Mode=OneWay}"
+                TextTrimming="CharacterEllipsis" />
+            <TextBlock
+                x:Name="RestoTexto"
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                VerticalAlignment="Center"
+                Visibility="Collapsed"
+                AutomationProperties.Name="Tiempo restante"
+                FontFamily="Cascadia Mono, Consolas"
+                FontSize="11"
+                FontWeight="SemiBold"
+                Foreground="{StaticResource TextSecondary}"
+                Text="{x:Bind Reproductor.RemainingText, Mode=OneWay}"
+                TextTrimming="CharacterEllipsis" />
+            <TextBlock
+                x:Name="AliasTexto"
+                Grid.Row="1"
+                Grid.Column="2"
+                MaxWidth="110"
+                VerticalAlignment="Center"
+                AutomationProperties.Name="Alias del operador"
+                FontFamily="Segoe Script"
+                FontSize="13"
+                FontStyle="Italic"
+                Foreground="{StaticResource TextPrimary}"
+                Text="DJ"
+                TextTrimming="CharacterEllipsis" />
+        </Grid>
+    </Border>
+</UserControl>

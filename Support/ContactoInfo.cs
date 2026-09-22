@@ -2,12 +2,12 @@ namespace BebeRadio.Support;
 
 /// <summary>
 /// Datos de ayuda de Baby Radio (único punto a editar).
-/// PENDIENTE del owner: número WhatsApp, PNGs QR en Assets/ y URL de GitHub.
+/// Número de WhatsApp, QR de soporte, web y URL de GitHub.
 /// </summary>
 public static class ContactoInfo
 {
-    /// <summary>Número WhatsApp con código país (p. ej. 18095551234).</summary>
-    public const string WhatsAppNumero = "";
+    /// <summary>Número WhatsApp en formato internacional, sin '+' ni espacios.</summary>
+    public const string WhatsAppNumero = "593982311600";
 
     /// <summary>Mensaje precargado del chat.</summary>
     public const string WhatsAppMensaje = "Hola, necesito soporte con Baby Radio";
@@ -15,11 +15,8 @@ public static class ContactoInfo
     /// <summary>Web de la emisora.</summary>
     public const string WebTopRemix = "https://www.top-remix.com";
 
-    /// <summary>QR de la cuenta de usuario (Assets/usuario-qr.png).</summary>
-    public const string QrUsuarioPath = "ms-appx:///Assets/usuario-qr.png";
-
-    /// <summary>QR de soporte (Assets/soporte-qr.png).</summary>
-    public const string QrSoportePath = "ms-appx:///Assets/soporte-qr.png";
+    /// <summary>QR de soporte (Assets/SupportQr.jpeg).</summary>
+    public const string QrSoportePath = "ms-appx:///Assets/SupportQr.jpeg";
 
     /// <summary>Releases de GitHub para auto-actualizar (vacío = pendiente).</summary>
     public const string GitHubReleasesUrl = "https://github.com/NavyHernandez/Baby-Radio_TopRemix";

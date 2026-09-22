@@ -25,6 +25,7 @@ public sealed partial class PlayerViewModel : ObservableObject
     private static readonly TimeSpan UmbralNext = TimeSpan.FromMilliseconds(600);
 
     private DateTime _ultimoNext = DateTime.MinValue;
+    private CancellationTokenSource? _transicionCts;
 
     private readonly DispatcherTimer _ticker;
     private readonly Microsoft.UI.Dispatching.DispatcherQueue _colaUi;
@@ -137,6 +138,7 @@ public sealed partial class PlayerViewModel : ObservableObject
     private void Stop()
     {
         Support.RegistroErrores.Traza("Cola.Stop", "transporte detener");
+        CancelarTransicion();
         _motor.Detener();
         IsPlaying = false;
         IsPaused = false;
@@ -144,12 +146,15 @@ public sealed partial class PlayerViewModel : ObservableObject
     }
 
     /// <summary>Salta a la siguiente (la actual se consume y sale).</summary>
-    /// <remarks>Anti-rebote 600 ms: escala a N pistas sin vaciados accidentales.</remarks>
+    /// <remarks>
+    /// Anti-rebote 600 ms + una sola transición a la vez. Con la transición de
+    /// Config activada y el motor sonando, baja el audio en N segundos antes de avanzar.
+    /// </remarks>
     [RelayCommand]
     private void Next()
     {
         var ahora = DateTime.UtcNow;
-        if (ahora - _ultimoNext < UmbralNext)
+        if (ahora - _ultimoNext < UmbralNext || _transicionCts is not null)
         {
             return;
         }
@@ -161,6 +166,13 @@ public sealed partial class PlayerViewModel : ObservableObject
             return;
         }
 
+        var (transicionOn, segundos) = LeerTransicion();
+        if (transicionOn && _motor.Reproduciendo)
+        {
+            AvanzarConTransicion(segundos);
+            return;
+        }
+
         _sonidoSolicitado = true;
         _cola.ConsumirActual();
         if (Current() is null)
@@ -169,10 +181,69 @@ public sealed partial class PlayerViewModel : ObservableObject
         }
     }
 
+    /// <summary>Baja el audio en N segundos y luego avanza (fire-and-forget).</summary>
+    /// <param name="segundos">Duración de la transición (3, 5 o 7).</param>
+    /// <remarks>Stop/Previous/fin natural cancelan (sin doble avance).</remarks>
+    private async void AvanzarConTransicion(int segundos)
+    {
+        CancelarTransicion();
+        var cts = new CancellationTokenSource();
+        _transicionCts = cts;
+        try
+        {
+            await _motor.TransicionAsync(0, TimeSpan.FromSeconds(segundos), cts.Token);
+            if (cts.IsCancellationRequested || _cola is null)
+            {
+                return;
+            }
+
+            _sonidoSolicitado = true;
+            _cola.ConsumirActual();
+            if (Current() is null)
+            {
+                Stop();
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(_transicionCts, cts))
+            {
+                _transicionCts = null;
+            }
+
+            cts.Dispose();
+        }
+    }
+
+    /// <summary>Cancela la transición en curso (conserva el nivel alcanzado).</summary>
+    private void CancelarTransicion()
+    {
+        _transicionCts?.Cancel();
+        _transicionCts?.Dispose();
+        _transicionCts = null;
+    }
+
+    /// <summary>Lee el ajuste de transición (defaults si el JSON falla).</summary>
+    /// <returns>(activado, segundos normalizados).</returns>
+    private static (bool Activado, int Segundos) LeerTransicion()
+    {
+        try
+        {
+            var config = ConsolaStore.Cargar();
+            return (config.TransicionSiguienteActivada,
+                ConfiguracionViewModel.NormalizarSegundos(config.TransicionSiguienteSegundos));
+        }
+        catch
+        {
+            return (true, 5);
+        }
+    }
+
     /// <summary>Reinicia si lleva +3s; si no, va a la anterior.</summary>
     [RelayCommand]
     private void Previous()
     {
+        CancelarTransicion();
         if (_cola is null)
         {
             return;
@@ -252,6 +323,7 @@ public sealed partial class PlayerViewModel : ObservableObject
 
         _colaUi.TryEnqueue(() =>
         {
+            CancelarTransicion();
             if (RepeatArmed)
             {
                 var actual = Current();

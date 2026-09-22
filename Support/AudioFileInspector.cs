@@ -10,6 +10,9 @@ public static class AudioFileInspector
     public static readonly string[] AudioExtensions =
         { ".mp3", ".wav", ".m4a", ".wma", ".aiff", ".aif" };
 
+    /// <summary>Artista mostrado cuando el archivo no trae (null o blanco).</summary>
+    public const string ArtistaDesconocido = "Archivo local";
+
     /// <summary>Indica si la ruta es un audio reproducible.</summary>
     /// <param name="path">Ruta del archivo.</param>
     /// <returns>True si la extensión está en la whitelist.</returns>
@@ -35,7 +38,8 @@ public static class AudioFileInspector
             var title = string.IsNullOrWhiteSpace(file.Tag.Title)
                 ? System.IO.Path.GetFileNameWithoutExtension(path)
                 : file.Tag.Title;
-            var artist = file.Tag.FirstPerformer ?? "Archivo local";
+            var artista = file.Tag.FirstPerformer;
+            var artist = string.IsNullOrWhiteSpace(artista) ? ArtistaDesconocido : artista;
             var duration = file.Properties.Duration;
             if (duration <= TimeSpan.Zero)
             {

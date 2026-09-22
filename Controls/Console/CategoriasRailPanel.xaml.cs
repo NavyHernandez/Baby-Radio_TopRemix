@@ -3,6 +3,7 @@ using BebeRadio.ViewModels;
 using BebeRadio.ViewModels.Console;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Animation;
 
 namespace BebeRadio.Controls.Console;
 
@@ -62,11 +63,51 @@ public sealed partial class CategoriasRailPanel : UserControl
         }
     }
 
-    /// <summary>Anexa sombras GPU a los botones del riel.</summary>
+    private bool _avisoChequeado;
+
+    /// <summary>Anexa sombras GPU y lanza el chequeo de actualización.</summary>
     /// <param name="sender">Este control.</param>
     /// <param name="e">Args de enrutado.</param>
-    private void OnLoaded(object sender, RoutedEventArgs e) =>
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
         ConsolaSombraHelper.AttachAllShadows(this);
+        _ = ComprobarAvisoActualizacionAsync();
+    }
+
+    /// <summary>
+    /// Consulta GitHub en diferido y enciende el punto pulsante si hay versión nueva.
+    /// </summary>
+    /// <remarks>Silencioso: sin red o copia no instalada no muestra aviso ni falla.</remarks>
+    private async Task ComprobarAvisoActualizacionAsync()
+    {
+        if (_avisoChequeado)
+        {
+            return;
+        }
+
+        _avisoChequeado = true;
+        try
+        {
+            await Task.Delay(8000);
+            if (ViewModel is not { } vm)
+            {
+                return;
+            }
+
+            await vm.ComprobarActualizacionAsync();
+            if (vm.HayActualizacion)
+            {
+                ToolTipService.SetToolTip(
+                    AcercaSlot,
+                    $"Acerca de Baby Radio — ¡v{vm.VersionActualizacion} disponible!");
+                (Resources["PulsoPunto"] as Storyboard)?.Begin();
+            }
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "Riel.AvisoUpdate");
+        }
+    }
 
     /// <summary>Ajusta el menú (Eliminar solo customs, Restaurar solo fijas).</summary>
     /// <param name="sender">Menú contextual.</param>
@@ -360,6 +401,87 @@ public sealed partial class CategoriasRailPanel : UserControl
         finally
         {
             _dialogoAbierto = false;
+        }
+    }
+
+    /// <summary>Se eleva al importar: el orquestador redespliega todo.</summary>
+    public event Action? ConfiguracionImportada;
+
+    /// <summary>Abre el menú portable con click izquierdo en el iconito.</summary>
+    /// <param name="sender">Iconito portable.</param>
+    /// <param name="e">Args del puntero.</param>
+    private void OnPortablePressed(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (sender is FrameworkElement icono && icono.ContextFlyout is MenuFlyout menu)
+        {
+            menu.ShowAt(icono);
+        }
+    }
+
+    /// <summary>Exporta el JSON portable a la ruta elegida.</summary>
+    /// <param name="sender">Opción del menú.</param>
+    /// <param name="e">Args de enrutado.</param>
+    /// <remarks>Blindado: un fallo no cierra la app.</remarks>
+    private async void OnExportarClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var picker = new Windows.Storage.Pickers.FileSavePicker
+            {
+                SuggestedFileName = "baby-radio-consola",
+            };
+            picker.FileTypeChoices.Add("Configuración Baby Radio", new List<string> { ".baby-consola.json" });
+            InicializarPicker(picker);
+            var archivo = await picker.PickSaveFileAsync();
+            if (archivo is not null)
+            {
+                ConsolaStore.Exportar(archivo.Path);
+            }
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "Riel.Exportar");
+        }
+    }
+
+    /// <summary>Importa un JSON portable y pide redesplegar.</summary>
+    /// <param name="sender">Opción del menú.</param>
+    /// <param name="e">Args de enrutado.</param>
+    /// <remarks>Blindado: un fallo no cierra la app.</remarks>
+    private async void OnImportarClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var picker = new Windows.Storage.Pickers.FileOpenPicker();
+            picker.FileTypeFilter.Add(".baby-consola.json");
+            picker.FileTypeFilter.Add(".json");
+            InicializarPicker(picker);
+            var archivo = await picker.PickSingleFileAsync();
+            if (archivo is not null && ConsolaStore.Importar(archivo.Path))
+            {
+                ConfiguracionImportada?.Invoke();
+            }
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "Riel.Importar");
+        }
+    }
+
+    /// <summary>Asocia el picker a la ventana (identidad de paquete).</summary>
+    /// <param name="picker">Picker a inicializar (open o save).</param>
+    private void InicializarPicker(object picker)
+    {
+        try
+        {
+            var hwnd = Microsoft.UI.Win32Interop.GetWindowFromWindowId(
+                XamlRoot.ContentIslandEnvironment.AppWindowId);
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+        }
+        catch
+        {
+            // Sin HWND el picker no abre: se ignora en silencio.
         }
     }
 

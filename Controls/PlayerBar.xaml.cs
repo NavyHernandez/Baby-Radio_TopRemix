@@ -8,21 +8,13 @@ namespace BebeRadio.Controls;
 /// <summary>
 /// Barra de reproductor compacta (dirige la cola vía su ViewModel).
 /// El code-behind solo enruta eventos, anexa sombras GPU, refleja niveles
-/// al VU, parpadeos del transporte y reloj digital.
+/// al VU y parpadeos del transporte. La mini-pantalla vive en
+/// <see cref="MiniPantallaControl"/> (sobre la lista).
 /// </summary>
 public sealed partial class PlayerBar : UserControl
 {
     /// <summary>Intervalo del parpadeo del Stop programado.</summary>
     private static readonly TimeSpan IntervaloParpadeo = TimeSpan.FromMilliseconds(450);
-
-    /// <summary>Paso del marquee (30 ms, ~66 px/s).</summary>
-    private static readonly TimeSpan IntervaloMarquee = TimeSpan.FromMilliseconds(30);
-
-    /// <summary>Pausas del marquee en cada extremo (1.2 s).</summary>
-    private const int MarqueeEsperaTicks = 40;
-
-    /// <summary>Píxeles por tick del marquee.</summary>
-    private const double MarqueePasoPx = 2.0;
 
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _parpadeo;
     private bool _faseParpadeo;
@@ -33,11 +25,6 @@ public sealed partial class PlayerBar : UserControl
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _parpadeoStop;
     private bool _faseStop;
     private int _pasosStop;
-    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _marquee;
-    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _reloj;
-    private double _marqueeMax;
-    private int _marqueeEspera;
-    private int _marqueeFase;
 
     /// <summary>Propiedad de dependencia del ViewModel inyectado.</summary>
     public static readonly DependencyProperty ViewModelProperty =
@@ -70,7 +57,6 @@ public sealed partial class PlayerBar : UserControl
     public PlayerBar()
     {
         InitializeComponent();
-        TituloContenedor.SizeChanged += (_, _) => AjustarClipTitulo();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
@@ -113,9 +99,6 @@ public sealed partial class PlayerBar : UserControl
         RefreshTransportVisual();
         RefreshParpadeo();
         RefreshRepeatBlink();
-        IniciarReloj();
-        AjustarClipTitulo();
-        GestionarMarquee();
     }
 
     /// <summary>Desuscribe eventos y apaga parpadeos al descargar.</summary>
@@ -128,9 +111,6 @@ public sealed partial class PlayerBar : UserControl
         ApagarParpadeoPlay();
         ApagarParpadeoRepeat();
         ApagarParpadeoStop();
-        DetenerMarquee(false);
-        _reloj?.Stop();
-        _reloj = null;
     }
 
     /// <summary>
@@ -149,17 +129,10 @@ public sealed partial class PlayerBar : UserControl
         else if (e.PropertyName == nameof(PlayerViewModel.IsPlaying))
         {
             RefreshTransportVisual();
-            GestionarMarquee();
         }
         else if (e.PropertyName == nameof(PlayerViewModel.IsPaused))
         {
             RefreshTransportVisual();
-            GestionarMarquee();
-        }
-        else if (e.PropertyName == nameof(PlayerViewModel.Title))
-        {
-            TituloDesplazamiento.X = 0;
-            GestionarMarquee();
         }
         else if (e.PropertyName == nameof(PlayerViewModel.RepeatArmed))
         {
@@ -338,145 +311,4 @@ public sealed partial class PlayerBar : UserControl
         StopAtEndButton.Opacity = 1;
     }
 
-    /// <summary>Arranca el reloj digital (1 s, solo visible).</summary>
-    private void IniciarReloj()
-    {
-        if (_reloj is not null)
-        {
-            return;
-        }
-
-        RefrescarReloj();
-        _reloj = DispatcherQueue.CreateTimer();
-        _reloj.Interval = TimeSpan.FromSeconds(1);
-        _reloj.Tick += (_, _) => RefrescarReloj();
-        _reloj.Start();
-    }
-
-    /// <summary>Pinta hora y fecha actuales.</summary>
-    private void RefrescarReloj()
-    {
-        var ahora = DateTime.Now;
-        RelojTexto.Text = ahora.ToString("HH:mm:ss");
-        FechaTexto.Text = ahora.ToString("dd/MM");
-    }
-
-    /// <summary>Recorta el título al contenedor (llamado al redimensionar).</summary>
-    private void AjustarClipTitulo()
-    {
-        var ancho = TituloContenedor.ActualWidth;
-        var alto = TituloContenedor.ActualHeight;
-        TituloContenedor.Clip = ancho > 0 && alto > 0
-            ? new Microsoft.UI.Xaml.Media.RectangleGeometry { Rect = new Windows.Foundation.Rect(0, 0, ancho, alto) }
-            : null;
-        GestionarMarquee();
-    }
-
-    /// <summary>Enciende, congela o reinicia el marquee según estado.</summary>
-    /// <remarks>Sonando = scroll; pausa = congelado; resto = inicio apagado.</remarks>
-    private void GestionarMarquee()
-    {
-        if (ViewModel.IsPlaying)
-        {
-            EvaluarMarquee();
-        }
-        else if (ViewModel.IsPaused)
-        {
-            DetenerMarquee(false);
-        }
-        else
-        {
-            DetenerMarquee(true);
-        }
-    }
-
-    /// <summary>Mide desborde y arranca el scroll solo si no cabe.</summary>
-    /// <remarks>Sin ellipsis al avanzar; con traza diagnóstica del cálculo.</remarks>
-    private void EvaluarMarquee()
-    {
-        var visible = TituloContenedor.ActualWidth;
-        if (visible <= 0)
-        {
-            return;
-        }
-
-        TituloTexto.Width = double.NaN;
-        TituloTexto.TextTrimming = TextTrimming.None;
-        TituloTexto.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
-        var total = TituloTexto.DesiredSize.Width;
-        if (total <= visible + 1)
-        {
-            BebeRadio.Support.RegistroErrores.Traza(
-                "Player.Marquee", $"cabe sin scroll (visible={visible:F0} total={total:F0})");
-            DetenerMarquee(true);
-            return;
-        }
-
-        TituloTexto.Width = total;
-        _marqueeMax = total - visible;
-        if (-TituloDesplazamiento.X > _marqueeMax)
-        {
-            TituloDesplazamiento.X = -_marqueeMax;
-        }
-
-        if (_marquee is null)
-        {
-            BebeRadio.Support.RegistroErrores.Traza(
-                "Player.Marquee", $"scroll arranca (visible={visible:F0} total={total:F0} max={_marqueeMax:F0})");
-            _marqueeFase = 0;
-            _marqueeEspera = MarqueeEsperaTicks;
-            _marquee = DispatcherQueue.CreateTimer();
-            _marquee.Interval = IntervaloMarquee;
-            _marquee.Tick += (_, _) => AvanzarMarquee();
-            _marquee.Start();
-        }
-    }
-
-    /// <summary>Avanza el scroll (pausas en extremos, loop hasta fin de pista).</summary>
-    private void AvanzarMarquee()
-    {
-        switch (_marqueeFase)
-        {
-            case 0:
-                if (--_marqueeEspera <= 0)
-                {
-                    _marqueeFase = 1;
-                }
-
-                break;
-            case 1:
-                TituloDesplazamiento.X -= MarqueePasoPx;
-                if (-TituloDesplazamiento.X >= _marqueeMax)
-                {
-                    TituloDesplazamiento.X = -_marqueeMax;
-                    _marqueeFase = 2;
-                    _marqueeEspera = MarqueeEsperaTicks;
-                }
-
-                break;
-            default:
-                if (--_marqueeEspera <= 0)
-                {
-                    TituloDesplazamiento.X = 0;
-                    _marqueeFase = 0;
-                    _marqueeEspera = MarqueeEsperaTicks;
-                }
-
-                break;
-        }
-    }
-
-    /// <summary>Apaga el scroll (opcionalmente vuelve al inicio con ellipsis).</summary>
-    /// <param name="reiniciar">True para offset a cero y ancho auto.</param>
-    private void DetenerMarquee(bool reiniciar)
-    {
-        _marquee?.Stop();
-        _marquee = null;
-        if (reiniciar)
-        {
-            TituloDesplazamiento.X = 0;
-            TituloTexto.Width = double.NaN;
-            TituloTexto.TextTrimming = TextTrimming.CharacterEllipsis;
-        }
-    }
 }

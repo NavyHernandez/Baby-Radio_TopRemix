@@ -2,7 +2,7 @@
 <!--
     BancoOperadorPanel — un banco del modo operador: tira compacta de
     categorías (independiente por banco) + indicador de página con flechas
-    propias + grilla de 20 carts (reusa PaletaPanel sin su encabezado).
+    propias + grilla de 30 carts (PaletaPanel reutilizada).
     Click dispara el efecto; click derecho edita/limpia; arrastre carga.
 -->
 <UserControl
@@ -114,11 +114,10 @@
                 </StackPanel>
             </Grid>
 
-            <!-- Grilla de 30 carts (reusa la paleta sin su encabezado) -->
+            <!-- Grilla de 30 carts (paleta reutilizada) -->
             <console:PaletaPanel
                 x:Name="PaletaInterna"
                 Grid.Row="1"
-                MostrarEncabezado="False"
                 ViewModel="{x:Bind PaletaVM, Mode=OneWay}" />
         </Grid>
     </Border>

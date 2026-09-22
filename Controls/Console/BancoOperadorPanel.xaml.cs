@@ -6,7 +6,7 @@ namespace BebeRadio.Controls.Console;
 
 /// <summary>
 /// Un banco del modo operador: selector de categoría propio + páginas propias
-/// + grilla de 20 carts (PaletaPanel reutilizada). El code-behind solo enruta
+/// + grilla de 30 carts (PaletaPanel reutilizada). El code-behind solo enruta
 /// clics al selector y a la paleta, y anexa sombras al cargar.
 /// </summary>
 public sealed partial class BancoOperadorPanel : UserControl
@@ -47,16 +47,12 @@ public sealed partial class BancoOperadorPanel : UserControl
     /// <summary>Se eleva al pedir crear una categoría (guía sin categoría).</summary>
     public event Action? PideNuevaCategoria;
 
-    /// <summary>Se eleva al importar: el orquestador recarga todo.</summary>
-    public event Action? ConfiguracionImportada;
-
     /// <summary>Inicializa el banco y reenvía los eventos de su paleta.</summary>
     public BancoOperadorPanel()
     {
         InitializeComponent();
         Loaded += OnLoaded;
         PaletaInterna.PideNuevaCategoria += () => PideNuevaCategoria?.Invoke();
-        PaletaInterna.ConfiguracionImportada += () => ConfiguracionImportada?.Invoke();
     }
 
     /// <summary>Anexa sombras GPU al cargar.</summary>

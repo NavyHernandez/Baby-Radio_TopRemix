@@ -10,17 +10,12 @@ namespace BebeRadio.Controls.Console;
 /// </summary>
 public sealed partial class SoporteDialog : ContentDialog
 {
-    /// <summary>Inicializa el diálogo y carga el QR.</summary>
+    /// <summary>Inicializa el diálogo y carga el QR de soporte.</summary>
     public SoporteDialog()
     {
         InitializeComponent();
         TemaConsola.AplicarADialogo(this);
         QrImage.Source = new BitmapImage(new Uri(ContactoInfo.QrSoportePath));
-        if (string.IsNullOrWhiteSpace(ContactoInfo.ChatUrl))
-        {
-            ChatBoton.IsEnabled = false;
-            ChatBoton.Content = "WhatsApp pendiente (sin número)";
-        }
     }
 
     /// <summary>Muestra el fallback si falta el PNG.</summary>

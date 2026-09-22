@@ -9,7 +9,7 @@
     <!--
         Consola Baby Radio Fase 1 (shell delgada, 3 columnas, sin scroll general):
         - Izq (320): ListaReproduccionPanel (cola + EN VIVO + drag&drop).
-        - Centro (*): PlayerBar + PaletaPanel (20 carts 5×4) + AccionesConsolaStrip (7).
+        - Centro (*): PlayerBar + PaletaPanel (25 carts 5×5) + AccionesConsolaStrip (7).
         - Der (176): CategoriasRailPanel (7 fijas, sincronizada con paleta).
         La mezcla vive en ConsolaViewModel (ver ViewModels/Console/):
         categoría→paleta, acciones→lista. Esta vista no contiene lógica.
@@ -22,10 +22,11 @@
             <ColumnDefinition Width="176" />
         </Grid.ColumnDefinitions>
 
-        <!-- Parte 1: cola de reproducción -->
+        <!-- Parte 1: mini-pantalla + cola de reproducción -->
         <console:ListaReproduccionPanel
             Grid.Column="0"
-            ViewModel="{x:Bind ViewModel.Lista, Mode=OneWay}" />
+            ViewModel="{x:Bind ViewModel.Lista, Mode=OneWay}"
+            Reproductor="{x:Bind ViewModel.Reproductor, Mode=OneWay}" />
 
         <!-- Parte central: reproductor + paleta + acciones -->
         <StackPanel Grid.Column="1" Spacing="6">
@@ -34,7 +35,6 @@
                 ViewModel="{x:Bind ViewModel.Reproductor, Mode=OneWay}" />
             <console:PaletaPanel
                 x:Name="Paleta"
-                ConfiguracionImportada="OnConfiguracionImportada"
                 PideNuevaCategoria="OnPideNuevaCategoria"
                 ViewModel="{x:Bind ViewModel.Paleta, Mode=OneWay}" />
             <console:AccionesConsolaStrip Margin="0,-4,0,0" ViewModel="{x:Bind ViewModel.Acciones, Mode=OneWay}" />
@@ -44,6 +44,7 @@
         <console:CategoriasRailPanel
             x:Name="Riel"
             Grid.Column="2"
+            ConfiguracionImportada="OnConfiguracionImportada"
             ViewModel="{x:Bind ViewModel.Categorias, Mode=OneWay}" />
     </Grid>
     <!-- El panel operador se crea en código al primer ingreso (arranque intacto). -->

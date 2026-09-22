@@ -1,17 +1,17 @@
-Baby Radio v0.1.2 — la configuración sí se guarda.
+Baby Radio v0.1.3 — tus datos sobreviven a las actualizaciones.
 
-- FIX: efectos de paletas y categorías creadas sobreviven al cerrar (datos en %LOCALAPPDATA%\BabyRadio, sin depender de identidad MSIX).
-- FIX: caché de normalización y log de errores también persisten en instalada.
-- Al abrir, la consola carga la configuración guardada si la hay.
+- Tus ajustes, paletas, categorías, alias y caché de volumen ahora viven en %APPDATA%\BabyRadio: NO se pierden al actualizar ni al reinstalar (migración automática desde la ubicación anterior).
+- NUEVO botón Config: transición suave al pulsar Siguiente (3, 5 o 7 s, activado por defecto).
+- NUEVO botón Ganancia: al armarlo, los efectos suenan por encima de la música (la música retoma sola al terminar el efecto).
+- Arrastra canciones de la lista a la paleta para cargar efectos (se guardan solos).
+- Buscar actualizaciones ahora dice la verdad (avisa si no hay conexión o si la copia no es instalada) + puntito rojo en Acerca de cuando hay versión nueva.
+- Mini-pantalla sobre la lista (título con marquee, reloj, artista o tiempo restante, firma del DJ) + barra de transporte compacta.
+- Paleta de 50 efectos (25+25) + confirmación al cerrar con música sonando.
 
-- FIX: los Assets ahora sí viajan en el instalador (marca de agua visible en la lista).
-- FIX: icono de ventana y titlebar visibles en la app instalada (PNG + P/Invoke).
-- Instalador con número de versión 0.1.1 en el ejecutable y en Acerca de.
-
+- FIX: efectos de paletas y categorías creadas sobreviven al cerrar.
+- FIX: los Assets viajan en el instalador (marca de agua visible en la lista).
+- FIX: icono de ventana y titlebar visibles en la app instalada.
 - Consola estilo Jazler: lista de reproducción con audios reales (mp3, wav, m4a, wma).
 - Motor de audio real con normalización a −14 LUFS y VU consola.
-- Paletas de efectos (40 slots, 2 páginas) con mezclador polifónico y editor con onda.
-- Riel de categorías gestionable (crear, editar, eliminar, restaurar).
 - Modo operador fullscreen con 2 bancos independientes.
-- Marca de agua Baby Radio fusionada en la lista + tarjetas con glass sutil.
 - Auto-actualizaciones desde GitHub Releases (Acerca de → Buscar actualizaciones).

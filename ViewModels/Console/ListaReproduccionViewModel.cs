@@ -33,6 +33,10 @@ public sealed partial class ListaReproduccionViewModel : ObservableObject
     [ObservableProperty]
     public partial string QueueSummary { get; set; } = string.Empty;
 
+    /// <summary>True si la cola está vacía (muestra la guía de arrastre).</summary>
+    [ObservableProperty]
+    public partial bool ColaVacia { get; set; } = true;
+
     private readonly Microsoft.UI.Dispatching.DispatcherQueue? _colaUi =
         Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
 
@@ -245,7 +249,7 @@ public sealed partial class ListaReproduccionViewModel : ObservableObject
         RefreshSummary();
     }
 
-    /// <summary>Recalcula "N pistas · total m:ss".</summary>
+    /// <summary>Recalcula "N pistas · total m:ss" y el estado vacío.</summary>
     private void RefreshSummary()
     {
         var total = TimeSpan.Zero;
@@ -255,5 +259,6 @@ public sealed partial class ListaReproduccionViewModel : ObservableObject
         }
 
         QueueSummary = $"{Queue.Count} pistas · total {TimeFormatter.ToMinuteSecond(total)}";
+        ColaVacia = Queue.Count == 0;
     }
 }

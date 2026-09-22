@@ -18,4 +18,14 @@ public sealed class ConsolaConfiguracion
 
     /// <summary>Perfil del operador (alias + tema).</summary>
     public PerfilOperador Perfil { get; set; } = new();
+
+    /// <summary>
+    /// Transición suave al pulsar Siguiente (baja el audio antes de avanzar).
+    /// </summary>
+    public bool TransicionSiguienteActivada { get; set; } = true;
+
+    /// <summary>
+    /// Duración de la transición en segundos (solo 3, 5 o 7; otro valor cae a 5).
+    /// </summary>
+    public int TransicionSiguienteSegundos { get; set; } = 5;
 }

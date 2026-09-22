@@ -3,10 +3,11 @@
     AccionesConsolaStrip — franja inferior de 7 botones aluminio
     (Config·Operador·Mix·Ganancia·Stop·Arriba·Abajo), 1/7 del ancho c/u.
     Botones altos (72) sin separadores: ocupan todo el ancho disponible.
-    Mix titila continuo armado (sin glow ni bordes: parpadeo = armado);
-    Stop corta solo los efectos; Arriba/Abajo cambian de página (20+20).
+    Mix y Ganancia titilan continuo armados (sin glow ni bordes:
+    parpadeo = armado); Ganancia prioriza efectos sobre la cola (ducking).
+    Stop corta solo los efectos; Arriba/Abajo cambian de página (25+15).
     Operador con glow persistente; resto con pulso de 300 ms.
-    Config/Ganancia→diálogo/fader en Fase 2.
+    Config abre la ventana de ajustes (transición de Siguiente).
 -->
 <UserControl
     x:Class="BebeRadio.Controls.Console.AccionesConsolaStrip"
@@ -17,13 +18,13 @@
 
     <!-- Tira de acciones: grilla uniforme 7 col (sin ScrollViewer: estira al ancho) -->
     <controls:UniformGridPanel Columns="7">
-        <!-- FUTURO: Config → diálogo de configuración (hoy solo pulso) -->
+        <!-- Config: abre la ventana de ajustes -->
         <Button
             MinHeight="112"
             MinWidth="103"
             Margin="0,0,2,0"
             AutomationProperties.Name="Configuración"
-            Click="OnConsolaFlashClick"
+            Click="OnConfigClick"
             controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryFiller}"
             Style="{StaticResource BebeLightButtonStyle}">
             <StackPanel Spacing="2">
@@ -113,15 +114,17 @@
                     Text="Mix" />
             </StackPanel>
         </Button>
-        <!-- FUTURO: Ganancia → fader del motor (hoy solo pulso) -->
+        <!-- Ganancia: titila continuo armada (prioriza efectos sobre la cola) -->
         <Button
+            x:Name="GananciaButton"
             MinHeight="112"
             MinWidth="103"
             Margin="0,0,2,0"
             AutomationProperties.Name="Ganancia"
-            Click="OnConsolaFlashClick"
+            Command="{x:Bind ViewModel.ToggleGananciaCommand, Mode=OneWay}"
             controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryMusic}"
-            Style="{StaticResource BebeLightButtonStyle}">
+            Style="{StaticResource BebeLightButtonStyle}"
+            ToolTipService.ToolTip="Ganancia: prioriza efectos (titila armada)">
             <StackPanel Spacing="2">
                 <Grid HorizontalAlignment="Center">
                     <fluent:SymbolIcon
@@ -177,7 +180,7 @@
                     Text="Stop" />
             </StackPanel>
         </Button>
-            <!-- Página anterior de la paleta (20+20) -->
+            <!-- Página anterior de la paleta (25+15) -->
             <Button
                 MinHeight="112"
                 MinWidth="103"
@@ -210,7 +213,7 @@
                     Text="Arriba" />
             </StackPanel>
         </Button>
-            <!-- Página siguiente de la paleta (20+20) -->
+            <!-- Página siguiente de la paleta (25+15) -->
             <Button
                 MinHeight="112"
                 MinWidth="103"

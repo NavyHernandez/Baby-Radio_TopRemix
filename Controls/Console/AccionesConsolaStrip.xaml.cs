@@ -8,12 +8,13 @@ namespace BebeRadio.Controls.Console;
 /// <summary>
 /// Franja inferior de acciones. Los toggles van por comando al VM;
 /// Stop y páginas invocan su comando (mezcla con la paleta) + pulso.
-/// Mix titila continuo armado sin glow ni bordes (parpadeo = armado)
-/// con un único timer; Operador conserva su glow persistente.
+/// Mix y Ganancia titilan continuo armados sin glow ni bordes
+/// (parpadeo = armado) con un timer cada uno; Operador conserva su glow.
 /// </summary>
 public sealed partial class AccionesConsolaStrip : UserControl
 {
     private TitileoArmado? _titileoMix;
+    private TitileoArmado? _titileoGanancia;
 
     /// <summary>Propiedad de dependencia del ViewModel inyectado.</summary>
     public static readonly DependencyProperty ViewModelProperty =
@@ -38,21 +39,23 @@ public sealed partial class AccionesConsolaStrip : UserControl
         Unloaded += OnUnloaded;
     }
 
-    /// <summary>Anexa sombras GPU y suscribe el armado de Mix.</summary>
+    /// <summary>Anexa sombras GPU y suscribe el armado de Mix y Ganancia.</summary>
     /// <param name="sender">Este control.</param>
     /// <param name="e">Args de enrutado.</param>
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         ConsolaSombraHelper.AttachAllShadows(this);
         _titileoMix ??= new TitileoArmado(MixButton, DispatcherQueue);
+        _titileoGanancia ??= new TitileoArmado(GananciaButton, DispatcherQueue);
         if (ViewModel is not null)
         {
             ViewModel.PropertyChanged += OnAccionesCambiadas;
             _titileoMix.Sincronizar(ViewModel.IsMixArmed);
+            _titileoGanancia.Sincronizar(ViewModel.IsGananciaArmada);
         }
     }
 
-    /// <summary>Desuscribe y apaga el titileo de Mix al descargar.</summary>
+    /// <summary>Desuscribe y apaga los titileos al descargar.</summary>
     /// <param name="sender">Este control.</param>
     /// <param name="e">Args de enrutado.</param>
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -63,6 +66,40 @@ public sealed partial class AccionesConsolaStrip : UserControl
         }
 
         _titileoMix?.Apagar();
+        _titileoGanancia?.Apagar();
+    }
+
+    private bool _configAbierta;
+
+    /// <summary>Abre la ventana de ajustes (un solo vuelo).</summary>
+    /// <param name="sender">Botón Config.</param>
+    /// <param name="e">Args de enrutado.</param>
+    /// <remarks>Blindado: un fallo no cierra la app.</remarks>
+    private async void OnConfigClick(object sender, RoutedEventArgs e)
+    {
+        if (_configAbierta)
+        {
+            return;
+        }
+
+        _configAbierta = true;
+        try
+        {
+            if (sender is Button boton)
+            {
+                ConsolaSombraHelper.FlashActive(boton, DispatcherQueue);
+            }
+
+            await new ConfiguracionDialog { XamlRoot = XamlRoot }.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            BebeRadio.Support.RegistroErrores.Registrar(ex, "Acciones.Config");
+        }
+        finally
+        {
+            _configAbierta = false;
+        }
     }
 
     /// <summary>Titileo continuo armado; fijo apagado al desarmar.</summary>
@@ -70,13 +107,19 @@ public sealed partial class AccionesConsolaStrip : UserControl
     /// <param name="e">Propiedad cambiada.</param>
     private void OnAccionesCambiadas(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(AccionesConsolaViewModel.IsMixArmed)
-            || ViewModel is null)
+        if (ViewModel is null)
         {
             return;
         }
 
-        _titileoMix?.Sincronizar(ViewModel.IsMixArmed);
+        if (e.PropertyName == nameof(AccionesConsolaViewModel.IsMixArmed))
+        {
+            _titileoMix?.Sincronizar(ViewModel.IsMixArmed);
+        }
+        else if (e.PropertyName == nameof(AccionesConsolaViewModel.IsGananciaArmada))
+        {
+            _titileoGanancia?.Sincronizar(ViewModel.IsGananciaArmada);
+        }
     }
 
     /// <summary>Pulso de glow en botones de consola (feedback).</summary>

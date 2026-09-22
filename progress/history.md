@@ -224,3 +224,109 @@ Cada vez que se cierra una feature, su resumen se añade aquí. No edites entrad
 - Instalador local v0.1.1 pendiente de prueba en instalada + upload a Releases con orden del owner.
 
 ---
+## 2026-09-21 — Ayuda: Mi cuenta sin QR/chat + Soporte con WhatsApp real (feature 11)
+
+1. **ContactoInfo**: `WhatsAppNumero = "593982311600"` (internacional, sin '+' ni espacios); `QrSoportePath` → `Assets/SupportQr.jpeg`; se elimina `QrUsuarioPath` (sin uso). `ChatUrl` = `https://wa.me/593982311600?text=...`.
+2. **csproj**: `Assets/SupportQr.jpeg` como `Content` con `CopyToOutputDirectory=PreserveNewest` (viaja al instalador Velopack).
+3. **UsuarioDialog**: sin marco de QR ni botón de chat; solo alias + Guardar + web; pie `© Derechos reservados por GH Dev Company` (`TextSecondary` 11, `AutomationProperties.Name` en español).
+4. **SoporteDialog**: se elimina la rama "WhatsApp pendiente (sin número)" (el número ya existe); se conserva el fallback de QR como red de seguridad.
+5. **Updater/CI (misma sesión)**: `publish.ps1` con `--publish` (vpk dejaba la release como borrador → la app nunca veía el update) y `exit 1` si falta token; secret `GH_TOKEN` verificado; release **v0.1.2** publicada en GitHub con `--merge` idempotente.
+6. **VS DEP1560**: causa = perfil `Baby Radio (Package)` (deploy MSIX sobre app unpackaged). `Properties/launchSettings.json` deja solo `Baby Radio (Unpackaged)`; `EnableWinAppRunSupport=false` en el csproj.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `Assets/SupportQr.jpeg` copiado a `bin/.../Assets/`.
+- `progress/feature_list.json`: feature 11 en done.
+
+---
+## 2026-09-21 — Buscar actualizaciones honesto + puntito en Acerca de (features 24–25)
+
+1. **Consulta verificable**: `ResultadoActualizacion` suma `ConsultaOk` + `Detalle`; `ComprobarAsync` distingue `NotInstalledException` (copia no instalada), `HttpRequestException` (sin red) y genérica, cada una con log propio. `AcercaDialog` muestra 3 estados: motivo real, al día con hora de consulta a GitHub, o descarga-aplica.
+2. **Aviso**: `CategoriasRailViewModel` suma `HayActualizacion` + `VersionActualizacion` y `ComprobarActualizacionAsync` blindado; icono Info en `Grid` 20×20 con `Ellipse` 8 px `StateOnAir` + `Storyboard` de pulso + tooltip con versión; chequeo diferido 8 s en `OnLoaded`.
+3. Verificado: `dotnet build` 0/0; desde `bin/` informa copia no instalada (antes mentía "al día"); sin red no hay punto ni fallos.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: features 24 y 25 en done.
+
+---
+## 2026-09-21 — Arrastrar Lista → Paleta con guardado + fix de brillo (features 26–27)
+
+1. **Drag**: `Support/FormatosArrastre.EntradaCola` (formato privado con `FilePath`); `ColaList` con `CanDragItems` + `OnColaDragStarting` (solo audio real); `OnQueueDrop` ignora el formato propio (sin duplicados al reordenar); `OnCartDragOver/Drop` aceptan el formato y encaminan por `SoltarAudio` (persiste en JSON).
+2. **Brillo**: al cargar, el cart re-templaba y nacía sin sombra GPU (más plano/brillante); el re-anexado solo se armaba al cambiar categoría/página (confirmado: al volver se normalizaba). Nuevo `RearmarSombras()` en drop (2 rutas), `OnCargarAudioClick` y `OnLimpiarCartClick`.
+3. Verificado: `dotnet build` 0/0; cart cargado persiste al reabrir e iguala brillo sin cambiar de categoría.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: features 26 y 27 en done.
+
+---
+## 2026-09-21 — Ganancia con ducking (feature 28)
+
+1. **Toggle**: `IsGananciaArmada` + `ToggleGanancia` + `TitileoArmado` propio (espejo de Mix); hooks `GananciaActiva`/`ColaSonando` en `Paleta` (+A/B) cableados en `ConsolaViewModel`; eliminado el gancho muerto `AlPedirGanancia`.
+2. **Ducking**: con armada + cola sonando, `Disparar` atenúa la música −6 dB (`AtenuacionColaDb`) con etapa maestra en vivo en `MotorAudio` (`FijarMaestro`); restaura a 1.0 al terminar la última voz, en `Stop` o si el arranque falla. Hallazgo: subir dB al efecto no servía (voces recortadas a 1.0, slots a 0 dB).
+3. Verificado: `dotnet build` 0/0. Pendiente prueba manual con audio real (música baja, efecto domina, retoma sola).
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: feature 28 en done.
+
+---
+## 2026-09-21 — Config + transición en Siguiente (feature 29)
+
+1. **Ajustes**: `ConsolaConfiguracion` suma `TransicionSiguienteActivada` (default true) + `TransicionSiguienteSegundos` (default 5); `ConfiguracionViewModel` (carga/guarda inmediato, valida 3/5/7, puente `TransicionIndice`); `ConfiguracionDialog` (`ToggleSwitch` + `RadioButtons` 3/5/7); tira y panel operador abren el diálogo (eliminado el gancho muerto `AlPedirConfiguracion`).
+2. **Transición**: `MotorAudio` suma etapa compuesta (maestro × transición) + `TransicionAsync` (~20 Hz, cancelable); `Next` rampa-avanza con guard anti-doble y cancela en `Stop`/`Previous`/fin natural; `Abrir` restablece transición a 1.
+3. **Incidente WMC9999**: borrar `AbrirConfiguracionCommand` rompió un `x:Bind` en `OperadorConsolaPanel.xaml:83` y el compilador XAML colapsó con error genérico (sus satélites de recursos faltan en esta máquina). Lección: ante WMC9999, listar TODOS los errores (suele haber `WMC0001/WMC0010/CS` ocultos) y `grep x:Bind` antes de borrar miembros del VM. Bisección documentada en sesión.
+4. Verificado: `dotnet build` 0/0 tras el fix. Pendiente prueba manual (rampa 3/5/7 s, OFF = corte, Stop a mitad).
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: feature 29 en done.
+
+---
+## 2026-09-22 — Mini-pantalla 3×2 + PlayerBar compacto 60/40 (feature 30)
+
+1. **Display trasplantado**: `MiniPantallaControl` nuevo (título+reloj / artista o restante + alias firma Segoe Script, marquee heredado, reloj 1 s, DP `Reproductor`) sobre la cabecera de la lista; el restante ocupa el lugar de artista ausente ("Archivo local" ya no se muestra).
+2. **PlayerBar compacto**: fuera display, reloj y marquee (~120 líneas menos); una fila 60/40 con transporte repartido (pads 52/play 60, spacing 4 centrado) + progreso y VU estirado con fondo `BackgroundPanel` fusionado.
+3. Nota: se probaron variantes de mini-onda en vivo y se revirtieron a petición (no constituyen feature).
+4. Verificado: `dotnet build` 0/0; display y transporte vivos y sincronizados.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: feature 30 en done.
+
+---
+## 2026-09-22 — Paleta 50 + guía vacía + portable al riel (feature 31)
+
+1. **50 slots**: `SlotsPorCategoria` 40→50 (páginas 25+25; guardados 0-39 intactos, 40-49 nacen vacíos); carts `MinHeight` 81 con filas 1fr (se adaptan a pantalla).
+2. **Guía vacía**: hint de arrastre al fondo de la caja solo con `ColaVacia` (nueva prop fijada en `RefreshSummary`).
+3. **Sin header**: fuera "Paleta:" e icono portable del panel; limpiados DP `MostrarEncabezado`, evento y handlers muertos en paleta/banco/operador; exportar/importar junto a Acerca de en el riel con evento propio (la shell recarga igual).
+4. Verificado: `dotnet build` 0/0; brillo parejo vía `RearmarSombras`.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: feature 31 en done.
+
+---
+## 2026-09-22 — Confirmar cierre con música + release CI (features 32–33)
+
+1. **Cierre**: `MainWindow` intercepta `AppWindow.Closing` (WinAppSDK 2.2 no tiene deferral: cancela en síncrono y dialoga después, flag anti-loop); `ContentDialog` solo con `Reproductor.IsPlaying`; en silencio cierra directo; blindado con log. Funciona en operador.
+2. **Release**: secret `GH_TOKEN` verificado; `publish.ps1` con `--publish` + `--merge` y `exit 1` sin token; **v0.1.2 pública** con assets Velopack; `launchSettings` solo Unpackaged + `EnableWinAppRunSupport=false` (fix DEP1560).
+3. Verificado: `dotnet build` 0/0; release visible en GitHub; F5 sin DEP1560.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: features 32 y 33 en done.
+
+---
+## 2026-09-22 — Marquee siempre + datos en roaming (feature 34)
+
+1. **Marquee**: corre con overflow en cualquier estado (sonando/pausa/detenido) + re-evaluación post-layout (si la primera medida fue 0 nunca arrancaba) + espera 0.9 s; tooltip con el título completo.
+2. **Datos**: `%LOCALAPPDATA%\BabyRadio` es la raíz de instalación de Velopack (sobrevive updates en la práctica, pero se borra al desinstalar — docs oficiales). `ConsolaStore.CarpetaDatos()` ahora es `%APPDATA%\BabyRadio` con migración única best-effort de los 3 archivos desde la ubicación vieja.
+3. Verificado: `dotnet build` 0/0. Release v0.1.3 en camino con estos cambios.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: feature 34 en done.
+
+---

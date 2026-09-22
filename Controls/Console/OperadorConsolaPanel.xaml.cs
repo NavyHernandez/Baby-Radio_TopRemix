@@ -45,8 +45,6 @@ public sealed partial class OperadorConsolaPanel : UserControl
         BancoB.PideGestionarCategorias += FlujoGestionarDisparado;
         BancoA.PideNuevaCategoria += FlujoNuevaDisparado;
         BancoB.PideNuevaCategoria += FlujoNuevaDisparado;
-        BancoA.ConfiguracionImportada += OnImportada;
-        BancoB.ConfiguracionImportada += OnImportada;
     }
 
     /// <summary>Anexa sombras GPU y engancha el titileo de Mix al cargar.</summary>
@@ -132,6 +130,37 @@ public sealed partial class OperadorConsolaPanel : UserControl
         }
     }
 
+    /// <summary>Abre la ventana de ajustes (sin reentrancia).</summary>
+    /// <param name="sender">Botón Config.</param>
+    /// <param name="e">Args de enrutado.</param>
+    /// <remarks>Blindado: un fallo no cierra la app.</remarks>
+    private async void OnConfigClick(object sender, RoutedEventArgs e)
+    {
+        if (_dialogoAbierto)
+        {
+            return;
+        }
+
+        _dialogoAbierto = true;
+        try
+        {
+            if (sender is Button boton)
+            {
+                ConsolaSombraHelper.FlashActive(boton, DispatcherQueue);
+            }
+
+            await new ConfiguracionDialog { XamlRoot = XamlRoot }.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "Operador.Config");
+        }
+        finally
+        {
+            _dialogoAbierto = false;
+        }
+    }
+
     /// <summary>Abre el gestor desde la tira (sin reentrancia).</summary>
     /// <param name="sender">Botón categorías.</param>
     /// <param name="e">Args de enrutado.</param>
@@ -153,13 +182,6 @@ public sealed partial class OperadorConsolaPanel : UserControl
         {
             _ = FlujoNuevaAsync();
         }
-    }
-
-    /// <summary>Recarga todo tras importar y resincroniza los bancos.</summary>
-    private void OnImportada()
-    {
-        Consola?.RecargarTodo();
-        ResincronizarBancos();
     }
 
     /// <summary>Flujo del gestor (toggles, orden, editar, eliminar, nueva).</summary>

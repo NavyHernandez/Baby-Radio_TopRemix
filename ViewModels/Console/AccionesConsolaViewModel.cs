@@ -6,9 +6,8 @@ namespace BebeRadio.ViewModels.Console;
 /// <summary>
 /// Franja inferior de 7 acciones aluminio
 /// (Config · Operador · Mix · Ganancia · Stop · Arriba · Abajo).
-/// Los toggles viven aquí; las acciones de mezcla (detener, mover,
-/// configurar, ganancia) se inyectan como ganchos desde
-/// <see cref="ConsolaViewModel"/> para cruzar partes sin acoplar vistas.
+/// Los toggles viven aquí (la tira abre Config directo); detener y páginas
+/// se inyectan como ganchos desde <see cref="ConsolaViewModel"/>.
 /// </summary>
 public sealed partial class AccionesConsolaViewModel : ObservableObject
 {
@@ -20,19 +19,17 @@ public sealed partial class AccionesConsolaViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsMixArmed { get; set; }
 
-    /// <summary>Gancho: abrir configuración (Fase 2: diálogo real).</summary>
-    public Action? AlPedirConfiguracion { get; set; }
-
-    /// <summary>Gancho: ajustar ganancia (Fase 2: fader real).</summary>
-    public Action? AlPedirGanancia { get; set; }
+    /// <summary>Ganancia armada: prioriza efectos sobre la cola (titila).</summary>
+    [ObservableProperty]
+    public partial bool IsGananciaArmada { get; set; }
 
     /// <summary>Gancho: detener efectos de paleta (Stop solo corta la mezcla).</summary>
     public Action? AlPedirDetener { get; set; }
 
-    /// <summary>Gancho: página anterior de la paleta (20+20).</summary>
+    /// <summary>Gancho: página anterior de la paleta (25+15).</summary>
     public Action? AlPedirSubir { get; set; }
 
-    /// <summary>Gancho: página siguiente de la paleta (20+20).</summary>
+    /// <summary>Gancho: página siguiente de la paleta (25+15).</summary>
     public Action? AlPedirBajar { get; set; }
 
     /// <summary>Alterna el Modo Operador (toggle con glow).</summary>
@@ -43,15 +40,9 @@ public sealed partial class AccionesConsolaViewModel : ObservableObject
     [RelayCommand]
     private void ToggleMix() => IsMixArmed = !IsMixArmed;
 
-    /// <summary>Solicita abrir la configuración.</summary>
-    /// <remarks>Fase 1: solo pulso visual; Fase 2: abre el diálogo.</remarks>
+    /// <summary>Alterna la ganancia armada (toggle con titileo).</summary>
     [RelayCommand]
-    private void AbrirConfiguracion() => AlPedirConfiguracion?.Invoke();
-
-    /// <summary>Solicita ajustar la ganancia.</summary>
-    /// <remarks>Fase 1: solo pulso visual; Fase 2: fader del motor.</remarks>
-    [RelayCommand]
-    private void AjustarGanancia() => AlPedirGanancia?.Invoke();
+    private void ToggleGanancia() => IsGananciaArmada = !IsGananciaArmada;
 
     /// <summary>Solicita detener los efectos que suenan.</summary>
     /// <remarks>El orquestador lo mezcla con la paleta (no toca la cola).</remarks>

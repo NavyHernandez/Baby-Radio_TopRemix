@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    ConfiguracionDialog — ajustes de la app (popup moderno).
+    Toggle de transición + duración 3/5/7 s con persistencia inmediata.
+-->
+<ContentDialog
+    x:Class="BebeRadio.Controls.Console.ConfiguracionDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Configuración"
+    CloseButtonText="Cerrar"
+    DefaultButton="Close"
+    Style="{StaticResource BebeDialogStyle}">
+
+    <ContentDialog.Resources>
+        <CornerRadius x:Key="ControlCornerRadius">10,10,10,10</CornerRadius>
+    </ContentDialog.Resources>
+
+    <!-- Ajustes: transición suave al pasar a Siguiente -->
+    <StackPanel Spacing="12" MinWidth="300" HorizontalAlignment="Stretch">
+        <ToggleSwitch
+            Header="Transición suave al pasar a Siguiente"
+            AutomationProperties.Name="Transición suave al pasar a Siguiente"
+            IsOn="{x:Bind ViewModel.TransicionActivada, Mode=TwoWay}"
+            OnContent="Activado"
+            OffContent="Desactivado" />
+        <RadioButtons
+            Header="Duración de la transición"
+            AutomationProperties.Name="Duración de la transición en segundos"
+            IsEnabled="{x:Bind ViewModel.TransicionActivada, Mode=OneWay}"
+            SelectedIndex="{x:Bind ViewModel.TransicionIndice, Mode=TwoWay}">
+            <RadioButton
+                AutomationProperties.Name="Transición de 3 segundos"
+                Content="3 segundos" />
+            <RadioButton
+                AutomationProperties.Name="Transición de 5 segundos"
+                Content="5 segundos" />
+            <RadioButton
+                AutomationProperties.Name="Transición de 7 segundos"
+                Content="7 segundos" />
+        </RadioButtons>
+        <TextBlock
+            FontSize="11"
+            Foreground="{StaticResource TextSecondary}"
+            Text="Al pulsar Siguiente, el audio baja suavemente antes de avanzar. Los cambios se guardan solos."
+            TextWrapping="Wrap" />
+    </StackPanel>
+</ContentDialog>

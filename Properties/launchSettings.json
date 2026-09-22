@@ -1,8 +1,5 @@
 {
   "profiles": {
-    "Baby Radio (Package)": {
-      "commandName": "MsixPackage"
-    },
     "Baby Radio (Unpackaged)": {
       "commandName": "Project"
     }

@@ -10,7 +10,7 @@ using Microsoft.UI.Dispatching;
 namespace BebeRadio.ViewModels.Console;
 
 /// <summary>
-/// Paleta de 40 slots por categoría (2 páginas de 20, 5×4 por vista).
+/// Paleta de 50 slots por categoría (25+25, 5×5 por vista).
 /// Sin mocks: todo slot arranca vacío y elegante; solo lo guardado en JSON
 /// o arrastrado se ve lleno. Escucha a <see cref="CategoriasRailViewModel"/>.
 /// El clic dispara por el <see cref="MezcladorEfectos"/> (polifonía con Mix,
@@ -18,13 +18,13 @@ namespace BebeRadio.ViewModels.Console;
 /// </summary>
 public sealed partial class PaletaViewModel : ObservableObject
 {
-    /// <summary>Slots por categoría (2 páginas).</summary>
-    public const int SlotsPorCategoria = 40;
+    /// <summary>Slots por categoría (2 páginas de 25).</summary>
+    public const int SlotsPorCategoria = 50;
 
-    /// <summary>Carts visibles por página en modo normal (5 columnas × 4 filas).</summary>
-    public const int ItemsPorPagina = 20;
+    /// <summary>Carts visibles por página en modo normal (5 columnas × 5 filas).</summary>
+    public const int ItemsPorPagina = 25;
 
-    /// <summary>Carts por página de esta instancia (20 normal, 30 en operador).</summary>
+    /// <summary>Carts por página de esta instancia (25 normal, 30 en operador).</summary>
     /// <remarks>Fijarlo antes del primer despliegue; la última página puede quedar parcial.</remarks>
     public int TamanoPagina { get; set; } = ItemsPorPagina;
 
@@ -54,6 +54,15 @@ public sealed partial class PaletaViewModel : ObservableObject
     /// <summary>Gancho: true si Mix está armado (mezcla) o false (exclusivo).</summary>
     public Func<bool>? MezclaActiva { get; set; }
 
+    /// <summary>Atenuación de la cola en dB mientras suena un efecto priorizado.</summary>
+    public const double AtenuacionColaDb = -6.0;
+
+    /// <summary>Gancho del orquestador: Ganancia armada (priorizar efectos).</summary>
+    public Func<bool>? GananciaActiva { get; set; }
+
+    /// <summary>Gancho del orquestador: la cola está sonando.</summary>
+    public Func<bool>? ColaSonando { get; set; }
+
     /// <summary>Gancho del orquestador: la paleta cambió (refrescar conteos).</summary>
     public event Action? PaletaCambio;
 
@@ -72,7 +81,7 @@ public sealed partial class PaletaViewModel : ObservableObject
     {
         _mezclador.VozTerminada += OnVozTerminada;
 
-        // Pool estable: los 40 slots y los visibles se crean una sola vez y se
+        // Pool estable: los 50 slots y los visibles se crean una sola vez y se
         // mutan en el lugar. Así cambiar de categoría no recrea contenedores de UI.
         for (var i = 0; i < SlotsPorCategoria; i++)
         {
@@ -89,7 +98,7 @@ public sealed partial class PaletaViewModel : ObservableObject
     /// <param name="cola">Cola del dispatcher de la vista.</param>
     public void UsarHiloUi(DispatcherQueue cola) => _hiloUi = cola;
 
-    /// <summary>Reconstruye la paleta (40 slots mutados en el lugar).</summary>
+    /// <summary>Reconstruye la paleta (50 slots mutados en el lugar).</summary>
     /// <param name="category">Categoría desplegada.</param>
     /// <remarks>
     /// Vuelve a la página 1 sin cortar efectos (siguen y retoman titileo).
@@ -196,6 +205,8 @@ public sealed partial class PaletaViewModel : ObservableObject
     /// pesada (lector + salida) corre en background y se marshala al hilo UI.
     /// Sin Mix el disparo es exclusivo (corta lo anterior); con Mix se suma
     /// hasta 6 voces. Los slots sin audio retornan false (la vista deja el pulso).
+    /// Con Ganancia armada y la cola sonando, el efecto prioriza: la cola se
+    /// atenúa (ducking) y retoma sola al terminar la última voz.
     /// Debe llamarse en el hilo UI.
     /// </remarks>
     public bool Disparar(PaletteItem item)
@@ -211,6 +222,11 @@ public sealed partial class PaletaViewModel : ObservableObject
             || !File.Exists(item.FilePath))
         {
             return false;
+        }
+
+        if (GananciaActiva?.Invoke() == true && ColaSonando?.Invoke() == true)
+        {
+            MotorAudio.Instancia.FijarMaestro(Math.Pow(10, AtenuacionColaDb / 20));
         }
 
         item.EstaSonando = true;
@@ -246,6 +262,7 @@ public sealed partial class PaletaViewModel : ObservableObject
                 if (voz is null)
                 {
                     ApagarSlot(clave.Duena, clave.Slot);
+                    RestaurarMaestroSiLibre();
                     return;
                 }
 
@@ -266,6 +283,7 @@ public sealed partial class PaletaViewModel : ObservableObject
     public void DetenerEfectos()
     {
         _mezclador.DetenerTodos();
+        MotorAudio.Instancia.FijarMaestro(1.0);
         _voces.Clear();
         lock (_puerta)
         {
@@ -292,9 +310,23 @@ public sealed partial class PaletaViewModel : ObservableObject
 
         _mezclador.Liberar(voz);
         ApagarSlot(clave.Duena, clave.Slot);
+        RestaurarMaestroSiLibre();
     }
 
-    /// <summary>Persiste los 40 slots de la paleta actual.</summary>
+    /// <summary>Restaura el volumen de la cola si no queda voz sonando.</summary>
+    /// <remarks>Solo restaura sin voces activas ni arranques pendientes.</remarks>
+    private void RestaurarMaestroSiLibre()
+    {
+        lock (_puerta)
+        {
+            if (_mezclador.VocesActivas == 0 && _pendientes.Count == 0)
+            {
+                MotorAudio.Instancia.FijarMaestro(1.0);
+            }
+        }
+    }
+
+    /// <summary>Persiste los 50 slots de la paleta actual.</summary>
     public void Persistir()
     {
         if (!string.IsNullOrEmpty(PropietariaActual))

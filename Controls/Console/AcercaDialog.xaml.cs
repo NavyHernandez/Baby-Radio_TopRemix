@@ -41,9 +41,16 @@ public sealed partial class AcercaDialog : ContentDialog
 
             EstadoText.Text = "Buscando en GitHub…";
             var resultado = await ActualizadorBaby.Instancia.ComprobarAsync();
+            if (!resultado.ConsultaOk)
+            {
+                EstadoText.Text = resultado.Detalle;
+                return;
+            }
+
             if (!resultado.HayActualizacion)
             {
-                EstadoText.Text = $"Estás al día (v{resultado.VersionInstalada}).";
+                var hora = resultado.ConsultadoUtc.ToLocalTime().ToString("HH:mm");
+                EstadoText.Text = $"Estás al día (consultado a GitHub v{resultado.VersionInstalada}, {hora}).";
                 return;
             }
 

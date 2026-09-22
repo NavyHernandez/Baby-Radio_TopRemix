@@ -7,114 +7,33 @@
     xmlns:fluent="using:FluentIcons.WinUI">
 
     <!--
-        Barra de reproductor (~140px). Dirige la cola con audio real.
-        Transporte + progreso/tiempos + VU estéreo debajo (junto al progreso).
+        Barra de reproductor compacta: 60 % transporte (pads 52, play 60,
+        repartidos) + progreso, 40 % VU estéreo. Fondo fusionado.
+        La mini-pantalla vive sobre la lista (MiniPantallaControl).
         Iconografía solo FluentIcons.WinUI; tiempos en Cascadia Mono.
     -->
-    <UserControl.Resources>
-        <controls:TextoAVisibilidadConverter x:Key="AvisoVisibilidad" />
-    </UserControl.Resources>
     <Border
-        Background="{StaticResource VuTrack}"
+        Background="{StaticResource BackgroundPanel}"
         BorderBrush="{StaticResource BorderSubtle}"
         BorderThickness="1"
         CornerRadius="12"
         Padding="8,4">
-        <Grid ColumnSpacing="16">
+        <!-- 60 % transporte + progreso · 40 % vúmetro -->
+        <Grid ColumnSpacing="8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="280" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="6*" />
+                <ColumnDefinition Width="4*" />
             </Grid.ColumnDefinitions>
 
-            <!-- Mini-pantalla digital en grilla (mapa de celdas):
-                 F1: A1·B1 libres + C1 = reloj+fecha (der/sup) ·
-                 F2: título span 3 (marquee) · F3: artista span 3 ·
-                 F4: avisos span 3 (solo si hay) · LIBRES: A1, B1. -->
-            <Border
-                Grid.Column="0"
-                Padding="8,4"
-                VerticalAlignment="Stretch"
-                Background="{StaticResource VuTrack}"
-                BorderBrush="{StaticResource BorderSubtle}"
-                BorderThickness="1"
-                CornerRadius="6">
-                <Grid ColumnSpacing="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Rectangle
-                        Grid.ColumnSpan="3"
-                        Height="1"
-                        VerticalAlignment="Top"
-                        Fill="{StaticResource PressedOverlay}" />
-                    <!-- Fila 1: aire (A1, B1 libres) + reloj C1 -->
-                    <StackPanel Grid.Row="0" Grid.Column="2" Spacing="0" VerticalAlignment="Top">
-                        <TextBlock
-                            x:Name="RelojTexto"
-                            HorizontalAlignment="Right"
-                            AutomationProperties.Name="Reloj"
-                            FontFamily="Consolas"
-                            FontSize="15"
-                            FontWeight="SemiBold"
-                            Foreground="{StaticResource DigitalAmber}"
-                            Text="00:00:00" />
-                        <TextBlock
-                            x:Name="FechaTexto"
-                            HorizontalAlignment="Right"
-                            FontFamily="Consolas"
-                            FontSize="10"
-                            Foreground="{StaticResource TextSecondary}"
-                            Text="01/01" />
-                    </StackPanel>
-                    <!-- Fila 2: título a todo el ancho (marquee) -->
-                    <Grid x:Name="TituloContenedor" Grid.Row="1" Grid.ColumnSpan="3">
-                        <TextBlock
-                            x:Name="TituloTexto"
-                            FontSize="13"
-                            FontWeight="SemiBold"
-                            Foreground="{StaticResource DigitalAmber}"
-                            Text="{x:Bind ViewModel.Title, Mode=OneWay}"
-                            TextTrimming="CharacterEllipsis">
-                            <TextBlock.RenderTransform>
-                                <TranslateTransform x:Name="TituloDesplazamiento" />
-                            </TextBlock.RenderTransform>
-                        </TextBlock>
-                    </Grid>
-                    <!-- Fila 3: artista a todo el ancho -->
-                    <TextBlock
-                        Grid.Row="2"
-                        Grid.ColumnSpan="3"
-                        FontSize="11"
-                        Foreground="{StaticResource DisplaySecondary}"
-                        Text="{x:Bind ViewModel.Artist, Mode=OneWay}"
-                        TextTrimming="CharacterEllipsis" />
-                    <!-- Fila 4: avisos (colapsada si vacía) -->
-                    <TextBlock
-                        Grid.Row="3"
-                        Grid.ColumnSpan="3"
-                        FontSize="10"
-                        Foreground="{StaticResource CategoryCommercial}"
-                        Text="{x:Bind ViewModel.Aviso, Mode=OneWay}"
-                        TextTrimming="CharacterEllipsis"
-                        Visibility="{x:Bind ViewModel.Aviso, Mode=OneWay, Converter={StaticResource AvisoVisibilidad}}" />
-                </Grid>
-            </Border>
-
-            <!-- Zona centro: transporte (5 pads) + progreso/tiempos + VU debajo -->
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+            <!-- Transporte (6 pads) + progreso/tiempos -->
+            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="4">
                 <!-- Previous · Play/Pausa (60px) · Stop · Next · Repeat 🔁 · StopAtEnd 🏁
                      (toggles armados con glow: repetir re-empieza; 🏁 detiene al terminar) -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4">
                     <Button
                         x:Name="PreviousButton"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
                         AutomationProperties.Name="Pista anterior"
                         Command="{x:Bind ViewModel.PreviousCommand}"
                         Style="{StaticResource BebeTransportButtonStyle}">
@@ -124,6 +43,8 @@
                         x:Name="PlayButton"
                         Width="60"
                         Height="60"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
                         AutomationProperties.Name="Reproducir o pausar"
                         Command="{x:Bind ViewModel.TogglePlayCommand}"
                         Style="{StaticResource BebeTransportButtonStyle}">
@@ -141,6 +62,8 @@
                     </Button>
                     <Button
                         x:Name="StopButton"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
                         AutomationProperties.Name="Detener"
                         Command="{x:Bind ViewModel.StopCommand}"
                         Click="OnStopClick"
@@ -149,6 +72,8 @@
                     </Button>
                     <Button
                         x:Name="NextButton"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
                         AutomationProperties.Name="Siguiente pista"
                         Command="{x:Bind ViewModel.NextCommand}"
                         Style="{StaticResource BebeTransportButtonStyle}">
@@ -156,6 +81,8 @@
                     </Button>
                     <Button
                         x:Name="RepeatButton"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
                         AutomationProperties.Name="Repetir pista actual"
                         Command="{x:Bind ViewModel.ToggleRepeatCommand}"
                         controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryMusic}"
@@ -164,6 +91,8 @@
                     </Button>
                     <Button
                         x:Name="StopAtEndButton"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
                         AutomationProperties.Name="Detener al terminar la pista"
                         Command="{x:Bind ViewModel.ToggleStopAtEndCommand}"
                         controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryCommercial}"
@@ -199,9 +128,13 @@
                         Foreground="{StaticResource TextSecondary}"
                         Text="{x:Bind ViewModel.RemainingText, Mode=OneWay}" />
                 </Grid>
-                <!-- VU estéreo (200×32): lo alimenta el VM a 20 Hz vía code-behind -->
-                <controls:VuMeterControl x:Name="VuMeter" HorizontalAlignment="Stretch" />
             </StackPanel>
+            <!-- VU estéreo compacto (lo alimenta el VM a 20 Hz vía code-behind) -->
+            <controls:VuMeterControl
+                x:Name="VuMeter"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Center" />
         </Grid>
     </Border>
 </UserControl>

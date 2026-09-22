@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
     UsuarioDialog — cuenta del operador (popup moderno).
-    QR + chat directo + web. Sin QR en Assets muestra fallback.
+    Alias + Guardar + web + pie de derechos (GH Dev Company).
 -->
 <ContentDialog
     x:Class="BebeRadio.Controls.Console.UsuarioDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:fluent="using:FluentIcons.WinUI"
     Title="Mi cuenta"
     CloseButtonText="Cerrar"
     DefaultButton="Close"
@@ -17,7 +16,7 @@
         <CornerRadius x:Key="ControlCornerRadius">10,10,10,10</CornerRadius>
     </ContentDialog.Resources>
 
-    <!-- Cuenta: operador + QR + acciones -->
+    <!-- Cuenta: operador + acciones + derechos -->
     <StackPanel Spacing="10" MinWidth="300" HorizontalAlignment="Center">
         <TextBox
             x:Name="AliasBox"
@@ -29,44 +28,17 @@
             AutomationProperties.Name="Guardar perfil"
             Click="OnGuardarPerfilClick"
             Content="Guardar" />
-        <Border
-            HorizontalAlignment="Center"
-            Padding="8"
-            Background="{StaticResource BackgroundCard}"
-            BorderBrush="{StaticResource BorderSubtle}"
-            BorderThickness="1"
-            CornerRadius="12">
-            <Grid Width="140" Height="140">
-                <Image x:Name="QrImage" ImageFailed="OnQrFailed" Stretch="Uniform" />
-                <StackPanel
-                    x:Name="QrFallback"
-                    Spacing="4"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Visibility="Collapsed">
-                    <fluent:SymbolIcon
-                        HorizontalAlignment="Center"
-                        FontSize="40"
-                        Foreground="{StaticResource TextDisabled}"
-                        Symbol="QrCode" />
-                    <TextBlock
-                        FontSize="11"
-                        Foreground="{StaticResource TextDisabled}"
-                        Text="QR pendiente" />
-                </StackPanel>
-            </Grid>
-        </Border>
-        <Button
-            x:Name="ChatBoton"
-            HorizontalAlignment="Stretch"
-            AutomationProperties.Name="Abrir chat directo"
-            Click="OnChatClick"
-            Content="Abrir chat" />
         <HyperlinkButton
             HorizontalAlignment="Center"
             AutomationProperties.Name="Abrir web Top Remix"
             Click="OnWebClick"
             Content="www.top-remix.com"
             FontSize="12" />
+        <TextBlock
+            HorizontalAlignment="Center"
+            FontSize="11"
+            Foreground="{StaticResource TextSecondary}"
+            AutomationProperties.Name="Derechos reservados por GH Dev Company"
+            Text="© Derechos reservados por GH Dev Company" />
     </StackPanel>
 </ContentDialog>

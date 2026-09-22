@@ -20,7 +20,7 @@
 BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 ├── AGENTS.md                 ← este archivo (leer antes de codificar)
 ├── App.xaml(.cs)              ← fusiona Themes/*, backdrop Mica
-├── MainWindow.xaml(.cs)       ← Title fijo "Baby Radio" + fullscreen operador + RootFrame → Views/Phase1ShowcaseView
+├── MainWindow.xaml(.cs)       ← Title fijo "Baby Radio" + fullscreen operador + confirma cierre con música + RootFrame → showcase
 ├── Themes/
 │   ├── ColorPalette.xaml      ← tokens de color (Paleta A-Studio Console)
 │   └── ButtonStyles.xaml      ← BebeButtonBase físico 3D + variantes
@@ -36,9 +36,10 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 ├── ViewModels/SelectableCategory.cs ← wrapper IsSelected + TieneAudio + comando Select
 ├── ViewModels/Console/
 │   ├── ListaReproduccionViewModel.cs ← cola + EN VIVO + AddFiles con cue + ReproduccionPedida + análisis en background
-│   ├── PaletaViewModel.cs             ← pool estable 40 + TamanoPagina (20/30) + mezcla + voces + Sonando
+│   ├── PaletaViewModel.cs             ← pool estable 50 + TamanoPagina (25/30) + mezcla + voces + Sonando
 │   ├── CategoriasRailViewModel.cs     ← categorías + 7 fijas + conteos + riel vacío→null
-│   ├── AccionesConsolaViewModel.cs    ← toggles + ganchos (Stop→efectos, ▲▼→páginas)
+│   ├── AccionesConsolaViewModel.cs    ← toggles (Operador/Mix/Ganancia) + ganchos (Stop→efectos, ▲▼→páginas)
+│   ├── ConfiguracionViewModel.cs      ← ajustes Config (transición Siguiente 3/5/7, guardado inmediato)
 │   ├── OpcionCategoria.cs             ← opción de categoría por banco (operador)
 │   ├── SelectorCategoriaViewModel.cs  ← selección independiente por banco (operador)
 │   └── ConsolaViewModel.cs            ← orquestador + bancos operador (PaletaA/B, SelectorA/B)
@@ -49,6 +50,7 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 │   ├── ServicioAnalisisAudio.cs ← worker único BelowNormal + Channel dedup
 │   ├── ValidadorRecursos.cs     ← valida tokens de paleta al arrancar
 │   ├── MockQueueBuilder.cs      ← cola inicial de 12 entradas
+│   ├── FormatosArrastre.cs      ← formato privado Lista→Paleta (FilePath)
 │   └── RegistroErrores.cs       ← log baby-radio-error.log (blindaje diálogos)
 ├── Controls/
 │   ├── BebeButtonHelper.cs    ← attached props (CategoryColor, IsCircular) + sombra GPU + EnsureShadow
@@ -56,15 +58,17 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 │   ├── CategoryBrushConverter.cs ← clave de token → brush (para {Binding})
 │   ├── BoolToOpacityConverter.cs ← bool → opacidad (selección, EN VIVO)
 │   ├── VuMeterControl.xaml(.cs) ← Win2D estéreo, inercia + peak-hold
-│   ├── PlayerBar.xaml(.cs)    ← transporte×6 + display 3×3 (reloj C1, título A2, artista B2) + VU
+│   ├── PlayerBar.xaml(.cs)    ← transporte×6 + progreso + VU compacto der (display en MiniPantalla)
+│   ├── MiniPantallaControl.xaml(.cs) ← display 3×2 alto (título+reloj / artista o restante + alias firma) + marquee + reloj
 │   ├── ColorALetraConverter.cs ← color → tinta adaptativa (claro/oscuro)
 │   ├── SlotAEstiloConverter.cs  ← TieneAudio → estilo macizo/claro
 │   └── Console/
 │       ├── ConsolaSombraHelper.cs       ← flash 300ms + sombras + FindDescendants
-│       ├── ListaReproduccionPanel.xaml(.cs) ← izq: cola + drag&drop (inyecta su VM)
-│       ├── PaletaPanel.xaml(.cs)            ← centro: header opcional + carts + guía + titileo
-│       ├── CategoriasRailPanel.xaml(.cs)    ← der: 7 esqueleto/color 3D + IniciarCreacionAsync (inyecta su VM)
-│       └── AccionesConsolaStrip.xaml(.cs)   ← abajo: 7 aluminio + Mix titila (TitileoArmado)
+│       ├── ListaReproduccionPanel.xaml(.cs) ← izq: mini-pantalla + cola + drag&drop (inyecta VM + Reproductor)
+│       ├── PaletaPanel.xaml(.cs)            ← centro: 50 carts 81px + guía + titileo (sin header)
+│       ├── CategoriasRailPanel.xaml(.cs)    ← der: 7 esqueleto/color 3D + ayuda (cuenta/soporte/acerca/portable) + aviso update
+│       └── AccionesConsolaStrip.xaml(.cs)   ← abajo: 7 aluminio + Mix/Ganancia titilan (abre Config)
+│       ├── ConfiguracionDialog.xaml(.cs)    ← ajustes: toggle transición + 3/5/7 s (inyecta su VM)
 │       ├── TitileoArmado.cs                 ← titileo de armado reutilizable
 │       ├── BancoOperadorPanel.xaml(.cs)     ← banco 5×N + selector + páginas propias
 │       └── OperadorConsolaPanel.xaml(.cs)   ← modo operador: 2 bancos + tira + salir + Esc
@@ -224,7 +228,7 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | Archivo | Hace |
 |---|---|
 | `App.xaml(.cs)` | Recursos globales + apertura de `MainWindow` |
-| `MainWindow.xaml(.cs)` | Title fijo + fullscreen operador + `RootFrame` → showcase |
+| `MainWindow.xaml(.cs)` | Title fijo + fullscreen operador + confirma cierre con música + `RootFrame` → showcase |
 | `Themes/ColorPalette.xaml` | Todos los colores/tokens + brush `AluminumTop` (único hex) |
 | `Themes/ButtonStyles.xaml` | Templates 3D: transporte×6, carts, aluminio, categoría maciza, cart claro |
 | `Controls/BebeButtonHelper.cs` | Attached props + sombra GPU + `IsActive` + `EnsureShadow` |
@@ -233,7 +237,8 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `Controls/BoolToOpacityConverter.cs` | Bool → opacidad (selección, EN VIVO) |
 | `Controls/BoolAVisibilidadConverter.cs` | Bool → visibilidad (+Invertir: fantasmas) |
 | `Controls/VuMeterControl.xaml(.cs)` | VU consola 60 fps, dB, picos + reposo (pausa canvas) |
-| `Controls/PlayerBar.xaml(.cs)` | Transporte×6 + display 3×3 + reloj + VU combinado |
+| `Controls/PlayerBar.xaml(.cs)` | Transporte×6 repartido (pads 52/play 60) + progreso 60 % + VU 40 % |
+| `Controls/MiniPantallaControl.xaml(.cs)` | Display 3×2 alto (título+reloj / artista o restante + alias) + marquee + reloj |
 | `Controls/ColorALetraConverter.cs` | Color → tinta adaptativa (+EsColorClaro) |
 | `Controls/SlotAEstiloConverter.cs` | TieneAudio → estilo macizo/claro |
 | `Models/Track.cs` + `TrackCategory.cs` | DTO + 10 categorías |
@@ -245,9 +250,10 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `ViewModels/ShowcaseViewModel.cs` | LEGADO (ver Console/ConsolaViewModel) |
 | `ViewModels/SelectableCategory.cs` | Wrapper IsSelected + TieneAudio + Icono enum + ColorFantasma |
 | `ViewModels/Console/ListaReproduccionViewModel.cs` | Cola + EN VIVO + AddFiles con cue + ReproduccionPedida + análisis en background |
-| `ViewModels/Console/PaletaViewModel.cs` | 40 slots + páginas (20/30 por `TamanoPagina`) + mezcla + voces + Sonando |
+| `ViewModels/Console/PaletaViewModel.cs` | 50 slots + páginas (25/30 por `TamanoPagina`) + mezcla + voces + Sonando |
 | `ViewModels/Console/CategoriasRailViewModel.cs` | Categorías + 7 fijas + conteos + vacío |
 | `ViewModels/Console/AccionesConsolaViewModel.cs` | Toggles + ganchos paleta |
+| `ViewModels/Console/ConfiguracionViewModel.cs` | Ajustes Config + validación 3/5/7 + guardado inmediato |
 | `ViewModels/Console/ConsolaViewModel.cs` | Orquestador + bancos operador (PaletaA/B, SelectorA/B) + salir |
 | `ViewModels/Console/OpcionCategoria.cs` | Opción de categoría por banco (operador) |
 | `ViewModels/Console/SelectorCategoriaViewModel.cs` | Selección independiente por banco (operador) |
@@ -255,8 +261,9 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `Support/VuDynamics.cs` | Escala dB + balística + picos (puro) |
 | `Support/MockLevelsProvider.cs` | Niveles mock (seno + ruido) |
 | `Services/MezcladorEfectos.cs` | Singleton 6 voces (Mix), niveles 20 Hz, latencia 80 ms |
-| `Services/MotorAudio.cs` | Salida única cola/tramo + ganancia normalización + anti-tardíos |
+| `Services/MotorAudio.cs` | Salida única cola/tramo + normalización + maestro en vivo + transición + anti-tardíos |
 | `Support/MockQueueBuilder.cs` | Lista inicial de 12 |
+| `Support/FormatosArrastre.cs` | Formato privado Lista→Paleta (FilePath) |
 | `Support/RegistroErrores.cs` | Log + trazas (blindaje diálogos y motor) |
 | `Support/AudioFileInspector.cs` | Metadatos de arrastrados (TagLibSharp) |
 | `Support/AnalizadorLoudness.cs` | LUFS BS.1770 (48k, filtros-K, gating) |
@@ -266,11 +273,12 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `Support/TemaConsola.cs` | Tema único oscuro + alias + `Cambio` |
 | `Support/ValidadorRecursos.cs` | Valida tokens de paleta al arrancar |
 | `Controls/Console/ConsolaSombraHelper.cs` | Flash 300ms + sombras + FindDescendants |
-| `Controls/Console/ListaReproduccionPanel.xaml(.cs)` | Izq: cola + drag&drop (inyecta su VM) |
-| `Controls/Console/PaletaPanel.xaml(.cs)` | Centro: header opcional + carts + guía + titileo + medición layout |
+| `Controls/Console/ListaReproduccionPanel.xaml(.cs)` | Izq: mini-pantalla + cola + drag&drop (inyecta VM + Reproductor) |
+| `Controls/Console/PaletaPanel.xaml(.cs)` | Centro: 50 carts 81px + guía + titileo + medición layout (sin header) |
 | `Controls/Console/OndaEfectoControl.xaml(.cs)` | Onda blindada + cues + pre-escucha (no pausa cola) |
-| `Controls/Console/CategoriasRailPanel.xaml(.cs)` | Der: 7 esqueleto/color 3D + crear (inyecta su VM) |
-| `Controls/Console/AccionesConsolaStrip.xaml(.cs)` | Abajo: 7 aluminio 112×103, iconos 26 relieve + Mix titila |
+| `Controls/Console/CategoriasRailPanel.xaml(.cs)` | Der: 7 esqueleto/color 3D + crear + ayuda/portable + aviso update |
+| `Controls/Console/AccionesConsolaStrip.xaml(.cs)` | Abajo: 7 aluminio + Mix/Ganancia titilan (abre Config) |
+| `Controls/Console/ConfiguracionDialog.xaml(.cs)` | Ajustes: toggle transición + 3/5/7 s (inyecta su VM) |
 | `Controls/Console/TitileoArmado.cs` | Titileo de armado reutilizable |
 | `Controls/Console/BancoOperadorPanel.xaml(.cs)` | Banco 5×N + selector + páginas propias |
 | `Controls/Console/OperadorConsolaPanel.xaml(.cs)` | Modo operador: 2 bancos + tira + salir + Esc |
