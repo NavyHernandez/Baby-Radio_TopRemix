@@ -45,7 +45,7 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 │   └── ConsolaViewModel.cs            ← orquestador + bancos operador (PaletaA/B, SelectorA/B)
 ├── Support/
 │   ├── AudioFileInspector.cs    ← metadatos de arrastrados (TagLibSharp)
-│   ├── IconoVentana.cs          ← icono ventana/taskbar vía HICON (JPG + fallback ico)
+│   ├── IconoVentana.cs          ← icono ventana/taskbar vía HICON (PNG transparente 16/32 + fallback ico)
 │   ├── AnalizadorLoudness.cs    ← LUFS BS.1770 (48k, filtros-K, gating)
 │   ├── LoudnessCache.cs         ← caché baby-radio-loudness.json + ganancia ±12dB
 │   ├── ServicioAnalisisAudio.cs ← worker único BelowNormal + Channel dedup
@@ -272,7 +272,7 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `Support/Telemetria/TelemetriaFirebase.cs` | ID único + IP/país + PATCH por arranque |
 | `Support/RegistroErrores.cs` | Log + trazas (blindaje diálogos y motor) |
 | `Support/AudioFileInspector.cs` | Metadatos de arrastrados (TagLibSharp) |
-| `Support/IconoVentana.cs` | Icono ventana/taskbar vía HICON (JPG + fallback ico) |
+| `Support/IconoVentana.cs` | Icono ventana/taskbar vía HICON (PNG transparente 16/32 + fallback ico) |
 | `Support/AnalizadorLoudness.cs` | LUFS BS.1770 (48k, filtros-K, gating) |
 | `Support/LoudnessCache.cs` | Caché baby-radio-loudness.json + ganancia ±12dB |
 | `Support/ServicioAnalisisAudio.cs` | Worker único BelowNormal + Channel dedup |

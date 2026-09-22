@@ -332,7 +332,7 @@ Cada vez que se cierra una feature, su resumen se añade aquí. No edites entrad
 ---
 ## 2026-09-22 — Telemetría Firestore (feature 35)
 
-1. **Modular sin SDK**: `Support/Telemetria/` con `DatosInstalacion` (DTO + JSON REST) + `TelemetriaFirebase` (`HttpClient` compartido, GUID en `ConsolaConfiguracion.IdInstalacion`, IP + país en 1 GET a ipapi.co, PATCH con `updateMask` que preserva `primeraVez`).
+1. **Modular sin SDK**: `Support/Telemetria/` con `DatosInstalacion` (DTO + JSON REST) + `TelemetriaFirebase` (`HttpClient` compartido con User-Agent —ipapi.co daba 429 sin él—, GUID en `ConsolaConfiguracion.IdInstalacion`, IP + país en 1 GET, `commit` con update + incremento atómico de `aperturas` que preserva `primeraVez`).
 2. **Disparo**: fire-and-forget en `App.OnLaunched` tras activar la ventana; todo best-effort con log, jamás bloquea el arranque.
 3. **Pendiente del owner**: pegar las reglas de `instalaciones` en consola Firebase (ya entregadas); sin reglas todo da `PERMISSION_DENIED` (registrado en log, sin afectar la app).
 4. Verificado: `dotnet build` 0/0. Falta prueba manual contra el proyecto `baby-radio-3bfbb`.
@@ -354,3 +354,15 @@ Cada vez que se cierra una feature, su resumen se añade aquí. No edites entrad
 - `progress/feature_list.json`: feature 36 en done.
 
 ---
+
+---
+## 2026-09-22 — Icono PNG con transparencia en ventana y taskbar (feature 37)
+
+1. **PNG nuevo**: `Assets/bbradioLogo-removebg-preview.png` (493×506 RGBA) como icono de `TitleBar.IconSource` + `IconoVentana` (recorte cuadrado centrado, HICON 16/32 px en alta calidad, fallback al JPG legado y al `.ico`).
+2. **FIX taskbar**: mostraba el logo viejo porque `AppWindow.SetIcon` y el `.exe` usan el `.ico` embebido (`ApplicationIcon`); `Assets/AppIcon.ico` regenerado multi-tamaño (16–256 con alfa) desde el PNG. Release `BabyRadio.exe` v0.1.5 publicado en `bin/x64/Release/.../win-x64/publish/` (con el PNG en `Assets/`).
+3. Lista de reproducción y marca de agua intactas. Si un anclado conserva el icono viejo: desanclar/reanclar (caché de Windows).
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `dotnet publish -c Release -r win-x64`: exe + PNG presentes en `publish/`.
+- `progress/feature_list.json`: feature 37 en done.

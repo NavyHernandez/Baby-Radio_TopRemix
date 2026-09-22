@@ -1,7 +1,9 @@
+using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace BebeRadio.Support.Telemetria;
 
@@ -26,6 +28,11 @@ public static class TelemetriaFirebase
 
     /// <summary>Cliente compartido (un socket reutilizado, sin fugas).</summary>
     private static readonly HttpClient Http = new();
+
+    /// <summary>Fija el User-Agent (ipapi.co limita sin él con 429).</summary>
+    static TelemetriaFirebase() =>
+        Http.DefaultRequestHeaders.UserAgent.ParseAdd(
+            $"BabyRadio/{ActualizadorBaby.VersionInstalada}");
 
     /// <summary>Reporta la instalación (crea ID si es la primera vez).</summary>
     /// <remarks>Llamar sin await desde el arranque; nunca lanza.</remarks>
@@ -86,6 +93,8 @@ public static class TelemetriaFirebase
             using var respuesta = await Http.GetAsync(UrlGeoIp, token);
             if (!respuesta.IsSuccessStatusCode)
             {
+                RegistroErrores.Traza(
+                    "Telemetria.GeoIp", $"HTTP {(int)respuesta.StatusCode} en ipapi.co");
                 return (string.Empty, string.Empty, string.Empty);
             }
 
@@ -112,27 +121,62 @@ public static class TelemetriaFirebase
             ? (valor.GetString() ?? string.Empty).Trim()
             : string.Empty;
 
-    /// <summary>Crea o actualiza el documento (PATCH = upsert con updateMask).</summary>
+    /// <summary>
+    /// Crea o actualiza el documento e incrementa <c>aperturas</c> en una sola
+    /// llamada (<c>commit</c> con update + transform atómico del servidor).
+    /// </summary>
     /// <param name="datos">Registro a enviar.</param>
     /// <param name="esPrimeraVez">Incluye primeraVez en la máscara.</param>
     /// <param name="token">Cancelación.</param>
+    /// <remarks>El contador sube aunque falle la geo o se borre el JSON local.</remarks>
     private static async Task EnviarAsync(DatosInstalacion datos, bool esPrimeraVez, CancellationToken token)
     {
-        var mascara = string.Join(
-            "&",
+        var recurso = NombreDocumento(datos.Id);
+        var mascara = new JsonArray(
             DatosInstalacion.CamposActualizables
                 .Append(esPrimeraVez ? "primeraVez" : string.Empty)
                 .Where(campo => !string.IsNullOrEmpty(campo))
-                .Select(campo => $"updateMask.fieldPaths={campo}"));
-        using var contenido = new StringContent(
-            datos.AJsonFirestore(esPrimeraVez), Encoding.UTF8, "application/json");
-        using var respuesta = await Http.PatchAsync($"{UrlDocumento(datos.Id)}&{mascara}", contenido, token);
+                .Select(campo => (JsonNode)JsonValue.Create(campo)!)
+                .ToArray());
+        var cuerpo = new JsonObject
+        {
+            ["writes"] = new JsonArray(
+                new JsonObject
+                {
+                    ["update"] = new JsonObject
+                    {
+                        ["name"] = recurso,
+                        ["fields"] = datos.ACamposFirestore(esPrimeraVez),
+                    },
+                    ["updateMask"] = new JsonObject { ["fieldPaths"] = mascara },
+                },
+                new JsonObject
+                {
+                    ["transform"] = new JsonObject
+                    {
+                        ["document"] = recurso,
+                        ["fieldTransforms"] = new JsonArray(
+                            new JsonObject
+                            {
+                                ["fieldPath"] = "aperturas",
+                                ["increment"] = new JsonObject { ["integerValue"] = "1" },
+                            }),
+                    },
+                }),
+        };
+        using var contenido = new StringContent(cuerpo.ToJsonString(), Encoding.UTF8, "application/json");
+        using var respuesta = await Http.PostAsync(UrlCommit(), contenido, token);
         respuesta.EnsureSuccessStatusCode();
     }
 
-    /// <summary>URL REST del documento (con API key).</summary>
+    /// <summary>Nombre de recurso del documento.</summary>
     /// <param name="id">ID de instalación.</param>
+    /// <returns>Ruta projects/.../documents/instalaciones/id.</returns>
+    private static string NombreDocumento(string id) =>
+        $"projects/{ProjectId}/databases/(default)/documents/{Coleccion}/{Uri.EscapeDataString(id)}";
+
+    /// <summary>URL del commit (con API key).</summary>
     /// <returns>URL completa.</returns>
-    private static string UrlDocumento(string id) =>
-        $"https://firestore.googleapis.com/v1/projects/{ProjectId}/databases/(default)/documents/{Coleccion}/{Uri.EscapeDataString(id)}?key={ApiKey}";
+    private static string UrlCommit() =>
+        $"https://firestore.googleapis.com/v1/projects/{ProjectId}/databases/(default)/documents:commit?key={ApiKey}";
 }

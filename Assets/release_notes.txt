@@ -1,3 +1,9 @@
+Baby Radio v0.1.5 — icono nuevo con transparencia en ventana y taskbar.
+
+- Nuevo logo (PNG con fondo transparente) en la ventana, la taskbar y Alt+Tab, en tamaño 16/32 px nítido.
+- FIX: la taskbar mostraba el logo viejo porque usaba el .ico embebido; AppIcon.ico regenerado multi-tamaño (16–256) desde el PNG nuevo.
+- Lista de reproducción y marca de agua sin cambios.
+
 Baby Radio v0.1.4 — logo en ventana y taskbar.
 
 - Logo de la emisora en la ventana, taskbar y Alt+Tab (instalador sin cambios).

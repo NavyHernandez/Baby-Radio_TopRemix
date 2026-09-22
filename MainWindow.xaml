@@ -24,11 +24,11 @@
         </Grid.RowDefinitions>
 
         <!-- Barra de título personalizada (contenido extendido debajo).
-             Icono JPG del logo; el icono de ventana/taskbar lo fija
+             Icono PNG con transparencia; el icono de ventana/taskbar lo fija
              IconoVentana en el code-behind. -->
         <TitleBar x:Name="AppTitleBar" Title="Baby Radio">
             <TitleBar.IconSource>
-                <ImageIconSource ImageSource="Assets/bbradioLogo.jpg" />
+                <ImageIconSource ImageSource="Assets/bbradioLogo-removebg-preview.png" />
             </TitleBar.IconSource>
         </TitleBar>
 

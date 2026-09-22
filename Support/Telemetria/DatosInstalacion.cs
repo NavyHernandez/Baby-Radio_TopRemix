@@ -32,10 +32,10 @@ public sealed record DatosInstalacion(
         "version", "so", "arquitectura", "ip", "pais", "codigoPais", "ultimaVez",
     ];
 
-    /// <summary>Arma el cuerpo JSON en formato Firestore REST.</summary>
+    /// <summary>Arma los campos JSON en formato Firestore REST.</summary>
     /// <param name="incluirPrimeraVez">True solo al crear el documento.</param>
-    /// <returns>JSON listo para el PATCH.</returns>
-    public string AJsonFirestore(bool incluirPrimeraVez)
+    /// <returns>Objeto fields (reutilizable en update y commit).</returns>
+    public JsonObject ACamposFirestore(bool incluirPrimeraVez)
     {
         var campos = new JsonObject
         {
@@ -52,7 +52,7 @@ public sealed record DatosInstalacion(
             campos["primeraVez"] = Marca(PrimeraVezUtc);
         }
 
-        return new JsonObject { ["fields"] = campos }.ToJsonString();
+        return campos;
     }
 
     /// <summary>Valor string de Firestore (nunca null).</summary>

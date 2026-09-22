@@ -458,9 +458,9 @@
       "id": 35,
       "name": "telemetria-firebase",
       "title": "Telemetría Firestore (versión, SO, IP, país)",
-      "description": "Support/Telemetria modular sin SDK (HttpClient + REST): DatosInstalacion (DTO + JSON Firestore) + TelemetriaFirebase (GUID en ConsolaConfiguracion.IdInstalacion, IP/país vía ipapi.co en 1 llamada, PATCH con updateMask que preserva primeraVez); disparo fire-and-forget en App.OnLaunched; todo best-effort con log, jamás bloquea.",
+      "description": "Support/Telemetria modular sin SDK (HttpClient + REST): DatosInstalacion (DTO + JSON Firestore) + TelemetriaFirebase (GUID en ConsolaConfiguracion.IdInstalacion, IP/país vía ipapi.co con User-Agent, commit con update + incremento atómico de aperturas que preserva primeraVez); disparo fire-and-forget en App.OnLaunched; todo best-effort con log, jamás bloquea.",
       "acceptance": [
-        "Primer arranque crea ID + documento; siguientes actualizan versión/SO/IP/país/ultimaVez",
+        "Primer arranque crea ID + documento; siguientes actualizan versión/SO/IP/país/ultimaVez y aperturas +1",
         "Sin red no falla ni demora el arranque",
         "Documento visible en consola Firestore",
         "dotnet build sin warnings ni errores"
@@ -476,6 +476,19 @@
         "Logo visible en titlebar, taskbar y Alt+Tab",
         "Sin JPG o con fallo, cae al ico sin romper el arranque",
         "Instalador y tiles sin cambios",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 37,
+      "name": "icono-png-transparente-taskbar",
+      "title": "Icono PNG con transparencia en ventana y taskbar",
+      "description": "TitleBar.IconSource + IconoVentana al PNG bbradioLogo-removebg-preview.png (RGBA): recorte cuadrado centrado y HICON 16/32 px en alta calidad; AppIcon.ico regenerado multi-tamaño (16-256) desde el PNG para que la taskbar, el .exe y los accesos directos usen el logo nuevo. Lista de reproducción intacta.",
+      "acceptance": [
+        "Logo nuevo con transparencia en titlebar, taskbar y Alt+Tab",
+        "Sin PNG, cae al JPG legado y luego al ico sin romper el arranque",
+        "Marca de agua de la lista sin cambios",
         "dotnet build sin warnings ni errores"
       ],
       "status": "done"
