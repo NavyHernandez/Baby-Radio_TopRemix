@@ -29,6 +29,29 @@
             HorizontalAlignment="Center"
             FontSize="12"
             Foreground="{StaticResource TextSecondary}" />
+        <Border
+            HorizontalAlignment="Center"
+            Padding="10,3"
+            Background="{StaticResource CategoryPromoWash}"
+            BorderBrush="{StaticResource CategoryPromo}"
+            BorderThickness="1"
+            CornerRadius="10"
+            AutomationProperties.Name="Edición gratuita">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <Ellipse
+                    Width="6"
+                    Height="6"
+                    VerticalAlignment="Center"
+                    Fill="{StaticResource CategoryPromo}" />
+                <TextBlock
+                    VerticalAlignment="Center"
+                    FontSize="10"
+                    FontWeight="Bold"
+                    Foreground="{StaticResource CategoryPromo}"
+                    CharacterSpacing="120"
+                    Text="VERSIÓN GRATUITA" />
+            </StackPanel>
+        </Border>
         <Button
             HorizontalAlignment="Stretch"
             AutomationProperties.Name="Buscar actualizaciones"

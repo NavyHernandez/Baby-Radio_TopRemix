@@ -45,13 +45,17 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 │   └── ConsolaViewModel.cs            ← orquestador + bancos operador (PaletaA/B, SelectorA/B)
 ├── Support/
 │   ├── AudioFileInspector.cs    ← metadatos de arrastrados (TagLibSharp)
+│   ├── IconoVentana.cs          ← icono ventana/taskbar vía HICON (JPG + fallback ico)
 │   ├── AnalizadorLoudness.cs    ← LUFS BS.1770 (48k, filtros-K, gating)
 │   ├── LoudnessCache.cs         ← caché baby-radio-loudness.json + ganancia ±12dB
 │   ├── ServicioAnalisisAudio.cs ← worker único BelowNormal + Channel dedup
 │   ├── ValidadorRecursos.cs     ← valida tokens de paleta al arrancar
 │   ├── MockQueueBuilder.cs      ← cola inicial de 12 entradas
 │   ├── FormatosArrastre.cs      ← formato privado Lista→Paleta (FilePath)
-│   └── RegistroErrores.cs       ← log baby-radio-error.log (blindaje diálogos)
+│   ├── RegistroErrores.cs       ← log baby-radio-error.log (blindaje diálogos)
+│   └── Telemetria/              ← Firebase sin SDK (HttpClient + REST)
+│       ├── DatosInstalacion.cs  ← DTO + JSON Firestore (updateMask)
+│       └── TelemetriaFirebase.cs ← ID único + IP/país + PATCH por arranque
 ├── Controls/
 │   ├── BebeButtonHelper.cs    ← attached props (CategoryColor, IsCircular) + sombra GPU + EnsureShadow
 │   ├── UniformGridPanel.cs    ← grilla uniforme 5 col + filas 1fr con alto finito
@@ -264,8 +268,11 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `Services/MotorAudio.cs` | Salida única cola/tramo + normalización + maestro en vivo + transición + anti-tardíos |
 | `Support/MockQueueBuilder.cs` | Lista inicial de 12 |
 | `Support/FormatosArrastre.cs` | Formato privado Lista→Paleta (FilePath) |
+| `Support/Telemetria/DatosInstalacion.cs` | DTO + JSON Firestore (updateMask) |
+| `Support/Telemetria/TelemetriaFirebase.cs` | ID único + IP/país + PATCH por arranque |
 | `Support/RegistroErrores.cs` | Log + trazas (blindaje diálogos y motor) |
 | `Support/AudioFileInspector.cs` | Metadatos de arrastrados (TagLibSharp) |
+| `Support/IconoVentana.cs` | Icono ventana/taskbar vía HICON (JPG + fallback ico) |
 | `Support/AnalizadorLoudness.cs` | LUFS BS.1770 (48k, filtros-K, gating) |
 | `Support/LoudnessCache.cs` | Caché baby-radio-loudness.json + ganancia ±12dB |
 | `Support/ServicioAnalisisAudio.cs` | Worker único BelowNormal + Channel dedup |

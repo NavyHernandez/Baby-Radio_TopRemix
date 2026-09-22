@@ -140,6 +140,8 @@
     <SolidColorBrush x:Key="CategoryBed" Color="{StaticResource CategoryBedColor}" />
     <SolidColorBrush x:Key="CategoryNews" Color="{StaticResource CategoryNewsColor}" />
     <SolidColorBrush x:Key="CategoryPromo" Color="{StaticResource CategoryPromoColor}" />
+    <!-- Wash promo 14 % (fondos tenues: píldora gratuita, glows de actividad) -->
+    <SolidColorBrush x:Key="CategoryPromoWash" Color="#2484CC16" />
     <SolidColorBrush x:Key="CategoryProgram" Color="{StaticResource CategoryProgramColor}" />
     <SolidColorBrush x:Key="CategoryFiller" Color="{StaticResource CategoryFillerColor}" />
 

@@ -44,5 +44,15 @@
             Foreground="{StaticResource TextSecondary}"
             Text="Al pulsar Siguiente, el audio baja suavemente antes de avanzar. Los cambios se guardan solos."
             TextWrapping="Wrap" />
+        <TextBlock
+            HorizontalAlignment="Center"
+            FontSize="11"
+            Foreground="{StaticResource TextSecondary}"
+            AutomationProperties.Name="Personalización solo en versión PRO"
+            TextAlignment="Center"
+            TextWrapping="Wrap"><Run Text="La personalización es solo en la " /><Run
+                FontWeight="SemiBold"
+                Foreground="{StaticResource CategoryPromo}"
+                Text="versión PRO" /></TextBlock>
     </StackPanel>
 </ContentDialog>

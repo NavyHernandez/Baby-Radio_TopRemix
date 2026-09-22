@@ -129,12 +129,21 @@
                         Text="{x:Bind ViewModel.RemainingText, Mode=OneWay}" />
                 </Grid>
             </StackPanel>
-            <!-- VU estéreo compacto (lo alimenta el VM a 20 Hz vía code-behind) -->
-            <controls:VuMeterControl
-                x:Name="VuMeter"
+            <!-- Web sobre el VU estéreo (lo alimenta el VM a 20 Hz vía code-behind) -->
+            <StackPanel
                 Grid.Column="1"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Center" />
+                Spacing="2"
+                VerticalAlignment="Center">
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    FontSize="10"
+                    Foreground="{StaticResource TextSecondary}"
+                    AutomationProperties.Name="Web Top Remix"
+                    Text="www.top-remix.com" />
+                <controls:VuMeterControl
+                    x:Name="VuMeter"
+                    HorizontalAlignment="Stretch" />
+            </StackPanel>
         </Grid>
     </Border>
 </UserControl>

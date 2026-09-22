@@ -330,3 +330,27 @@ Cada vez que se cierra una feature, su resumen se añade aquí. No edites entrad
 - `progress/feature_list.json`: feature 34 en done.
 
 ---
+## 2026-09-22 — Telemetría Firestore (feature 35)
+
+1. **Modular sin SDK**: `Support/Telemetria/` con `DatosInstalacion` (DTO + JSON REST) + `TelemetriaFirebase` (`HttpClient` compartido, GUID en `ConsolaConfiguracion.IdInstalacion`, IP + país en 1 GET a ipapi.co, PATCH con `updateMask` que preserva `primeraVez`).
+2. **Disparo**: fire-and-forget en `App.OnLaunched` tras activar la ventana; todo best-effort con log, jamás bloquea el arranque.
+3. **Pendiente del owner**: pegar las reglas de `instalaciones` en consola Firebase (ya entregadas); sin reglas todo da `PERMISSION_DENIED` (registrado en log, sin afectar la app).
+4. Verificado: `dotnet build` 0/0. Falta prueba manual contra el proyecto `baby-radio-3bfbb`.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: feature 35 en done.
+
+---
+## 2026-09-22 — Logo en ventana y taskbar (feature 36)
+
+1. **Solo ventana + taskbar**: `TitleBar.IconSource` a `bbradioLogo.jpg` (1091×960, casi cuadrado) + `IconoVentana` vía `Bitmap.GetHicon()` (`LoadImage` no carga JPG), con fallback silencioso al `.ico` y respaldo anclado (el `Handle` muere si el GC recoge el `Icon`).
+2. **Instalador intacto**: `.ico` de `ApplicationIcon` sin tocar; JPG declarado `Content` para que viaje en el publish.
+3. Incidente menor: `??` sobre `nint` (CS0019 tras la cascada WMC9999 habitual) corregido con comparación explícita.
+4. Verificado: `dotnet build` 0/0. Pendiente visual en ejecución.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: feature 36 en done.
+
+---

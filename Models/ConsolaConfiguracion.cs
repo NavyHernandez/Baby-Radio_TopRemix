@@ -19,6 +19,9 @@ public sealed class ConsolaConfiguracion
     /// <summary>Perfil del operador (alias + tema).</summary>
     public PerfilOperador Perfil { get; set; } = new();
 
+    /// <summary>ID único de instalación para telemetría (vacío = primera vez).</summary>
+    public string IdInstalacion { get; set; } = string.Empty;
+
     /// <summary>
     /// Transición suave al pulsar Siguiente (baja el audio antes de avanzar).
     /// </summary>

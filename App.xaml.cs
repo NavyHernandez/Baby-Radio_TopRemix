@@ -76,5 +76,8 @@ public partial class App : Application
 
         _window = new MainWindow();
         _window.Activate();
+
+        // Telemetría fire-and-forget (nunca bloquea el arranque).
+        _ = Support.Telemetria.TelemetriaFirebase.ReportarAsync();
     }
 }
