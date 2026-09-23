@@ -492,6 +492,32 @@
         "dotnet build sin warnings ni errores"
       ],
       "status": "done"
+    },
+    {
+      "id": 38,
+      "name": "titileo-next-transicion",
+      "title": "El botón Siguiente titila durante la transición suave",
+      "description": "PlayerViewModel suma TransicionEnCurso observable (true al entrar a AvanzarConTransicion, false en finally vía DispatcherQueue + en CancelarTransicion para Stop/Previous/fin natural); PlayerBar titila NextButton (opacidad 1 ↔ 0.35 cada 450 ms, igual que Repeat/Pausa) suscrito a la propiedad, con apagado en Unloaded/cambio de VM. Incidente: en Unloaded se reemplazó por error ApagarParpadeoStop, corregido (ambos apagados).",
+      "acceptance": [
+        "Siguiente con transición ON titila 3/5/7 s y se apaga al avanzar",
+        "Stop/Previous a mitad apagan el titileo",
+        "Transición OFF = corte directo sin titileo",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 39,
+      "name": "alias-en-cajitas-sin-artista",
+      "title": "Cajitas sin artista muestran el alias de la cuenta",
+      "description": "QueueEntry suma ArtistaVisible computado (artista real intacto; sentinela 'Archivo local' + alias → alias; sin alias → 'Archivo local') + ResolverArtistaVisible puro y RefrescarArtista; ListaReproduccionPanel bindea ArtistaVisible y se suscribe a TemaConsola.Cambio para refrescar al guardar en Mi cuenta. Mini-pantalla y reproductor intactos (siguen viendo el Line2 crudo).",
+      "acceptance": [
+        "mp3 sin tags + alias muestra el alias en la cajita",
+        "Sin alias mantiene 'Archivo local'; con artista no cambia",
+        "Cambiar alias en Mi cuenta refresca las cajitas sin reimportar",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
     }
   ]
 }

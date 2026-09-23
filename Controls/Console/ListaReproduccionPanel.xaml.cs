@@ -49,15 +49,40 @@ public sealed partial class ListaReproduccionPanel : UserControl
     {
         InitializeComponent();
         Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
     }
 
     private bool _confirmando;
 
-    /// <summary>Anexa sombras GPU a los botones del panel.</summary>
+    /// <summary>Anexa sombras GPU y suscribe el refresco del alias visible.</summary>
     /// <param name="sender">Este control.</param>
     /// <param name="e">Args de enrutado.</param>
-    private void OnLoaded(object sender, RoutedEventArgs e) =>
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
         ConsolaSombraHelper.AttachAllShadows(this);
+        TemaConsola.Cambio += RefrescarArtistasVisibles;
+        RefrescarArtistasVisibles();
+    }
+
+    /// <summary>Desuscribe el refresco del alias al descargar.</summary>
+    /// <param name="sender">Este control.</param>
+    /// <param name="e">Args de enrutado.</param>
+    private void OnUnloaded(object sender, RoutedEventArgs e) =>
+        TemaConsola.Cambio -= RefrescarArtistasVisibles;
+
+    /// <summary>Refresca el artista visible de cada cajita (alias de la cuenta).</summary>
+    private void RefrescarArtistasVisibles()
+    {
+        if (ViewModel is null)
+        {
+            return;
+        }
+
+        foreach (var entry in ViewModel.Queue)
+        {
+            entry.RefrescarArtista();
+        }
+    }
 
     /// <summary>Pone en vivo la entrada de cola clicada.</summary>
     /// <param name="sender">Lista de cola.</param>

@@ -1,3 +1,9 @@
+Baby Radio v0.1.6 — Siguiente titila en transición + alias en cajitas.
+
+- El botón Siguiente ahora titila mientras baja el audio en la transición suave (3, 5 o 7 s) y se apaga al avanzar.
+- Las canciones sin artista en sus etiquetas muestran tu alias de Mi cuenta en vez de "Archivo local" (si no hay alias, se mantiene "Archivo local"); al cambiar tu alias se actualizan solas.
+- Mini-pantalla y resto de la consola sin cambios.
+
 Baby Radio v0.1.5 — icono nuevo con transparencia en ventana y taskbar.
 
 - Nuevo logo (PNG con fondo transparente) en la ventana, la taskbar y Alt+Tab, en tamaño 16/32 px nítido.

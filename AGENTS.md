@@ -296,3 +296,22 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 - Una feature a la vez (`progress/feature_list.json`: `pending` → `in_progress` → `done`).
 - Cerrar feature = `dotnet build` limpio + `status: done` + apéndice en `progress/history.md` (append-only, no editar entradas viejas).
 - Lecturas >350 líneas van por `bulk_read` (plugin shunt en `.opencode/`); requiere `HF_API_KEY` del usuario y reiniciar opencode tras cambios de config.
+
+## 9. Release y subida al repositorio (OBLIGATORIO — exigido por el owner)
+
+> Cuando el owner pida "subir al repositorio", estos pasos son OBLIGATORIOS
+> y en este orden. Prohibido commitear/pushear sin haberlos completado.
+
+1. **Versionar**: subir `<Version>` en `BebeRadio.csproj`.
+2. **Generar el ejecutable release**: `.\publish.ps1 -SkipUpload`
+   (dotnet publish Release win-x64 self-contained + `vpk pack` en `releases/`).
+   Sin el `.exe`/`.nupkg` de la versión vigente en `releases/`, NO se sube.
+3. **Limpiar `releases/`**: borrar los paquetes de versiones anteriores
+   (`*-0.X.Y-*.nupkg` viejos); solo queda la versión vigente
+   (full + delta + `BabyRadio-win-Setup.exe` + `RELEASES`).
+4. **Documentar**: feature en `done` en `progress/feature_list.json` +
+   apéndice en `progress/history.md` (append-only) + entrada en
+   `Assets/release_notes.txt`.
+5. **Recién entonces**: commit en español (`vX.Y.Z: descripción`) + push.
+- El upload a GitHub Releases (`.\publish.ps1 -Token ...`) SOLO con orden
+  expresa del owner y token `GH_TOKEN` (nunca commitear el token).

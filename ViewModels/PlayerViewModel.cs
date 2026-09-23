@@ -61,6 +61,10 @@ public sealed partial class PlayerViewModel : ObservableObject
     [ObservableProperty]
     public partial bool RepeatArmed { get; set; }
 
+    /// <summary>True mientras baja el audio antes de avanzar (el Next debe titilar).</summary>
+    [ObservableProperty]
+    public partial bool TransicionEnCurso { get; set; }
+
     [ObservableProperty]
     public partial double Progress { get; set; }
 
@@ -189,6 +193,7 @@ public sealed partial class PlayerViewModel : ObservableObject
         CancelarTransicion();
         var cts = new CancellationTokenSource();
         _transicionCts = cts;
+        TransicionEnCurso = true;
         try
         {
             await _motor.TransicionAsync(0, TimeSpan.FromSeconds(segundos), cts.Token);
@@ -212,6 +217,7 @@ public sealed partial class PlayerViewModel : ObservableObject
             }
 
             cts.Dispose();
+            _colaUi.TryEnqueue(() => TransicionEnCurso = false);
         }
     }
 
@@ -221,6 +227,7 @@ public sealed partial class PlayerViewModel : ObservableObject
         _transicionCts?.Cancel();
         _transicionCts?.Dispose();
         _transicionCts = null;
+        TransicionEnCurso = false;
     }
 
     /// <summary>Lee el ajuste de transición (defaults si el JSON falla).</summary>

@@ -366,3 +366,14 @@ Cada vez que se cierra una feature, su resumen se añade aquí. No edites entrad
 - `dotnet build -c Debug`: 0 advertencias, 0 errores.
 - `dotnet publish -c Release -r win-x64`: exe + PNG presentes en `publish/`.
 - `progress/feature_list.json`: feature 37 en done.
+
+---
+## 2026-09-23 — Titileo de Siguiente en transición + alias en cajitas (features 38 y 39)
+
+1. **Titileo Next (feature 38)**: `PlayerViewModel` suma `TransicionEnCurso` observable (true al entrar a `AvanzarConTransicion`, false en `finally` vía `_colaUi` + en `CancelarTransicion` para Stop/Previous/fin natural); `PlayerBar` titila `NextButton` (opacidad 1 ↔ 0.35 cada 450 ms, igual que Repeat/Pausa) suscrito a la propiedad, con apagado en `Unloaded`/cambio de VM. Incidente: en `OnUnloaded` se reemplazó por error `ApagarParpadeoStop`, corregido (ambos apagados).
+2. **Alias en cajitas (feature 39)**: `QueueEntry` suma `ArtistaVisible` computado (artista real intacto; sentinela "Archivo local" + alias → alias; sin alias → "Archivo local") + `ResolverArtistaVisible` puro y `RefrescarArtista`; `ListaReproduccionPanel` bindea `ArtistaVisible` y se suscribe a `TemaConsola.Cambio` (refresco al guardar en Mi cuenta, desuscribe en `Unloaded`). Mini-pantalla y reproductor intactos.
+3. Release v0.1.6: `publish.ps1 -SkipUpload` + limpieza de `releases/` (solo vigente).
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: features 38 y 39 en done.

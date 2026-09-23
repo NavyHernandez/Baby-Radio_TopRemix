@@ -165,7 +165,7 @@
                                     <TextBlock
                                         FontSize="12"
                                         Foreground="{StaticResource TextSecondary}"
-                                        Text="{Binding Line2}"
+                                        Text="{Binding ArtistaVisible}"
                                         TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Spacing="3" VerticalAlignment="Center">

@@ -22,6 +22,8 @@ public sealed partial class PlayerBar : UserControl
     private bool _fasePlay;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _parpadeoRepeat;
     private bool _faseRepeat;
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _parpadeoNext;
+    private bool _faseNext;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _parpadeoStop;
     private bool _faseStop;
     private int _pasosStop;
@@ -78,6 +80,8 @@ public sealed partial class PlayerBar : UserControl
                 nuevo.PropertyChanged += barra.OnViewModelChanged;
                 barra.RefreshTransportVisual();
                 barra.RefreshParpadeo();
+                barra.RefreshRepeatBlink();
+                barra.RefreshNextBlink();
             }
         }
     }
@@ -99,6 +103,7 @@ public sealed partial class PlayerBar : UserControl
         RefreshTransportVisual();
         RefreshParpadeo();
         RefreshRepeatBlink();
+        RefreshNextBlink();
     }
 
     /// <summary>Desuscribe eventos y apaga parpadeos al descargar.</summary>
@@ -110,6 +115,7 @@ public sealed partial class PlayerBar : UserControl
         ApagarParpadeo();
         ApagarParpadeoPlay();
         ApagarParpadeoRepeat();
+        ApagarParpadeoNext();
         ApagarParpadeoStop();
     }
 
@@ -141,6 +147,10 @@ public sealed partial class PlayerBar : UserControl
         else if (e.PropertyName == nameof(PlayerViewModel.StopAtEndArmed))
         {
             RefreshParpadeo();
+        }
+        else if (e.PropertyName == nameof(PlayerViewModel.TransicionEnCurso))
+        {
+            RefreshNextBlink();
         }
     }
 
@@ -269,6 +279,47 @@ public sealed partial class PlayerBar : UserControl
         _parpadeoRepeat?.Stop();
         _parpadeoRepeat = null;
         RepeatButton.Opacity = 1;
+    }
+
+    /// <summary>Enciende o apaga el titileo según la transición suave en curso.</summary>
+    private void RefreshNextBlink()
+    {
+        if (ViewModel.TransicionEnCurso)
+        {
+            EncenderParpadeoNext();
+        }
+        else
+        {
+            ApagarParpadeoNext();
+        }
+    }
+
+    /// <summary>Parpadea Next durante la transición (opacidad 1 ↔ 0.35 cada 450 ms).</summary>
+    private void EncenderParpadeoNext()
+    {
+        if (_parpadeoNext is not null)
+        {
+            return;
+        }
+
+        _faseNext = true;
+        NextButton.Opacity = 0.35;
+        _parpadeoNext = DispatcherQueue.CreateTimer();
+        _parpadeoNext.Interval = IntervaloParpadeo;
+        _parpadeoNext.Tick += (_, _) =>
+        {
+            _faseNext = !_faseNext;
+            NextButton.Opacity = _faseNext ? 0.35 : 1;
+        };
+        _parpadeoNext.Start();
+    }
+
+    /// <summary>Apaga el titileo de Next y restaura opacidad.</summary>
+    private void ApagarParpadeoNext()
+    {
+        _parpadeoNext?.Stop();
+        _parpadeoNext = null;
+        NextButton.Opacity = 1;
     }
 
     /// <summary>Enciende o apaga el parpadeo según el armado.</summary>

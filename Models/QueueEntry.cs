@@ -15,6 +15,44 @@ public sealed partial class QueueEntry : ObservableObject
     /// <summary>Segunda línea (artista, campaña o detalle).</summary>
     public string Line2 { get; }
 
+    /// <summary>
+    /// Segunda línea visible: si el archivo no trae artista (sentinela
+    /// "Archivo local"), muestra el alias de la cuenta cuando existe.
+    /// </summary>
+    /// <remarks>Dinámico: lee el alias guardado en cada acceso.</remarks>
+    public string ArtistaVisible => ResolverArtistaVisible(Line2);
+
+    /// <summary>
+    /// Resuelve la segunda línea visible para una línea cruda y un alias.
+    /// </summary>
+    /// <param name="line2">Línea cruda de la entrada.</param>
+    /// <param name="alias">Alias de la cuenta (puede ir vacío).</param>
+    /// <returns>Artista real, alias o "Archivo local" como último fallback.</returns>
+    public static string ResolverArtistaVisible(string line2, string? alias) =>
+        line2 != AudioFileInspector.ArtistaDesconocido
+            ? line2
+            : string.IsNullOrWhiteSpace(alias)
+                ? AudioFileInspector.ArtistaDesconocido
+                : alias.Trim();
+
+    /// <summary>Resuelve con el alias guardado actualmente.</summary>
+    /// <param name="line2">Línea cruda de la entrada.</param>
+    /// <returns>Artista real, alias vigente o "Archivo local".</returns>
+    public static string ResolverArtistaVisible(string line2)
+    {
+        try
+        {
+            return ResolverArtistaVisible(line2, TemaConsola.LeerPerfil().Alias);
+        }
+        catch
+        {
+            return line2;
+        }
+    }
+
+    /// <summary>Refresca el artista visible (p. ej. al cambiar el alias en Mi cuenta).</summary>
+    public void RefrescarArtista() => OnPropertyChanged(nameof(ArtistaVisible));
+
     /// <summary>Duración (para acumulado y contadores).</summary>
     public TimeSpan Duration { get; }
 
