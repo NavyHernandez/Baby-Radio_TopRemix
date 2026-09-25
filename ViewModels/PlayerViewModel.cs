@@ -80,6 +80,144 @@ public sealed partial class PlayerViewModel : ObservableObject
     [ObservableProperty]
     public partial double LevelRight { get; set; }
 
+    /// <summary>Volumen maestro del fader total (lineal 0…1; 1 = máximo).</summary>
+    [ObservableProperty]
+    public partial double VolumenMaestro { get; set; } = 1.0;
+
+    /// <summary>True cuando el fader está muteado (volumen efectivo 0).</summary>
+    [ObservableProperty]
+    public partial bool EstaSilenciado { get; set; }
+
+    private double _volumenAntesDeMute = 1.0;
+    private bool _aplicandoVolumen;
+
+    /// <summary>Volumen maestro en 0…100 (puente TwoWay para el Slider).</summary>
+    /// <remarks>Curva cuadrática: tacto realista con más resolución abajo.</remarks>
+    public double VolumenMaestroPorciento
+    {
+        get => LinealAPorciento(VolumenMaestro);
+        set => VolumenMaestro = PorcientoALineal(value);
+    }
+
+    /// <summary>Texto del fader (p. ej. "75%" o "Mute").</summary>
+    public string TextoVolumen => EstaSilenciado ? "Mute" : $"{LinealAPorciento(VolumenMaestro):F0}%";
+
+    /// <summary>Convierte lineal 0…1 a 0…100 (raíz: compensa la curva).</summary>
+    /// <param name="lineal">Factor lineal.</param>
+    /// <returns>Porciento 0…100.</returns>
+    public static double LinealAPorciento(double lineal) =>
+        Math.Clamp(Math.Sqrt(Math.Clamp(lineal, 0, 1)) * 100, 0, 100);
+
+    /// <summary>Convierte 0…100 a lineal 0…1 (cuadrática: tacto pro).</summary>
+    /// <param name="porciento">Porciento del fader.</param>
+    /// <returns>Factor lineal.</returns>
+    public static double PorcientoALineal(double porciento)
+    {
+        var normalizado = Math.Clamp(porciento / 100, 0, 1);
+        return normalizado * normalizado;
+    }
+
+    /// <summary>Aplica y persiste el volumen al mover el fader.</summary>
+    /// <param name="value">Nuevo factor lineal.</param>
+    partial void OnVolumenMaestroChanged(double value)
+    {
+        if (_aplicandoVolumen)
+        {
+            return;
+        }
+
+        var fijado = Math.Clamp(value, 0, 1);
+        if (fijado > 0 && EstaSilenciado)
+        {
+            _aplicandoVolumen = true;
+            EstaSilenciado = false;
+            _aplicandoVolumen = false;
+        }
+
+        AplicarVolumenAFader(fijado);
+        GuardarVolumen(fijado);
+        OnPropertyChanged(nameof(VolumenMaestroPorciento));
+        OnPropertyChanged(nameof(TextoVolumen));
+    }
+
+    /// <summary>Silencia o restaura el volumen maestro (botón mute).</summary>
+    [RelayCommand]
+    private void ToggleMute()
+    {
+        _aplicandoVolumen = true;
+        try
+        {
+            if (EstaSilenciado)
+            {
+                EstaSilenciado = false;
+                VolumenMaestro = _volumenAntesDeMute <= 0 ? 1.0 : _volumenAntesDeMute;
+            }
+            else
+            {
+                _volumenAntesDeMute = VolumenMaestro <= 0 ? 1.0 : VolumenMaestro;
+                EstaSilenciado = true;
+                AplicarVolumenAFader(0);
+                OnPropertyChanged(nameof(TextoVolumen));
+                return;
+            }
+        }
+        finally
+        {
+            _aplicandoVolumen = false;
+        }
+
+        AplicarVolumenAFader(VolumenMaestro);
+        GuardarVolumen(VolumenMaestro);
+        OnPropertyChanged(nameof(VolumenMaestroPorciento));
+        OnPropertyChanged(nameof(TextoVolumen));
+    }
+
+    /// <summary>Aplica el factor a cola y efectos sin persistir.</summary>
+    /// <param name="lineal">Factor 0…1.</param>
+    private void AplicarVolumenAFader(double lineal)
+    {
+        try
+        {
+            _motor.FijarMaestroUsuario(lineal);
+            _mezcla.FijarMaestro(lineal);
+        }
+        catch
+        {
+            // Sin audio: el fader sigue en memoria.
+        }
+    }
+
+    /// <summary>Persiste el volumen en el JSON portable (best-effort).</summary>
+    /// <param name="lineal">Factor 0…1.</param>
+    private static void GuardarVolumen(double lineal)
+    {
+        try
+        {
+            var config = ConsolaStore.Cargar();
+            config.VolumenMaestro = Math.Clamp(lineal, 0, 1);
+            ConsolaStore.Guardar(config);
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "Volumen.Guardar");
+        }
+    }
+
+    /// <summary>Lee el volumen guardado (1.0 si falta o es inválido).</summary>
+    /// <returns>Factor 0…1.</returns>
+    private static double LeerVolumen()
+    {
+        try
+        {
+            var guardado = ConsolaStore.Cargar().VolumenMaestro;
+            return double.IsNaN(guardado) ? 1.0 : Math.Clamp(guardado, 0, 1);
+        }
+        catch
+        {
+            return 1.0;
+        }
+    }
+
     /// <summary>Inicializa el reproductor (ticker UI + eventos de motores).</summary>
     public PlayerViewModel()
     {
@@ -87,6 +225,16 @@ public sealed partial class PlayerViewModel : ObservableObject
         _motor.TerminadoNatural += AlTerminarNatural;
         _motor.Niveles += AlRecibirNiveles;
         _mezcla.Niveles += AlRecibirNivelesEfectos;
+        var inicial = LeerVolumen();
+        _aplicandoVolumen = true;
+        VolumenMaestro = inicial;
+        if (inicial <= 0)
+        {
+            EstaSilenciado = true;
+        }
+
+        _aplicandoVolumen = false;
+        AplicarVolumenAFader(inicial);
         _ticker = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         _ticker.Tick += (_, _) => RefrescarReloj();
         _ticker.Start();

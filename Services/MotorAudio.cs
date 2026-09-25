@@ -20,6 +20,7 @@ public sealed class MotorAudio : IDisposable
     private WaveStream? _lector;
     private VolumeSampleProvider? _volumenMaestro;
     private float _maestroLineal = 1f;
+    private float _usuarioLineal = 1f;
     private float _transicionLineal = 1f;
     private System.Threading.Timer? _parada;
     private bool _disposed;
@@ -62,6 +63,24 @@ public sealed class MotorAudio : IDisposable
         AplicarCombinado();
     }
 
+    /// <summary>Volumen de usuario del fader maestro (0…1).</summary>
+    /// <returns>Factor actual del fader.</returns>
+    public double VolumenUsuario => _usuarioLineal;
+
+    /// <summary>
+    /// Fija el volumen del fader maestro en vivo (control total de salida).
+    /// </summary>
+    /// <param name="lineal">Factor 0…1 (1 = máximo).</param>
+    /// <remarks>
+    /// Se multiplica con el ducking y la transición; no los sustituye.
+    /// Segura desde cualquier hilo (asignación atómica de float).
+    /// </remarks>
+    public void FijarMaestroUsuario(double lineal)
+    {
+        _usuarioLineal = (float)Math.Clamp(lineal, 0, 1);
+        AplicarCombinado();
+    }
+
     /// <summary>
     /// Ejecuta la transición suave hacia un destino en el tiempo pedido (rampa ~20 Hz).
     /// </summary>
@@ -90,12 +109,12 @@ public sealed class MotorAudio : IDisposable
         }
     }
 
-    /// <summary>Aplica maestro × transición al provider vigente (si hay).</summary>
+    /// <summary>Aplica usuario × maestro × transición al provider vigente (si hay).</summary>
     private void AplicarCombinado()
     {
         if (_volumenMaestro is not null)
         {
-            _volumenMaestro.Volume = Math.Clamp(_maestroLineal * _transicionLineal, 0f, 1f);
+            _volumenMaestro.Volume = Math.Clamp(_usuarioLineal * _maestroLineal * _transicionLineal, 0f, 1f);
         }
     }
 

@@ -38,6 +38,7 @@ public sealed class MezcladorEfectos
     private readonly Dictionary<Guid, Voz> _voces = new();
     private readonly Dictionary<Guid, (float Izq, float Der)> _nivelesVoces = new();
     private long _ultimoAvisoTicks;
+    private float _maestroLineal = 1f;
 
     /// <summary>Voces sonando ahora.</summary>
     public int VocesActivas
@@ -69,7 +70,13 @@ public sealed class MezcladorEfectos
 
         var id = Guid.NewGuid();
         var voz = new Voz(id, OnVozTerminada, (izq, der) => OnNivelVoz(id, izq, der));
-        if (!voz.Arrancar(path, desde, hasta, gananciaDb))
+        float maestro;
+        lock (_candado)
+        {
+            maestro = _maestroLineal;
+        }
+
+        if (!voz.Arrancar(path, desde, hasta, gananciaDb, maestro))
         {
             return null;
         }
@@ -105,6 +112,42 @@ public sealed class MezcladorEfectos
 
         voz.Silenciar();
         voz.Soltar();
+    }
+
+    /// <summary>Volumen de usuario del fader maestro (0…1).</summary>
+    /// <returns>Factor actual del fader.</returns>
+    public double VolumenUsuario
+    {
+        get
+        {
+            lock (_candado)
+            {
+                return _maestroLineal;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Fija el volumen maestro de los efectos en vivo (fader total de salida).
+    /// </summary>
+    /// <param name="lineal">Factor 0…1 (1 = máximo).</param>
+    /// <remarks>
+    /// Aplica a voces nuevas y a las que ya suenan. Hilo-seguro.
+    /// </remarks>
+    public void FijarMaestro(double lineal)
+    {
+        var fijado = (float)Math.Clamp(lineal, 0, 1);
+        List<Voz> voces;
+        lock (_candado)
+        {
+            _maestroLineal = fijado;
+            voces = _voces.Values.ToList();
+        }
+
+        foreach (var voz in voces)
+        {
+            voz.FijarMaestro(fijado);
+        }
     }
 
     /// <summary>Detiene todas las voces (botón Stop: solo efectos).</summary>
@@ -207,6 +250,7 @@ public sealed class MezcladorEfectos
     {
         private WaveOutEvent? _salida;
         private WaveStream? _lector;
+        private VolumeSampleProvider? _maestro;
         private System.Threading.Timer? _parada;
         private bool _cierreManual;
 
@@ -215,22 +259,30 @@ public sealed class MezcladorEfectos
         /// <param name="desde">Inicio del cue.</param>
         /// <param name="hasta">Auto-stop o null.</param>
         /// <param name="gananciaDb">Ganancia.</param>
+        /// <param name="maestroLineal">Volumen maestro del fader (0…1).</param>
         /// <returns>True si arrancó.</returns>
-        public bool Arrancar(string path, TimeSpan desde, TimeSpan? hasta, double gananciaDb)
+        public bool Arrancar(string path, TimeSpan desde, TimeSpan? hasta, double gananciaDb, float maestroLineal)
         {
             try
             {
                 var lector = CrearLector(path);
                 lector.CurrentTime = desde < TimeSpan.Zero ? TimeSpan.Zero : desde;
-                if (lector is AudioFileReader directo)
+
+                // Ganancia uniforme (también para MediaFoundation) + etapa maestra
+                // del fader total: multiplica sin tocar la ganancia de jugada.
+                var ganancia = new VolumeSampleProvider(lector.ToSampleProvider())
                 {
-                    directo.Volume = (float)Math.Clamp(Math.Pow(10, gananciaDb / 20), 0, 1);
-                }
+                    Volume = (float)Math.Clamp(Math.Pow(10, gananciaDb / 20), 0, 1),
+                };
+                _maestro = new VolumeSampleProvider(ganancia)
+                {
+                    Volume = Math.Clamp(maestroLineal, 0f, 1f),
+                };
 
                 // Latencia baja para disparo inmediato (80 ms: equilibrio con CPU).
                 _salida = new WaveOutEvent { DesiredLatency = 80 };
                 _salida.PlaybackStopped += (_, _) => AvisarTermino();
-                var medidor = new MedidorPicos(lector.ToSampleProvider());
+                var medidor = new MedidorPicos(_maestro);
                 medidor.Niveles += (izq, der) => alNivel(izq, der);
                 _salida.Init(medidor.ToWaveProvider());
                 _lector = lector;
@@ -248,6 +300,16 @@ public sealed class MezcladorEfectos
             {
                 Soltar();
                 return false;
+            }
+        }
+
+        /// <summary>Ajusta el maestro en vivo de esta voz.</summary>
+        /// <param name="lineal">Factor 0…1.</param>
+        public void FijarMaestro(float lineal)
+        {
+            if (_maestro is not null)
+            {
+                _maestro.Volume = Math.Clamp(lineal, 0f, 1f);
             }
         }
 
@@ -284,6 +346,7 @@ public sealed class MezcladorEfectos
             _salida = null;
             _lector?.Dispose();
             _lector = null;
+            _maestro = null;
         }
 
         /// <summary>Avisa el fin natural (manual no avisa).</summary>

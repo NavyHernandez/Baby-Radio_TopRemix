@@ -62,7 +62,8 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 │   ├── CategoryBrushConverter.cs ← clave de token → brush (para {Binding})
 │   ├── BoolToOpacityConverter.cs ← bool → opacidad (selección, EN VIVO)
 │   ├── VuMeterControl.xaml(.cs) ← Win2D estéreo, inercia + peak-hold
-│   ├── PlayerBar.xaml(.cs)    ← transporte×6 + progreso + VU compacto der (display en MiniPantalla)
+│   ├── PlayerBar.xaml(.cs)    ← transporte×6 + progreso + fader maestro/VU der (display en MiniPantalla)
+│   ├── MasterFaderControl.xaml(.cs) ← fader horizontal total + mute + % (knob aluminio, riel VuTrack)
 │   ├── MiniPantallaControl.xaml(.cs) ← display 3×2 alto (título+reloj / artista o restante + alias firma) + marquee + reloj
 │   ├── ColorALetraConverter.cs ← color → tinta adaptativa (claro/oscuro)
 │   ├── SlotAEstiloConverter.cs  ← TieneAudio → estilo macizo/claro
@@ -241,7 +242,8 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `Controls/BoolToOpacityConverter.cs` | Bool → opacidad (selección, EN VIVO) |
 | `Controls/BoolAVisibilidadConverter.cs` | Bool → visibilidad (+Invertir: fantasmas) |
 | `Controls/VuMeterControl.xaml(.cs)` | VU consola 60 fps, dB, picos + reposo (pausa canvas) |
-| `Controls/PlayerBar.xaml(.cs)` | Transporte×6 repartido (pads 52/play 60) + progreso 60 % + VU 40 % |
+| `Controls/PlayerBar.xaml(.cs)` | Transporte×6 repartido (pads 52/play 60) + progreso 60 % + fader maestro/VU 40 % |
+| `Controls/MasterFaderControl.xaml(.cs)` | Fader horizontal total + mute + % (knob aluminio, riel VuTrack) |
 | `Controls/MiniPantallaControl.xaml(.cs)` | Display 3×2 alto (título+reloj / artista o restante + alias) + marquee + reloj |
 | `Controls/ColorALetraConverter.cs` | Color → tinta adaptativa (+EsColorClaro) |
 | `Controls/SlotAEstiloConverter.cs` | TieneAudio → estilo macizo/claro |

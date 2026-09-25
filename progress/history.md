@@ -377,3 +377,41 @@ Cada vez que se cierra una feature, su resumen se añade aquí. No edites entrad
 ### Verificación
 - `dotnet build -c Debug`: 0 advertencias, 0 errores.
 - `progress/feature_list.json`: features 38 y 39 en done.
+
+## 2026-09-25 - Fader maestro horizontal (feature 40)
+1. **Fader total de salida**: nuevo `Controls/MasterFaderControl.xaml(.cs)` (riel VuTrack empotrado, knob aluminio via override local de SliderThumbStyle, mute Speaker2/SpeakerMute + % en Cascadia Mono) montado sobre VU y www.top-remix.com en `PlayerBar` (columna der Spacing 2->6, mismo Stretch que el VU).
+2. **Audio real**: `MotorAudio` suma _usuarioLineal + FijarMaestroUsuario (combinado usuario x ducking x transicion, ducking intacto); `MezcladorEfectos` suma maestro en vivo (etapa VolumeSampleProvider por voz + FijarMaestro a nuevas y activas; ganancia ahora uniforme tambien para MediaFoundation).
+3. **VM + persistencia**: `PlayerViewModel` suma VolumenMaestro lineal, puente VolumenMaestroPorciento TwoWay con curva cuadratica, ToggleMute con previo, TextoVolumen; carga/aplica al arrancar y guarda en `ConsolaConfiguracion.VolumenMaestro`.
+4. **Docs**: AGENTS.md mapa + inventario con MasterFaderControl.
+### Verificacion
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: feature 40 en done.
+
+## 2026-09-25 - Fader channel-strip clasico (feature 40)
+Restyle de `MasterFaderControl` a consola real: cap rectangular 18x30 (cuerpo BackgroundCard + filo HighlightTop, grip de 3 estrias, linea indicadora blanca, sombra BottomEdge, hundido Pressed 80ms) en override local de SliderThumbStyle; ranura oscura de 6px; escala dB serigrafiada 0/-6/-12/-20/-40 (posiciones de la curva cuadratica); pista del Slider invisible (manda el cap contra la escala, sin fill). Sin cambios de audio/VM/persistencia.
+### Verificacion
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+
+## 2026-09-25 - Crossfader Pioneer DJM (feature 40)
+Template COMPLETO del Slider (DjCrossfaderStyle): adios cromo Windows (la pista nativa SliderTrackFill era lo que delataba el Slider estandar). Ranura fresada 6px + filo de luz, cap DJM 32x22 negro mate con grips laterales y linea blanca central, anillo de foco CategoryMusic, Disabled a 0.4. Partes HorizontalThumb/TrackRect/DecreaseRect + TickBars conservadas: arrastre, clic-en-pista, flechas y UIA intactos. Sin cambios de audio/VM.
+### Verificacion
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+
+## 2026-09-25 - Fader fusionado al panel (feature 40)
+MasterFaderControl sin caja propia: fondo BackgroundPanel (igual que PlayerBar) y sin borde ni radio; solo quedan ranura + cap DJM + escala flotando sobre el panel.
+### Verificacion
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+
+## 2026-09-25 - Marca web sobre transporte (feature 40)
+www.top-remix.com movido de la columna del VU a encima de los botones del reproductor: FontSize 9, LineHeight 10 compacto, Spacing 1 (casi sin padding vertical). Columna derecha solo fader + VU.
+### Verificacion
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+
+## 2026-09-25 - Tira inferior anclada al fondo (feature 41) + release v0.1.7
+1. **Layout central**: `Views/Phase1ShowcaseView.xaml` deja el `StackPanel` (que no distribuia el alto y dejaba un hueco/recorte bajo la tira) por un `Grid` de filas `Auto / * / Auto`: `PlayerBar` (Auto), `PaletaPanel` (*, reparte el sobrante entre sus 5 filas) y `AccionesConsolaStrip` (Auto, alto de repo) anclada al borde inferior.
+2. **Release v0.1.7**: bump en `BebeRadio.csproj`, `publish.ps1 -SkipUpload` y limpieza de `releases/` (solo la version vigente).
+3. **Docs**: `Assets/release_notes.txt` con la entrada v0.1.7; `progress/feature_list.json` con la feature 41 en done.
+
+### Verificacion
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: features 40 y 41 en done.

@@ -31,4 +31,9 @@ public sealed class ConsolaConfiguracion
     /// Duración de la transición en segundos (solo 3, 5 o 7; otro valor cae a 5).
     /// </summary>
     public int TransicionSiguienteSegundos { get; set; } = 5;
+
+    /// <summary>
+    /// Volumen maestro del fader total de salida (lineal 0…1; default máximo).
+    /// </summary>
+    public double VolumenMaestro { get; set; } = 1.0;
 }

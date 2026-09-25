@@ -9,7 +9,8 @@
     <!--
         Consola Baby Radio Fase 1 (shell delgada, 3 columnas, sin scroll general):
         - Izq (320): ListaReproduccionPanel (cola + EN VIVO + drag&drop).
-        - Centro (*): PlayerBar + PaletaPanel (25 carts 5×5) + AccionesConsolaStrip (7).
+        - Centro (*): Grid Auto/*/Auto (PlayerBar + PaletaPanel 25 carts 5×5 que
+          rellena + AccionesConsolaStrip 7 anclada al fondo, alto fijo).
         - Der (176): CategoriasRailPanel (7 fijas, sincronizada con paleta).
         La mezcla vive en ConsolaViewModel (ver ViewModels/Console/):
         categoría→paleta, acciones→lista. Esta vista no contiene lógica.
@@ -28,17 +29,28 @@
             ViewModel="{x:Bind ViewModel.Lista, Mode=OneWay}"
             Reproductor="{x:Bind ViewModel.Reproductor, Mode=OneWay}" />
 
-        <!-- Parte central: reproductor + paleta + acciones -->
-        <StackPanel Grid.Column="1" Spacing="6">
+        <!-- Parte central: reproductor (Auto) + paleta que rellena (*) + tira
+             de acciones anclada al fondo (Auto); así no queda hueco abajo. -->
+        <Grid Grid.Column="1" RowSpacing="6">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
             <controls:PlayerBar
                 x:Name="Player"
+                Grid.Row="0"
                 ViewModel="{x:Bind ViewModel.Reproductor, Mode=OneWay}" />
             <console:PaletaPanel
                 x:Name="Paleta"
+                Grid.Row="1"
                 PideNuevaCategoria="OnPideNuevaCategoria"
                 ViewModel="{x:Bind ViewModel.Paleta, Mode=OneWay}" />
-            <console:AccionesConsolaStrip Margin="0,-4,0,0" ViewModel="{x:Bind ViewModel.Acciones, Mode=OneWay}" />
-        </StackPanel>
+            <console:AccionesConsolaStrip
+                Grid.Row="2"
+                Margin="0,-4,0,0"
+                ViewModel="{x:Bind ViewModel.Acciones, Mode=OneWay}" />
+        </Grid>
 
         <!-- Parte 4: riel de categorías -->
         <console:CategoriasRailPanel

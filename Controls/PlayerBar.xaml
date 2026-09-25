@@ -26,9 +26,20 @@
             </Grid.ColumnDefinitions>
 
             <!-- Transporte (6 pads) + progreso/tiempos -->
-            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="4">
+            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="1">
+                <!-- Marca web compacta (sin padding vertical: no roba espacio) -->
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    Margin="0"
+                    Padding="0"
+                    FontSize="9"
+                    Foreground="{StaticResource TextSecondary}"
+                    LineHeight="10"
+                    LineStackingStrategy="BlockLineHeight"
+                    AutomationProperties.Name="Web Top Remix"
+                    Text="www.top-remix.com" />
                 <!-- Previous · Play/Pausa (60px) · Stop · Next · Repeat 🔁 · StopAtEnd 🏁
-                     (toggles armados con glow: repetir re-empieza; 🏁 detiene al terminar) -->
+                      (toggles armados con glow: repetir re-empieza; 🏁 detiene al terminar) -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4">
                     <Button
                         x:Name="PreviousButton"
@@ -129,17 +140,14 @@
                         Text="{x:Bind ViewModel.RemainingText, Mode=OneWay}" />
                 </Grid>
             </StackPanel>
-            <!-- Web sobre el VU estéreo (lo alimenta el VM a 20 Hz vía code-behind) -->
+            <!-- Fader maestro + VU estéreo (el VU lo alimenta el VM a 20 Hz vía code-behind) -->
             <StackPanel
                 Grid.Column="1"
-                Spacing="2"
+                Spacing="4"
                 VerticalAlignment="Center">
-                <TextBlock
-                    HorizontalAlignment="Center"
-                    FontSize="10"
-                    Foreground="{StaticResource TextSecondary}"
-                    AutomationProperties.Name="Web Top Remix"
-                    Text="www.top-remix.com" />
+                <controls:MasterFaderControl
+                    HorizontalAlignment="Stretch"
+                    ViewModel="{x:Bind ViewModel, Mode=OneWay}" />
                 <controls:VuMeterControl
                     x:Name="VuMeter"
                     HorizontalAlignment="Stretch" />

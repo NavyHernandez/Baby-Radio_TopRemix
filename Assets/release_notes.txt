@@ -1,3 +1,9 @@
+Baby Radio v0.1.7 — fader de volumen maestro + marca web reubicada.
+
+- NUEVO fader horizontal de volumen maestro sobre el VU: ajusta en vivo la música y los efectos, con mute y porcentaje; recuerda tu volumen al reiniciar.
+- www.top-remix.com ahora se muestra encima de los controles del reproductor.
+- La barra de acciones inferior queda fijada al fondo, sin dejar espacio vacío al redimensionar la ventana.
+
 Baby Radio v0.1.6 — Siguiente titila en transición + alias en cajitas.
 
 - El botón Siguiente ahora titila mientras baja el audio en la transición suave (3, 5 o 7 s) y se apaga al avanzar.

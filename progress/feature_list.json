@@ -518,6 +518,32 @@
         "dotnet build sin warnings ni errores"
       ],
       "status": "done"
+    },
+    {
+      "id": 40,
+      "name": "fader-maestro",
+      "title": "Fader maestro horizontal sobre el VU",
+      "description": "MasterFaderControl (knob aluminio, riel VuTrack, mute + porciento) sobre VU y www.top-remix.com en PlayerBar; volumen total de cola (MotorAudio usuario x ducking x transicion) y efectos (MezcladorEfectos maestro en vivo); curva cuadratica + persistencia VolumenMaestro en ConsolaStore.",
+      "acceptance": [
+        "Fader ocupa el ancho del VU y VU/texto bajan",
+        "Mueve cola y efectos en vivo sin romper ducking Ganancia",
+        "Mute restaura previo y volumen persiste al reiniciar",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 41,
+      "name": "tira-inferior-anclada",
+      "title": "Tira de acciones anclada al fondo",
+      "description": "Phase1ShowcaseView central pasa de StackPanel a Grid Auto/*/Auto: PlayerBar (Auto), PaletaPanel (*, reparte el sobrante entre sus 5 filas) y AccionesConsolaStrip (Auto, alto de repo) pegada al borde inferior. Elimina el hueco vacio que quedaba bajo la tira al redimensionar (StackPanel no distribuia el alto).",
+      "acceptance": [
+        "La tira de acciones queda siempre al fondo, sin hueco ni recorte",
+        "La paleta absorbe el espacio sobrante sin cambiar su contenido",
+        "Fader y www.top-remix.com intactos",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
     }
   ]
 }
