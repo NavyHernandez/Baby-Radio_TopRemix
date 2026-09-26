@@ -20,7 +20,10 @@
         PlayerViewModel (curva cuadrática + persistencia).
     -->
     <UserControl.Resources>
-        <!-- Crossfader DJ: template total, sin pista nativa (local al control). -->
+        <!-- Crossfader DJ: template total, sin pista nativa (local al control).
+             Respeta la estructura del template nativo (3 columnas + thumb en la
+             central): es lo que le permite al Slider desplazar el cap en todo
+             el ancho según Value. Partes por nombre conservadas. -->
         <Style x:Key="DjCrossfaderStyle" TargetType="Slider">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Template">
@@ -70,10 +73,21 @@
                                 </VisualStateGroup>
                             </VisualStateManager.VisualStateGroups>
 
-                            <!-- Plantilla horizontal: la única usada (fader maestro). -->
+                            <!-- Plantilla horizontal: Grid de 3 columnas como el template
+                                 nativo (decremento / cap / resto). El motor del Slider
+                                 desplaza el cap redimensionando las columnas laterales
+                                 según Value; sin columnas el thumb quedaba clavado. -->
                             <Grid x:Name="HorizontalTemplate" MinHeight="32">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
                                 <!-- Ranura fresada en la placa + filo de luz -->
-                                <StackPanel VerticalAlignment="Center">
+                                <StackPanel
+                                    Grid.Column="0"
+                                    Grid.ColumnSpan="3"
+                                    VerticalAlignment="Center">
                                     <Border
                                         Height="6"
                                         Background="{StaticResource BottomEdge}"
@@ -89,6 +103,8 @@
                                 <!-- Anillo de foco para teclado (flechas + Tab) -->
                                 <Border
                                     x:Name="FocoRanura"
+                                    Grid.Column="0"
+                                    Grid.ColumnSpan="3"
                                     Height="12"
                                     VerticalAlignment="Center"
                                     BorderBrush="{StaticResource CategoryMusic}"
@@ -97,10 +113,15 @@
                                     IsHitTestVisible="False"
                                     Opacity="0" />
                                 <!-- Medida de pista (invisible): el Slider calcula aquí -->
-                                <Border x:Name="HorizontalTrackRect" Background="Transparent" />
+                                <Border
+                                    x:Name="HorizontalTrackRect"
+                                    Grid.Column="0"
+                                    Grid.ColumnSpan="3"
+                                    Background="Transparent" />
                                 <!-- Sin fill (mixer real: manda el cap contra la escala) -->
                                 <Rectangle
                                     x:Name="HorizontalDecreaseRect"
+                                    Grid.Column="0"
                                     Height="6"
                                     HorizontalAlignment="Left"
                                     VerticalAlignment="Center"
@@ -108,19 +129,26 @@
                                 <!-- TickBars exigidos por el Slider (ocultos) -->
                                 <TickBar
                                     x:Name="TopTickBar"
+                                    Grid.Column="0"
+                                    Grid.ColumnSpan="3"
                                     Fill="Transparent"
                                     Visibility="Collapsed" />
                                 <TickBar
                                     x:Name="HorizontalInlineTickBar"
+                                    Grid.Column="0"
+                                    Grid.ColumnSpan="3"
                                     Fill="Transparent"
                                     Visibility="Collapsed" />
                                 <TickBar
                                     x:Name="BottomTickBar"
+                                    Grid.Column="0"
+                                    Grid.ColumnSpan="3"
                                     Fill="Transparent"
                                     Visibility="Collapsed" />
-                                <!-- Cap crossfader Pioneer DJM -->
+                                <!-- Cap crossfader Pioneer DJM (celda central: el motor lo desplaza con las columnas) -->
                                 <Thumb
                                     x:Name="HorizontalThumb"
+                                    Grid.Column="1"
                                     Width="32"
                                     Height="22"
                                     VerticalAlignment="Center"

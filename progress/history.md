@@ -415,3 +415,12 @@ www.top-remix.com movido de la columna del VU a encima de los botones del reprod
 ### Verificacion
 - `dotnet build -c Debug`: 0 advertencias, 0 errores.
 - `progress/feature_list.json`: features 40 y 41 en done.
+
+## 2026-09-26 - Fader visible en todo el ancho + paleta sin costuras (features 42-43) + release v0.1.8
+1. **Fader (feature 42)**: el cap DJM quedaba estático/centrado/anclado aunque el volumen cambiaba. Causa doble: el template `DjCrossfaderStyle` era un `Grid` de 1 celda (el motor del `Slider` posiciona el thumb con columnas y no tenía dónde aplicarlo) + `OnVolumenMaestroChanged` persistía el JSON completo en el hilo UI en cada tick y re-notificaba el porciento. Fix: `HorizontalTemplate` con 3 columnas nativas (`Auto/Auto/*`, thumb en la central, ranura/pista abarcando todo); sin re-notify de `VolumenMaestroPorciento` en el drag; guardado con debounce 400 ms en background (`ProgramarGuardadoVolumen`); `ToggleMute` cancela el debounce y persiste inmediato.
+2. **Paleta (feature 43)**: costuras entre filas en pantallas grandes (muescas del radio 4 + filetes por alturas fraccionarias según DPI). Fix: `UseLayoutRounding="True"` + `BackgroundCard` en el `UniformGridPanel` de `PaletaPanel` (aplica a normal y operador por reutilización). Sin cambios de layout, botones ni lógica.
+3. **Release v0.1.8**: bump en `BebeRadio.csproj`, `publish.ps1 -SkipUpload` (full + delta 0.1.7→0.1.8 + `BabyRadio-win-Setup.exe` + `RELEASES`) y limpieza de `releases/` (solo la versión vigente).
+4. **Docs**: `Assets/release_notes.txt` con la entrada v0.1.8; `progress/feature_list.json` con las features 42 y 43 en done.
+### Verificacion
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `publish.ps1 -SkipUpload`: paquete 0.1.8 OK (full + delta + Setup + RELEASES).

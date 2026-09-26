@@ -1,3 +1,9 @@
+Baby Radio v0.1.8 — fader visible en todo el ancho + paleta sin costuras.
+
+- FIX: el cap del fader maestro ahora se desplaza de izquierda a derecha en todo su recorrido (antes se quedaba fijo aunque el volumen sí cambiaba); el porcentaje, el mute y el volumen guardado siguen igual.
+- FIX: en pantallas grandes ya no se ven rayas o espacios entre las filas de la paleta (normal y operador); los carts llenan el alto disponible.
+- Paletas, categorías, botones y todo lo demás sin cambios.
+
 Baby Radio v0.1.7 — fader de volumen maestro + marca web reubicada.
 
 - NUEVO fader horizontal de volumen maestro sobre el VU: ajusta en vivo la música y los efectos, con mute y porcentaje; recuerda tu volumen al reiniciar.

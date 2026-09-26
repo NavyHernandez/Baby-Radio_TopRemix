@@ -28,7 +28,10 @@
         <ItemsControl x:Name="PaletteList" ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <controls:UniformGridPanel Columns="5" />
+                    <controls:UniformGridPanel
+                        Columns="5"
+                        Background="{StaticResource BackgroundCard}"
+                        UseLayoutRounding="True" />
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>

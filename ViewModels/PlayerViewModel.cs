@@ -90,6 +90,7 @@ public sealed partial class PlayerViewModel : ObservableObject
 
     private double _volumenAntesDeMute = 1.0;
     private bool _aplicandoVolumen;
+    private CancellationTokenSource? _guardadoVolumenCts;
 
     /// <summary>Volumen maestro en 0…100 (puente TwoWay para el Slider).</summary>
     /// <remarks>Curva cuadrática: tacto realista con más resolución abajo.</remarks>
@@ -119,6 +120,12 @@ public sealed partial class PlayerViewModel : ObservableObject
 
     /// <summary>Aplica y persiste el volumen al mover el fader.</summary>
     /// <param name="value">Nuevo factor lineal.</param>
+    /// <remarks>
+    /// No notifica <see cref="VolumenMaestroPorciento"/> a propósito: el
+    /// <c>Slider</c> TwoWay ya conserva su visual durante el arrastre y
+    /// re-notificarlo en cada tick recoherce el thumb (se quedaba estático).
+    /// El guardado va con debounce para no bloquear el hilo UI con I/O.
+    /// </remarks>
     partial void OnVolumenMaestroChanged(double value)
     {
         if (_aplicandoVolumen)
@@ -135,8 +142,7 @@ public sealed partial class PlayerViewModel : ObservableObject
         }
 
         AplicarVolumenAFader(fijado);
-        GuardarVolumen(fijado);
-        OnPropertyChanged(nameof(VolumenMaestroPorciento));
+        ProgramarGuardadoVolumen(fijado);
         OnPropertyChanged(nameof(TextoVolumen));
     }
 
@@ -144,6 +150,7 @@ public sealed partial class PlayerViewModel : ObservableObject
     [RelayCommand]
     private void ToggleMute()
     {
+        _guardadoVolumenCts?.Cancel();
         _aplicandoVolumen = true;
         try
         {
@@ -201,6 +208,34 @@ public sealed partial class PlayerViewModel : ObservableObject
         {
             RegistroErrores.Registrar(ex, "Volumen.Guardar");
         }
+    }
+
+    /// <summary>
+    /// Programa el guardado del volumen con debounce (400 ms).
+    /// El arrastre del fader genera decenas de cambios por segundo; persistir
+    /// el JSON completo en cada tick bloqueaba el hilo UI y el thumb no se
+    /// repintaba (el audio sí cambiaba porque se aplica antes del I/O).
+    /// </summary>
+    /// <param name="lineal">Factor 0…1 a persistir.</param>
+    private void ProgramarGuardadoVolumen(double lineal)
+    {
+        _guardadoVolumenCts?.Cancel();
+        _guardadoVolumenCts?.Dispose();
+        var fuente = new CancellationTokenSource();
+        _guardadoVolumenCts = fuente;
+        var token = fuente.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(400, token);
+                GuardarVolumen(lineal);
+            }
+            catch (OperationCanceledException)
+            {
+                // Un tick posterior tomó el relevo; nada que hacer.
+            }
+        }, token);
     }
 
     /// <summary>Lee el volumen guardado (1.0 si falta o es inválido).</summary>

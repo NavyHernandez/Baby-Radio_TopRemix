@@ -544,6 +544,32 @@
         "dotnet build sin warnings ni errores"
       ],
       "status": "done"
+    },
+    {
+      "id": 42,
+      "name": "fader-maestro-visual",
+      "title": "Fader maestro: cap visible en todo el ancho",
+      "description": "El cap DJM no se desplazaba (estático/centrado/anclado) aunque el volumen sí cambiaba: el template custom de Grid de 1 celda eliminó la estructura de columnas que el motor del Slider usa para posicionar el thumb, y cada tick persistía el JSON completo en el hilo UI + re-notificaba el porciento. Template con 3 columnas nativas (thumb en la central), sin re-notify del porciento durante el drag y guardado con debounce 400 ms en background.",
+      "acceptance": [
+        "El cap recorre de extremo a extremo con el % en vivo",
+        "Arrastre, clic en pista, flechas, mute y persistencia intactos",
+        "Paleta y botones sin moverse un píxel",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 43,
+      "name": "paleta-costuras-pantalla-grande",
+      "title": "Paleta sin costuras en pantallas grandes",
+      "description": "En pantallas grandes se veía espacio entre líneas: muescas del CornerRadius 4 + filetes de 1px por alturas fraccionarias (alto/5) según escala/DPI. UseLayoutRounding en la parrilla + fondo BackgroundCard del contenedor para fundir las costuras. Las filas ya repartían el alto (1fr) en normal (5) y operador (6).",
+      "acceptance": [
+        "Filas llenan el 100% del alto sin rayas en pantalla grande",
+        "Aplica a modo normal y operador (PaletaPanel reutilizada)",
+        "Sin cambios de layout, botones ni lógica",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
     }
   ]
 }
