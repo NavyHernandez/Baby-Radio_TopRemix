@@ -179,6 +179,23 @@ public sealed partial class ConsolaViewModel : ObservableObject
     public void AddFiles(IEnumerable<string> paths) => Lista.AddFiles(paths);
 
     /// <summary>
+    /// Relee el modo operador vigente (completa/ventana) del JSON.
+    /// </summary>
+    /// <returns>True si el valor cambió (el panel reacciona solo).</returns>
+    /// <remarks>Llamar tras cerrar el diálogo de ajustes para aplicar en vivo.</remarks>
+    public bool RefrescarAjusteOperador()
+    {
+        var vigente = ConsolaStore.Cargar().OperadorPantallaCompleta;
+        if (vigente == OperadorPantallaCompleta)
+        {
+            return false;
+        }
+
+        OperadorPantallaCompleta = vigente;
+        return true;
+    }
+
+    /// <summary>
     /// Prepara los bancos del modo operador (selectores + despliegue inicial).
     /// Conserva la selección de cada banco durante la sesión y lee el modo
     /// vigente (completa/ventana) del JSON.
@@ -187,7 +204,7 @@ public sealed partial class ConsolaViewModel : ObservableObject
     public void PrepararOperador()
     {
         RefrescarTituloOperador();
-        OperadorPantallaCompleta = ConsolaStore.Cargar().OperadorPantallaCompleta;
+        RefrescarAjusteOperador();
         var actual = Categorias.Selected ?? (Categorias.Categories.Count > 0 ? Categorias.Categories[0] : null);
         if (actual is null)
         {

@@ -1,3 +1,9 @@
+Baby Radio v0.1.10 — modo operador persistente y en vivo.
+
+- FIX: el ajuste de 1/2 pantallas ya no se revierte a 2 pantallas: persiste en la configuración al reabrir y al reiniciar.
+- NUEVO: cambiar el modo dentro del operador se aplica al instante (aparece/desaparece el segundo banco y la ventana entra/sale de pantalla completa sin salir del modo).
+- Resto de la consola sin cambios.
+
 Baby Radio v0.1.9 — consola portable en USB + modo operador configurable.
 
 - NUEVO Exportar/Importar portable para tu disco extraíble: la copia guarda las rutas relativas, así suena completa en otra PC aunque el USB cambie de letra; al cargar siempre pide confirmación con resumen y no toca la configuración local de esa PC.

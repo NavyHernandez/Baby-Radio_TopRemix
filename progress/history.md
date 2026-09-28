@@ -483,3 +483,26 @@ www.top-remix.com movido de la columna del VU a encima de los botones del reprod
 ### Verificacion
 - `dotnet build -c Debug`: 0 advertencias, 0 errores (build Release del publish OK).
 - `releases/`: 0.1.9-full + 0.1.9-delta + Setup + RELEASES presentes.
+
+## 2026-09-28 - Modo operador persistente y en vivo (feature 48)
+
+1. **Persistencia**: ConfiguracionViewModel ya no guarda durante el ctor (flag _cargando); el Guardar prematuro pisaba 1 pantalla con el default de 2. OperadorIndice ignora indices negativos (el RadioButtons sin seleccion empujaba -1 = completa y reescribia el JSON).
+2. **En vivo**: ConsolaViewModel.RefrescarAjusteOperador relee el JSON y notifica (el panel muestra/oculta el banco B solo); OperadorConsolaPanel lo llama al cerrar Config y ajusta el presentador (EntrarOperador/SalirOperador) sin salir del modo. PrepararOperador reutiliza el mismo metodo.
+3. **Docs**: progress/feature_list.json con la feature 48 en done.
+
+### Verificacion
+- dotnet build -c Debug: 0 advertencias, 0 errores.
+- progress/feature_list.json: feature 48 en done.
+- Pendiente funcional del owner: Config -> 1 paleta persiste tras reabrir y reiniciar; dentro de operador el cambio aplica bancos + fullscreen al instante.
+
+## 2026-09-28 - Release v0.1.10 (feature 48) + ejecutable
+
+1. **Versionado**: Version 0.1.9 -> 0.1.10 en BebeRadio.csproj.
+2. **Release**: publish.ps1 -SkipUpload (dotnet publish Release win-x64 self-contained + vpk pack: full + delta 0.1.9->0.1.10 + BabyRadio-win-Setup.exe + RELEASES). Sin subida a GitHub (sin token del owner).
+3. **Limpieza de releases/**: borrados BabyRadio-0.1.9-*.nupkg; solo queda la version vigente.
+4. **Docs**: entrada v0.1.10 en Assets/release_notes.txt; feature 48 en done.
+5. Incluye: modo operador persistente y aplicado en vivo (48).
+
+### Verificacion
+- dotnet build -c Debug: 0 advertencias, 0 errores (build Release del publish OK).
+- releases/: 0.1.10-full + 0.1.10-delta + Setup + RELEASES presentes.

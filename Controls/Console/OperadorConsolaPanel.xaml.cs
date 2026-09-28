@@ -165,7 +165,8 @@ public sealed partial class OperadorConsolaPanel : UserControl
     /// <summary>Abre la ventana de ajustes (sin reentrancia).</summary>
     /// <param name="sender">Botón Config.</param>
     /// <param name="e">Args de enrutado.</param>
-    /// <remarks>Blindado: un fallo no cierra la app.</remarks>
+    /// <remarks>Al cerrar aplica el modo en vivo (bancos + fullscreen).
+    /// Blindado: un fallo no cierra la app.</remarks>
     private async void OnConfigClick(object sender, RoutedEventArgs e)
     {
         if (_dialogoAbierto)
@@ -182,6 +183,7 @@ public sealed partial class OperadorConsolaPanel : UserControl
             }
 
             await new ConfiguracionDialog { XamlRoot = XamlRoot }.ShowAsync();
+            AplicarAjusteOperador();
         }
         catch (Exception ex)
         {
@@ -190,6 +192,37 @@ public sealed partial class OperadorConsolaPanel : UserControl
         finally
         {
             _dialogoAbierto = false;
+        }
+    }
+
+    /// <summary>Aplica en vivo el modo operador tras los ajustes.</summary>
+    /// <remarks>Relee el JSON al orquestador (el cambio de bancos entra solo
+    /// por <see cref="OnConsolaCambiada"/>) y ajusta el presentador de la
+    /// ventana (completa ↔ redimensionable) sin salir del modo operador.</remarks>
+    private void AplicarAjusteOperador()
+    {
+        try
+        {
+            if (Consola is null || !Consola.RefrescarAjusteOperador())
+            {
+                return;
+            }
+
+            if ((Microsoft.UI.Xaml.Application.Current as App)?.VentanaPrincipal is MainWindow ventana)
+            {
+                if (Consola.OperadorPantallaCompleta)
+                {
+                    ventana.EntrarOperador(pantallaCompleta: true);
+                }
+                else
+                {
+                    ventana.SalirOperador();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "Operador.AplicarAjuste");
         }
     }
 

@@ -625,6 +625,18 @@
         "dotnet build sin warnings ni errores"
       ],
       "status": "done"
+    },
+    {
+      "id": 48,
+      "name": "modo-operador-persistente-en-vivo",
+      "title": "Modo operador persistente y aplicado en vivo",
+      "description": "Fix: el ajuste 1/2 pantallas se revertia a 2 pantallas. Blindaje del guardado en el ctor + puente que ignora -1 + aplicacion en vivo (bancos y fullscreen) al cerrar Config dentro del modo operador.",
+      "acceptance": [
+        "Cambiar a 1 pantalla persiste en el JSON tras reabrir Config y reiniciar",
+        "El cambio dentro del modo operador se aplica en vivo (banco B + fullscreen)",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
     }
   ]
 }

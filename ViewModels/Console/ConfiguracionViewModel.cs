@@ -25,10 +25,20 @@ public sealed partial class ConfiguracionViewModel : ObservableObject
     public partial bool OperadorPantallaCompleta { get; set; } = true;
 
     /// <summary>Índice 0-1 del modo operador (puente TwoWay para RadioButtons).</summary>
+    /// <remarks>Los índices negativos (sin selección al inicializar) se ignoran:
+    /// antes convertían a completa y reescribían 2 pantallas en el JSON.</remarks>
     public int OperadorIndice
     {
         get => OperadorPantallaCompleta ? 0 : 1;
-        set => OperadorPantallaCompleta = value <= 0;
+        set
+        {
+            if (value < 0)
+            {
+                return;
+            }
+
+            OperadorPantallaCompleta = value <= 0;
+        }
     }
 
     /// <summary>Índice 0-2 de la duración (puente TwoWay para RadioButtons).</summary>
@@ -44,6 +54,11 @@ public sealed partial class ConfiguracionViewModel : ObservableObject
         }
     }
 
+    /// <summary>Suprime el guardado durante la carga inicial.</summary>
+    /// <remarks>Sin esto, cada setter del constructor persistía con los demás
+    /// valores aún en default y pisaba el JSON (p. ej. 1 pantalla → 2).</remarks>
+    private bool _cargando = true;
+
     /// <summary>Carga los ajustes guardados (o defaults si no hay).</summary>
     public ConfiguracionViewModel()
     {
@@ -57,6 +72,10 @@ public sealed partial class ConfiguracionViewModel : ObservableObject
         catch (Exception ex)
         {
             RegistroErrores.Registrar(ex, "Config.Cargar");
+        }
+        finally
+        {
+            _cargando = false;
         }
     }
 
@@ -104,8 +123,14 @@ public sealed partial class ConfiguracionViewModel : ObservableObject
     };
 
     /// <summary>Guarda los ajustes en el JSON portable (best-effort).</summary>
+    /// <remarks>No persiste durante la carga inicial (ver <see cref="_cargando"/>).</remarks>
     private void Guardar()
     {
+        if (_cargando)
+        {
+            return;
+        }
+
         try
         {
             var config = ConsolaStore.Cargar();
