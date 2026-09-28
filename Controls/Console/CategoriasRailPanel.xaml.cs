@@ -419,53 +419,165 @@ public sealed partial class CategoriasRailPanel : UserControl
         }
     }
 
-    /// <summary>Exporta el JSON portable a la ruta elegida.</summary>
+    /// <summary>Nombre sugerido para la copia portable (con alias o neutro).</summary>
+    /// <returns>alias_baby-radio-consola, o baby-radio-consola sin alias.</returns>
+    /// <remarks>El alias se sanea de caracteres inválidos y se recorta a 40.</remarks>
+    private static string NombrePortableSugerido()
+    {
+        try
+        {
+            var alias = ConsolaStore.Cargar().Perfil.Alias.Trim();
+            foreach (var invalido in System.IO.Path.GetInvalidFileNameChars())
+            {
+                alias = alias.Replace(invalido.ToString(), string.Empty);
+            }
+
+            alias = alias.Trim();
+            if (alias.Length > 40)
+            {
+                alias = alias[..40].Trim();
+            }
+
+            return string.IsNullOrWhiteSpace(alias)
+                ? "baby-radio-consola"
+                : $"{alias}_baby-radio-consola";
+        }
+        catch
+        {
+            return "baby-radio-consola";
+        }
+    }
+
+    /// <summary>Exporta la copia portable (rutas relativas a la carpeta destino).</summary>
     /// <param name="sender">Opción del menú.</param>
     /// <param name="e">Args de enrutado.</param>
-    /// <remarks>Blindado: un fallo no cierra la app.</remarks>
+    /// <remarks>
+    /// El nombre sugerido lleva el alias del operador
+    /// (alias_baby-radio-consola) o el neutro sin alias. Filtro .json simple:
+    /// Windows rechaza extensiones de doble punto. Blindado: un fallo avisa
+    /// en vez de cerrar la app.
+    /// </remarks>
     private async void OnExportarClick(object sender, RoutedEventArgs e)
     {
         try
         {
             var picker = new Windows.Storage.Pickers.FileSavePicker
             {
-                SuggestedFileName = "baby-radio-consola",
+                SuggestedFileName = NombrePortableSugerido(),
             };
-            picker.FileTypeChoices.Add("Configuración Baby Radio", new List<string> { ".baby-consola.json" });
+            picker.FileTypeChoices.Add("Configuración Baby Radio", new List<string> { ".json" });
             InicializarPicker(picker);
             var archivo = await picker.PickSaveFileAsync();
-            if (archivo is not null)
+            if (archivo is null)
             {
-                ConsolaStore.Exportar(archivo.Path);
+                return;
+            }
+
+            var (total, fuera) = ConsolaStore.ExportarPortable(archivo.Path);
+            if (fuera > 0)
+            {
+                await MostrarAvisoAsync(
+                    $"Copia guardada. {fuera} de {total} efectos están fuera del disco destino y no sonarán en otra PC.",
+                    "Consola portable");
             }
         }
         catch (Exception ex)
         {
             RegistroErrores.Registrar(ex, "Riel.Exportar");
+            await MostrarAvisoAsync("No se pudo guardar la copia portable.", "Consola portable");
         }
     }
 
-    /// <summary>Importa un JSON portable y pide redesplegar.</summary>
+    /// <summary>Importa un JSON portable con confirmación y pide redesplegar.</summary>
     /// <param name="sender">Opción del menú.</param>
     /// <param name="e">Args de enrutado.</param>
-    /// <remarks>Blindado: un fallo no cierra la app.</remarks>
+    /// <remarks>
+    /// Pre-escanea sin efectos, muestra el resumen para confirmar y solo al
+    /// aceptar activa la sesión portable (los guardados van al archivo
+    /// cargado, sin tocar el JSON local). Blindado: un fallo no cierra la app.
+    /// </remarks>
     private async void OnImportarClick(object sender, RoutedEventArgs e)
     {
         try
         {
             var picker = new Windows.Storage.Pickers.FileOpenPicker();
-            picker.FileTypeFilter.Add(".baby-consola.json");
             picker.FileTypeFilter.Add(".json");
             InicializarPicker(picker);
             var archivo = await picker.PickSingleFileAsync();
-            if (archivo is not null && ConsolaStore.Importar(archivo.Path))
+            if (archivo is null)
             {
-                ConfiguracionImportada?.Invoke();
+                return;
+            }
+
+            var config = ConsolaStore.LeerPortable(archivo.Path, out var versionFutura);
+            if (config is null)
+            {
+                await MostrarAvisoAsync(
+                    versionFutura
+                        ? "Ese archivo es de una versión más nueva de Baby Radio. Actualiza la app para cargarlo."
+                        : "No se pudo leer ese archivo de configuración.",
+                    "Consola portable");
+                return;
+            }
+
+            var carpeta = System.IO.Path.GetDirectoryName(archivo.Path) ?? string.Empty;
+            ConsolaStore.ResolverPortable(config, carpeta);
+            var (total, encontrados) = ConsolaStore.ContarPortable(config);
+            if (!await ConfirmarPortableAsync(archivo.Path, config, total, encontrados))
+            {
+                return;
+            }
+
+            ConsolaStore.ActivarPortable(config, archivo.Path);
+            ConfiguracionImportada?.Invoke();
+
+            var faltan = total - encontrados;
+            if (faltan > 0)
+            {
+                await MostrarAvisoAsync(
+                    $"{faltan} de {total} efectos no se encontraron en el disco. Esos carts quedan cargados pero no sonarán.",
+                    "Consola portable");
             }
         }
         catch (Exception ex)
         {
             RegistroErrores.Registrar(ex, "Riel.Importar");
+            await MostrarAvisoAsync("No se pudo abrir el selector de archivos.", "Consola portable");
+        }
+    }
+
+    /// <summary>Pide confirmación para cargar una consola portable.</summary>
+    /// <param name="ruta">Archivo portable elegido.</param>
+    /// <param name="config">Configuración pre-escaneada.</param>
+    /// <param name="total">Efectos con audio.</param>
+    /// <param name="encontrados">Audios existentes en disco.</param>
+    /// <returns>True si confirma la carga (false si falla).</returns>
+    private async Task<bool> ConfirmarPortableAsync(
+        string ruta, BebeRadio.Models.ConsolaConfiguracion config, int total, int encontrados)
+    {
+        try
+        {
+            var confirmar = new ContentDialog
+            {
+                XamlRoot = XamlRoot,
+                Style = (Style)Application.Current.Resources["BebeDialogStyle"],
+                RequestedTheme = TemaConsola.TemaActual,
+                Title = "Cargar consola portable",
+                Content = $"Archivo: {ruta}\n"
+                    + $"Categorías propias: {config.CategoriasPersonalizadas.Count}\n"
+                    + $"Efectos con audio: {total} ({encontrados} encontrados)\n\n"
+                    + "No se modificará la configuración local de esta PC: "
+                    + "los cambios de esta sesión se guardan solo en el archivo cargado.",
+                PrimaryButtonText = "Cargar",
+                CloseButtonText = "Cancelar",
+                DefaultButton = ContentDialogButton.Close,
+            };
+            return await confirmar.ShowAsync() == ContentDialogResult.Primary;
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "Riel.ConfirmarPortable");
+            return false;
         }
     }
 
@@ -518,7 +630,8 @@ public sealed partial class CategoriasRailPanel : UserControl
 
     /// <summary>Muestra un aviso breve (errores blindados del riel).</summary>
     /// <param name="mensaje">Texto del aviso.</param>
-    private async Task MostrarAvisoAsync(string mensaje)
+    /// <param name="titulo">Título del diálogo (default Categorías).</param>
+    private async Task MostrarAvisoAsync(string mensaje, string titulo = "Categorías")
     {
         try
         {
@@ -527,7 +640,7 @@ public sealed partial class CategoriasRailPanel : UserControl
                 XamlRoot = XamlRoot,
                 Style = (Style)Application.Current.Resources["BebeDialogStyle"],
                 RequestedTheme = TemaConsola.TemaActual,
-                Title = "Categorías",
+                Title = titulo,
                 Content = mensaje,
                 CloseButtonText = "Entendido",
                 DefaultButton = ContentDialogButton.Close,

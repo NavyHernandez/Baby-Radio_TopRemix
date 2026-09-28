@@ -9,7 +9,10 @@ namespace BebeRadio.Controls;
 /// items. Los hijos ocupan toda la celda (alineación Stretch), por lo que la
 /// parrilla llena el ancho disponible sin scroll ni huecos laterales. Cuando el
 /// alto disponible es finito, las filas lo reparten en partes iguales (1fr);
-/// con alto infinito quedan al alto natural del contenido.
+/// con alto infinito quedan al alto natural del contenido. El reparto usa
+/// bordes enteros compartidos entre celdas vecinas, así no quedan costuras
+/// de 1px entre filas aunque la división del alto sea fraccionaria
+/// (pantallas grandes o escalado DPI).
 /// </summary>
 public sealed class UniformGridPanel : Panel
 {
@@ -25,8 +28,6 @@ public sealed class UniformGridPanel : Panel
         get => (int)GetValue(ColumnsProperty);
         set => SetValue(ColumnsProperty, value);
     }
-
-    private double _rowHeight;
 
     /// <summary>Mide hijos con el ancho de celda y calcula alto total.</summary>
     /// <param name="availableSize">Espacio disponible.</param>
@@ -52,20 +53,20 @@ public sealed class UniformGridPanel : Panel
 
         if (double.IsInfinity(availableSize.Height) || availableSize.Height <= 0)
         {
-            _rowHeight = 0;
+            var naturalRowHeight = 0.0;
             foreach (var child in Children)
             {
                 child.Measure(new Size(cellWidth, availableSize.Height));
-                _rowHeight = Math.Max(_rowHeight, child.DesiredSize.Height);
+                naturalRowHeight = Math.Max(naturalRowHeight, child.DesiredSize.Height);
             }
 
-            return new Size(availableSize.Width, _rowHeight * rows);
+            return new Size(availableSize.Width, naturalRowHeight * rows);
         }
 
-        _rowHeight = availableSize.Height / rows;
+        var rowHeight = availableSize.Height / rows;
         foreach (var child in Children)
         {
-            child.Measure(new Size(cellWidth, _rowHeight));
+            child.Measure(new Size(cellWidth, rowHeight));
         }
 
         return new Size(availableSize.Width, availableSize.Height);
@@ -77,32 +78,45 @@ public sealed class UniformGridPanel : Panel
     private Size MeasureUnbounded(int columns)
     {
         var cellWidth = 0.0;
-        _rowHeight = 0;
+        var rowHeight = 0.0;
         foreach (var child in Children)
         {
             child.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             cellWidth = Math.Max(cellWidth, child.DesiredSize.Width);
-            _rowHeight = Math.Max(_rowHeight, child.DesiredSize.Height);
+            rowHeight = Math.Max(rowHeight, child.DesiredSize.Height);
         }
 
         var rows = (Children.Count + columns - 1) / columns;
-        return new Size(cellWidth * columns, _rowHeight * rows);
+        return new Size(cellWidth * columns, rowHeight * rows);
     }
 
-    /// <summary>Coloca cada hijo estirado en su celda.</summary>
+    /// <summary>Coloca cada hijo estirado en su celda, sin costuras.</summary>
     /// <param name="finalSize">Tamaño final asignado.</param>
     /// <returns>Tamaño final.</returns>
+    /// <remarks>
+    /// Los bordes de celda se calculan de forma acumulativa con
+    /// <see cref="Math.Floor(double)"/> sobre el tamaño final real, de modo
+    /// que dos celdas vecinas comparten exactamente el mismo borde (la última
+    /// fila/columna absorbe el píxel sobrante). Al ser valores idénticos, el
+    /// redondeo de layout o del escalado DPI encaja ambas celdas por igual y
+    /// no se abren líneas de fondo entre filas cuando la división del alto es
+    /// fraccionaria. No depende del alto medido en caché: si el tamaño final
+    /// difiere del medido, la grilla igual cubre el 100 % del espacio.
+    /// </remarks>
     protected override Size ArrangeOverride(Size finalSize)
     {
         var columns = Math.Max(1, Columns);
-        var cellWidth = columns == 0 ? 0 : finalSize.Width / columns;
+        var rows = Math.Max(1, (Children.Count + columns - 1) / columns);
 
         for (var i = 0; i < Children.Count; i++)
         {
             var row = i / columns;
             var column = i % columns;
-            Children[i].Arrange(new Rect(
-                column * cellWidth, row * _rowHeight, cellWidth, _rowHeight));
+            var left = Math.Floor(column * finalSize.Width / columns);
+            var right = Math.Floor((column + 1) * finalSize.Width / columns);
+            var top = Math.Floor(row * finalSize.Height / rows);
+            var bottom = Math.Floor((row + 1) * finalSize.Height / rows);
+            Children[i].Arrange(new Rect(left, top, right - left, bottom - top));
         }
 
         return finalSize;

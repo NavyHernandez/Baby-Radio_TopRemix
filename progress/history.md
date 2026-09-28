@@ -424,3 +424,62 @@ www.top-remix.com movido de la columna del VU a encima de los botones del reprod
 ### Verificacion
 - `dotnet build -c Debug`: 0 advertencias, 0 errores.
 - `publish.ps1 -SkipUpload`: paquete 0.1.8 OK (full + delta + Setup + RELEASES).
+
+## 2026-09-28 - Paleta sin costuras: bordes enteros compartidos (feature 44)
+
+1. **Causa raíz**: las líneas finas (1-2px) entre filas en pantallas grandes persistían tras la feature 43. El alto/filas daba fracciones (p. ej. 146.6px) y el redondeo de layout ajustaba el origen y el alto de cada cart por separado, abriendo filetes de `BackgroundCard` entre filas. En la laptop el alto salía divisible y no se notaba.
+2. **Fix**: `UniformGridPanel.ArrangeOverride` calcula los bordes de celda de forma acumulativa con `Math.Floor` sobre el tamaño final real: celdas vecinas comparten exactamente el mismo borde y la última fila/columna absorbe el píxel sobrante. La grilla cubre el 100% del alto en cualquier pantalla/DPI. Se eliminó el campo cacheado `_rowHeight` (mediciones con variables locales).
+3. **Docs**: comentarios XML del panel en español; `progress/feature_list.json` con la feature 44 en done. Sin cambios de XAML, estilos, ViewModels ni releases.
+
+### Verificacion
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: feature 44 en done.
+- Pendiente visual del owner en pantalla grande (normal 5x5 + operador 5x6).
+
+## 2026-09-28 - Exportar/Importar portable para disco extraíble (feature 45)
+
+1. **Exportar (riel, existente)**: `ConsolaStore.ExportarPortable` clona la config en memoria (caché intacta) y relativiza cada `FilePath` que comparta unidad con la carpeta destino (`RutaPortable`, funciones puras sin I/O); lo de otra unidad queda absoluto. Si hay no-portables, aviso "X de Y efectos están fuera del disco destino y no sonarán en otra PC". Local intacto, sin nada automático.
+2. **Importar (riel, existente)**: pre-escaneo sin efectos (`LeerPortable` + validación `VersionEsquema` + `ResolverPortable` contra la carpeta del archivo + `ContarPortable`) y popup de confirmación "Cargar consola portable" con resumen (archivo, categorías propias, efectos X/Y encontrados) + aviso de que lo local no se modifica. Al confirmar, `ActivarPortable` entra en sesión portable (los `Guardar` van al archivo cargado, muere con la app) conservando el `IdInstalacion` local; al cancelar no pasa nada. Faltantes → aviso post-carga.
+3. **Modelos/store**: `ConsolaConfiguracion` suma `Version` (viejos = 0); `Guardar` sella la versión y escribe en la ruta de sesión; `Importar` original intacto. Nuevo `Support/RutaPortable.cs`.
+4. **Docs**: `AGENTS.md` mapa + inventario (`RutaPortable`, sesión en `ConsolaStore`); `progress/feature_list.json` con la feature 45 en done.
+
+### Verificacion
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: feature 45 en done.
+- Pendiente funcional del owner: exportar al USB → cargar en otra PC con distinta letra → todo suena; Cancelar no toca nada; JSON local del anfitrión intacto.
+
+## 2026-09-28 - Pickers con filtro válido y export con nombre del alias (feature 46)
+
+1. **Causa del reporte**: al pulsar Importar no se abría el explorador. El log (`Riel.Importar`) mostró `ArgumentException` en `FileTypeFilter.Add(".baby-consola.json")`: Windows solo acepta extensiones simples de un punto; el doble punto es inválido y el catch blindado lo tragaba en silencio. Bug preexistente, heredado por la feature 45.
+2. **Fix**: filtros a `".json"` en Importar y `FileTypeChoices` en Exportar (los `*.baby-consola.json` existentes terminan en `.json` y siguen visibles). Exportar sugiere `<alias>_baby-radio-consola` (alias saneado de caracteres inválidos, recorte a 40) o `baby-radio-consola` sin alias. Si el picker falla, aviso al usuario además del log.
+3. **Docs**: `progress/feature_list.json` con la feature 46 en done.
+
+### Verificacion
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: feature 46 en done.
+- Pendiente funcional del owner: Importar abre el explorador; Exportar con alias sugiere el nombre.
+
+## 2026-09-28 - Modo operador configurable + Stop por banco (feature 47)
+
+1. **Ajuste nuevo**: `ConsolaConfiguracion.OperadorPantallaCompleta` (default true); `ConfiguracionViewModel` con observable + puente `OperadorIndice` y guardado inmediato; `ConfiguracionDialog` suma RadioButtons "Modo operador" (completa·2 paletas / ventana·1 paleta) con nota de que se aplica al entrar.
+2. **Ventana**: `MainWindow.EntrarOperador(bool)` — completa = FullScreen sin titlebar (igual que antes); ventana = no toca presenter ni titlebar (movible, redimensionable, convive con otras apps). `ConsolaViewModel.OperadorPantallaCompleta` se lee del JSON en `PrepararOperador`; la shell lo pasa al entrar.
+3. **Panel**: `OperadorConsolaPanel` muestra 1 o 2 bancos según el ajuste (columna B a ancho 0 + colapso, reevaluado al entrar); solo categorías + paleta + tira en ambos modos. `SalirOperador` y Esc intactos.
+4. **Stop por banco**: `PaletaViewModel.DetenerBanco` ([RelayCommand]) detiene solo sus Guid propios del mezclador compartido (el maestro se restaura solo sin voces vivas); botón Stop en el header de cada `BancoOperadorPanel`. El Stop global de la tira sigue cortando todo. Sin Ganancia en operador (pedido del owner).
+5. **Docs**: `AGENTS.md` mapa + inventario; `progress/feature_list.json` con la feature 47 en done.
+
+### Verificacion
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `progress/feature_list.json`: feature 47 en done.
+- Pendiente funcional del owner: elegir modo en Config → 2 paletas fullscreen idéntico; 1 paleta en ventana redimensionable; Stop por banco solo corta ese banco.
+
+## 2026-09-28 - Release v0.1.9 (features 44-47) + ejecutable
+
+1. **Versionado**: `<Version>` 0.1.8 → 0.1.9 en `BebeRadio.csproj`.
+2. **Release**: `publish.ps1 -SkipUpload` (dotnet publish Release win-x64 self-contained + `vpk pack`: full + delta 0.1.8→0.1.9 + `BabyRadio-win-Setup.exe` + `RELEASES`). Sin subida a GitHub (sin orden del owner).
+3. **Limpieza de `releases/`**: borrados `BabyRadio-0.1.8-*.nupkg`; solo queda la versión vigente.
+4. **Docs**: entrada v0.1.9 en `Assets/release_notes.txt`; features 44-47 en done.
+5. Incluye: paleta sin costuras definitivo (44), portable USB con sesión (45), fix pickers + export con alias (46), modo operador configurable + Stop por banco (47).
+
+### Verificacion
+- `dotnet build -c Debug`: 0 advertencias, 0 errores (build Release del publish OK).
+- `releases/`: 0.1.9-full + 0.1.9-delta + Setup + RELEASES presentes.

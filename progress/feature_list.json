@@ -570,6 +570,61 @@
         "dotnet build sin warnings ni errores"
       ],
       "status": "done"
+    },
+    {
+      "id": 44,
+      "name": "paleta-costuras-bordes-compartidos",
+      "title": "Paleta sin costuras: bordes enteros compartidos en UniformGridPanel",
+      "description": "Las líneas finas (1-2px) entre filas persistían en pantallas grandes: la causa raíz era que _rowHeight = alto/filas daba fracciones (p. ej. 146.6px) y el redondeo de layout ajustaba origen y alto de cada cart por separado, abriendo filetes de BackgroundCard entre filas. UniformGridPanel.ArrangeOverride calcula ahora los bordes de celda de forma acumulativa con Math.Floor sobre el tamaño final real: celdas vecinas comparten exactamente el mismo borde y la última fila/columna absorbe el píxel sobrante, así el redondeo de layout/DPI encaja ambas igual y la grilla cubre el 100% del alto. Se eliminó el campo cacheado _rowHeight (las mediciones usan variables locales).",
+      "acceptance": [
+        "Sin líneas entre filas en pantalla grande (cualquier DPI)",
+        "Filas cubren el 100% del alto disponible",
+        "Laptop y modo operador (2 bancos 5x6) sin regresiones",
+        "Tiras de 1 fila (acciones, selectores) intactas",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 45,
+      "name": "exportar-importar-portable-usb",
+      "title": "Exportar/Importar portable para disco extraíble",
+      "description": "Exportar relativiza los FilePath a la carpeta del JSON (misma unidad) para que la copia funcione en otra PC aunque cambie la letra del USB; Importar pre-escanea, pide confirmación con resumen y activa sesión portable (los guardados van al archivo cargado, sin tocar el JSON local; se conserva el IdInstalacion local).",
+      "acceptance": [
+        "Copia en USB suena completa en otra PC con distinta letra",
+        "Popup de confirmación con resumen antes de cada carga",
+        "En sesión portable el JSON local del anfitrión queda intacto",
+        "Avisos de no-portables al exportar y de faltantes al cargar",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 46,
+      "name": "pickers-filtro-json-nombre-alias",
+      "title": "Pickers con filtro válido y export con nombre del alias",
+      "description": "El filtro '.baby-consola.json' es inválido para Windows (doble punto) y lanzaba ArgumentException que impedía abrir el explorador en Importar (y Exportar). Filtros a '.json'; Exportar sugiere '<alias>_baby-radio-consola.json' o 'baby-radio-consola.json' sin alias; aviso al usuario si el picker falla.",
+      "acceptance": [
+        "Importar abre el explorador y acepta los .baby-consola.json existentes",
+        "Exportar sugiere el nombre con alias saneado",
+        "Ningún fallo de picker queda mudo",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 47,
+      "name": "modo-operador-configurable",
+      "title": "Modo operador configurable (2 paletas fullscreen o 1 paleta en ventana)",
+      "description": "Ajuste en Config: pantalla completa con 2 paletas (actual) o ventana redimensionable con 1 paleta para convivir con otras apps. Solo categorías + paleta + tira. Stop propio por banco.",
+      "acceptance": [
+        "El modo persiste en el JSON y se aplica al entrar",
+        "1 paleta: ventana normal redimensionable con titlebar",
+        "2 paletas: fullscreen idéntico al actual",
+        "Stop por banco detiene solo ese banco; el global sigue cortando todo",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
     }
   ]
 }

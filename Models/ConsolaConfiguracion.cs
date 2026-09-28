@@ -7,6 +7,12 @@ namespace BebeRadio.Models;
 /// </summary>
 public sealed class ConsolaConfiguracion
 {
+    /// <summary>
+    /// Versión del esquema del JSON (los archivos viejos la omiten = 0).
+    /// El store la sella al guardar; al cargar se rechazan versiones futuras.
+    /// </summary>
+    public int Version { get; set; }
+
     /// <summary>Categorías creadas por el usuario.</summary>
     public List<CategoriaPersonalizada> CategoriasPersonalizadas { get; set; } = new();
 
@@ -36,4 +42,10 @@ public sealed class ConsolaConfiguracion
     /// Volumen maestro del fader total de salida (lineal 0…1; default máximo).
     /// </summary>
     public double VolumenMaestro { get; set; } = 1.0;
+
+    /// <summary>
+    /// Modo operador en pantalla completa con 2 paletas (false = ventana
+    /// redimensionable con 1 paleta, para convivir con otras apps).
+    /// </summary>
+    public bool OperadorPantallaCompleta { get; set; } = true;
 }

@@ -20,7 +20,7 @@
 BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 ├── AGENTS.md                 ← este archivo (leer antes de codificar)
 ├── App.xaml(.cs)              ← fusiona Themes/*, backdrop Mica
-├── MainWindow.xaml(.cs)       ← Title fijo "Baby Radio" + fullscreen operador + confirma cierre con música + RootFrame → showcase
+├── MainWindow.xaml(.cs)       ← Title fijo "Baby Radio" + fullscreen operador configurable + confirma cierre con música + RootFrame → showcase
 ├── Themes/
 │   ├── ColorPalette.xaml      ← tokens de color (Paleta A-Studio Console)
 │   └── ButtonStyles.xaml      ← BebeButtonBase físico 3D + variantes
@@ -39,10 +39,10 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 │   ├── PaletaViewModel.cs             ← pool estable 50 + TamanoPagina (25/30) + mezcla + voces + Sonando
 │   ├── CategoriasRailViewModel.cs     ← categorías + 7 fijas + conteos + riel vacío→null
 │   ├── AccionesConsolaViewModel.cs    ← toggles (Operador/Mix/Ganancia) + ganchos (Stop→efectos, ▲▼→páginas)
-│   ├── ConfiguracionViewModel.cs      ← ajustes Config (transición Siguiente 3/5/7, guardado inmediato)
+│   ├── ConfiguracionViewModel.cs      ← ajustes Config (transición 3/5/7 + modo operador, guardado inmediato)
 │   ├── OpcionCategoria.cs             ← opción de categoría por banco (operador)
 │   ├── SelectorCategoriaViewModel.cs  ← selección independiente por banco (operador)
-│   └── ConsolaViewModel.cs            ← orquestador + bancos operador (PaletaA/B, SelectorA/B)
+│   └── ConsolaViewModel.cs            ← orquestador + bancos operador (PaletaA/B, SelectorA/B) + salir + modo operador
 ├── Support/
 │   ├── AudioFileInspector.cs    ← metadatos de arrastrados (TagLibSharp)
 │   ├── IconoVentana.cs          ← icono ventana/taskbar vía HICON (PNG transparente 16/32 + fallback ico)
@@ -53,12 +53,13 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 │   ├── MockQueueBuilder.cs      ← cola inicial de 12 entradas
 │   ├── FormatosArrastre.cs      ← formato privado Lista→Paleta (FilePath)
 │   ├── RegistroErrores.cs       ← log baby-radio-error.log (blindaje diálogos)
+│   ├── RutaPortable.cs          ← rutas relativas/absolutas del JSON portable (puras, sin I/O)
 │   └── Telemetria/              ← Firebase sin SDK (HttpClient + REST)
 │       ├── DatosInstalacion.cs  ← DTO + JSON Firestore (updateMask)
 │       └── TelemetriaFirebase.cs ← ID único + IP/país + PATCH por arranque
 ├── Controls/
 │   ├── BebeButtonHelper.cs    ← attached props (CategoryColor, IsCircular) + sombra GPU + EnsureShadow
-│   ├── UniformGridPanel.cs    ← grilla uniforme 5 col + filas 1fr con alto finito
+│   ├── UniformGridPanel.cs    ← grilla uniforme 5 col + filas 1fr con alto finito + bordes enteros compartidos (sin costuras)
 │   ├── CategoryBrushConverter.cs ← clave de token → brush (para {Binding})
 │   ├── BoolToOpacityConverter.cs ← bool → opacidad (selección, EN VIVO)
 │   ├── VuMeterControl.xaml(.cs) ← Win2D estéreo, inercia + peak-hold
@@ -75,8 +76,8 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 │       └── AccionesConsolaStrip.xaml(.cs)   ← abajo: 7 aluminio + Mix/Ganancia titilan (abre Config)
 │       ├── ConfiguracionDialog.xaml(.cs)    ← ajustes: toggle transición + 3/5/7 s (inyecta su VM)
 │       ├── TitileoArmado.cs                 ← titileo de armado reutilizable
-│       ├── BancoOperadorPanel.xaml(.cs)     ← banco 5×N + selector + páginas propias
-│       └── OperadorConsolaPanel.xaml(.cs)   ← modo operador: 2 bancos + tira + salir + Esc
+│       ├── BancoOperadorPanel.xaml(.cs)     ← banco 5×N + selector + páginas propias + Stop propio
+│       └── OperadorConsolaPanel.xaml(.cs)   ← modo operador: 1-2 bancos + tira + salir + Esc
 └── Views/Phase1ShowcaseView.xaml(.cs) ← shell dual normal/operador (perezoso) vía ConsolaViewModel
 ```
 
@@ -233,11 +234,11 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | Archivo | Hace |
 |---|---|
 | `App.xaml(.cs)` | Recursos globales + apertura de `MainWindow` |
-| `MainWindow.xaml(.cs)` | Title fijo + fullscreen operador + confirma cierre con música + `RootFrame` → showcase |
+| `MainWindow.xaml(.cs)` | Title fijo + fullscreen operador configurable + confirma cierre con música + `RootFrame` → showcase |
 | `Themes/ColorPalette.xaml` | Todos los colores/tokens + brush `AluminumTop` (único hex) |
 | `Themes/ButtonStyles.xaml` | Templates 3D: transporte×6, carts, aluminio, categoría maciza, cart claro |
 | `Controls/BebeButtonHelper.cs` | Attached props + sombra GPU + `IsActive` + `EnsureShadow` |
-| `Controls/UniformGridPanel.cs` | Grilla uniforme (5 paleta / 7 acciones / 4 operador) + filas 1fr |
+| `Controls/UniformGridPanel.cs` | Grilla uniforme (5 paleta / 7 acciones / 4 operador) + filas 1fr + bordes enteros compartidos (sin costuras 1px) |
 | `Controls/CategoryBrushConverter.cs` | Clave de token → brush |
 | `Controls/BoolToOpacityConverter.cs` | Bool → opacidad (selección, EN VIVO) |
 | `Controls/BoolAVisibilidadConverter.cs` | Bool → visibilidad (+Invertir: fantasmas) |
@@ -259,8 +260,8 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `ViewModels/Console/PaletaViewModel.cs` | 50 slots + páginas (25/30 por `TamanoPagina`) + mezcla + voces + Sonando |
 | `ViewModels/Console/CategoriasRailViewModel.cs` | Categorías + 7 fijas + conteos + vacío |
 | `ViewModels/Console/AccionesConsolaViewModel.cs` | Toggles + ganchos paleta |
-| `ViewModels/Console/ConfiguracionViewModel.cs` | Ajustes Config + validación 3/5/7 + guardado inmediato |
-| `ViewModels/Console/ConsolaViewModel.cs` | Orquestador + bancos operador (PaletaA/B, SelectorA/B) + salir |
+| `ViewModels/Console/ConfiguracionViewModel.cs` | Ajustes Config (transición 3/5/7 + modo operador) + guardado inmediato |
+| `ViewModels/Console/ConsolaViewModel.cs` | Orquestador + bancos operador (PaletaA/B, SelectorA/B) + salir + modo operador |
 | `ViewModels/Console/OpcionCategoria.cs` | Opción de categoría por banco (operador) |
 | `ViewModels/Console/SelectorCategoriaViewModel.cs` | Selección independiente por banco (operador) |
 | `Support/TimeFormatter.cs` | `m:ss` puro |
@@ -278,7 +279,8 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `Support/AnalizadorLoudness.cs` | LUFS BS.1770 (48k, filtros-K, gating) |
 | `Support/LoudnessCache.cs` | Caché baby-radio-loudness.json + ganancia ±12dB |
 | `Support/ServicioAnalisisAudio.cs` | Worker único BelowNormal + Channel dedup |
-| `Support/ConsolaStore.cs` | JSON portable + caché en memoria |
+| `Support/ConsolaStore.cs` | JSON portable + caché en memoria + sesión portable (export relativiza, import confirma+activa) |
+| `Support/RutaPortable.cs` | Rutas relativas/absolutas del portable (puras, sin I/O) |
 | `Support/TemaConsola.cs` | Tema único oscuro + alias + `Cambio` |
 | `Support/ValidadorRecursos.cs` | Valida tokens de paleta al arrancar |
 | `Controls/Console/ConsolaSombraHelper.cs` | Flash 300ms + sombras + FindDescendants |
@@ -289,8 +291,8 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `Controls/Console/AccionesConsolaStrip.xaml(.cs)` | Abajo: 7 aluminio + Mix/Ganancia titilan (abre Config) |
 | `Controls/Console/ConfiguracionDialog.xaml(.cs)` | Ajustes: toggle transición + 3/5/7 s (inyecta su VM) |
 | `Controls/Console/TitileoArmado.cs` | Titileo de armado reutilizable |
-| `Controls/Console/BancoOperadorPanel.xaml(.cs)` | Banco 5×N + selector + páginas propias |
-| `Controls/Console/OperadorConsolaPanel.xaml(.cs)` | Modo operador: 2 bancos + tira + salir + Esc |
+| `Controls/Console/BancoOperadorPanel.xaml(.cs)` | Banco 5×N + selector + páginas propias + Stop propio |
+| `Controls/Console/OperadorConsolaPanel.xaml(.cs)` | Modo operador: 1-2 bancos + tira + salir + Esc |
 | `Views/Phase1ShowcaseView.xaml(.cs)` | Shell dual normal/operador (perezoso) + sombras |
 
 ## 8. Progreso por features (obligatorio)

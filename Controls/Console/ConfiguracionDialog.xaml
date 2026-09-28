@@ -44,6 +44,22 @@
             Foreground="{StaticResource TextSecondary}"
             Text="Al pulsar Siguiente, el audio baja suavemente antes de avanzar. Los cambios se guardan solos."
             TextWrapping="Wrap" />
+        <RadioButtons
+            Header="Modo operador"
+            AutomationProperties.Name="Modo operador: pantalla completa con 2 paletas o ventana con 1 paleta"
+            SelectedIndex="{x:Bind ViewModel.OperadorIndice, Mode=TwoWay}">
+            <RadioButton
+                AutomationProperties.Name="Operador en pantalla completa con 2 paletas"
+                Content="Pantalla completa · 2 paletas" />
+            <RadioButton
+                AutomationProperties.Name="Operador en ventana redimensionable con 1 paleta"
+                Content="Ventana redimensionable · 1 paleta" />
+        </RadioButtons>
+        <TextBlock
+            FontSize="11"
+            Foreground="{StaticResource TextSecondary}"
+            Text="Se aplica al entrar al modo operador. En ventana solo se ven las categorías, la paleta y la tira (convive con otras apps)."
+            TextWrapping="Wrap" />
         <TextBlock
             HorizontalAlignment="Center"
             FontSize="11"

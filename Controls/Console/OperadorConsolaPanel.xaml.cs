@@ -60,6 +60,13 @@ public sealed partial class OperadorConsolaPanel : UserControl
             Consola.Acciones.PropertyChanged += OnAccionesCambiadas;
         }
 
+        if (Consola is not null)
+        {
+            Consola.PropertyChanged -= OnConsolaCambiada;
+            Consola.PropertyChanged += OnConsolaCambiada;
+        }
+
+        ActualizarBancos();
         SincronizarTitileoMix();
     }
 
@@ -73,7 +80,32 @@ public sealed partial class OperadorConsolaPanel : UserControl
             Consola.Acciones.PropertyChanged -= OnAccionesCambiadas;
         }
 
+        if (Consola is not null)
+        {
+            Consola.PropertyChanged -= OnConsolaCambiada;
+        }
+
         _titileoMix?.Apagar();
+    }
+
+    /// <summary>Refresca los bancos al cambiar el ajuste (completa/ventana).</summary>
+    /// <param name="sender">Orquestador.</param>
+    /// <param name="e">Propiedad cambiada.</param>
+    private void OnConsolaCambiada(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ConsolaViewModel.OperadorPantallaCompleta))
+        {
+            ActualizarBancos();
+        }
+    }
+
+    /// <summary>Muestra 1 o 2 bancos según el ajuste vigente.</summary>
+    /// <remarks>Composición: con 1 banco la columna B queda en ancho 0.</remarks>
+    private void ActualizarBancos()
+    {
+        var dos = Consola?.OperadorPantallaCompleta != false;
+        BancoB.Visibility = dos ? Visibility.Visible : Visibility.Collapsed;
+        ColumnaB.Width = dos ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
     }
 
     /// <summary>Sincroniza el titileo de Mix con su armado.</summary>

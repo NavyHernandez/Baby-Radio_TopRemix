@@ -1,3 +1,11 @@
+Baby Radio v0.1.9 — consola portable en USB + modo operador configurable.
+
+- NUEVO Exportar/Importar portable para tu disco extraíble: la copia guarda las rutas relativas, así suena completa en otra PC aunque el USB cambie de letra; al cargar siempre pide confirmación con resumen y no toca la configuración local de esa PC.
+- FIX: Importar y Exportar ahora sí abren el explorador para elegir el archivo; al exportar se sugiere el nombre con tu alias (alias_baby-radio-consola).
+- NUEVO modo operador configurable en Config: pantalla completa con 2 paletas (como antes) o ventana redimensionable con 1 paleta para usar otras apps al mismo tiempo (solo categorías, paleta y tira).
+- NUEVO botón Stop en cada banco del operador: detiene solo los efectos de esa pantalla (el Stop de la tira sigue cortando todo).
+- FIX: en pantallas grandes ya no quedan líneas entre las filas de la paleta (reparto sin costuras en normal y operador).
+
 Baby Radio v0.1.8 — fader visible en todo el ancho + paleta sin costuras.
 
 - FIX: el cap del fader maestro ahora se desplaza de izquierda a derecha en todo su recorrido (antes se quedaba fijo aunque el volumen sí cambiaba); el porcentaje, el mute y el volumen guardado siguen igual.

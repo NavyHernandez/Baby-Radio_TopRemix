@@ -20,6 +20,17 @@ public sealed partial class ConfiguracionViewModel : ObservableObject
     [ObservableProperty]
     public partial int TransicionSegundos { get; set; } = 5;
 
+    /// <summary>Modo operador en pantalla completa con 2 paletas (default).</summary>
+    [ObservableProperty]
+    public partial bool OperadorPantallaCompleta { get; set; } = true;
+
+    /// <summary>Índice 0-1 del modo operador (puente TwoWay para RadioButtons).</summary>
+    public int OperadorIndice
+    {
+        get => OperadorPantallaCompleta ? 0 : 1;
+        set => OperadorPantallaCompleta = value <= 0;
+    }
+
     /// <summary>Índice 0-2 de la duración (puente TwoWay para RadioButtons).</summary>
     public int TransicionIndice
     {
@@ -41,6 +52,7 @@ public sealed partial class ConfiguracionViewModel : ObservableObject
             var config = ConsolaStore.Cargar();
             TransicionActivada = config.TransicionSiguienteActivada;
             TransicionSegundos = NormalizarSegundos(config.TransicionSiguienteSegundos);
+            OperadorPantallaCompleta = config.OperadorPantallaCompleta;
         }
         catch (Exception ex)
         {
@@ -73,6 +85,14 @@ public sealed partial class ConfiguracionViewModel : ObservableObject
     public static int NormalizarSegundos(int segundos) =>
         segundos is 3 or 5 or 7 ? segundos : 5;
 
+    /// <summary>Persiste el modo operador al cambiar.</summary>
+    /// <param name="value">Nuevo modo.</param>
+    partial void OnOperadorPantallaCompletaChanged(bool value)
+    {
+        OnPropertyChanged(nameof(OperadorIndice));
+        Guardar();
+    }
+
     /// <summary>Índice 0-2 de unos segundos normalizados.</summary>
     /// <param name="segundos">Duración (se normaliza primero).</param>
     /// <returns>0 para 3 s, 1 para 5 s, 2 para 7 s.</returns>
@@ -91,6 +111,7 @@ public sealed partial class ConfiguracionViewModel : ObservableObject
             var config = ConsolaStore.Cargar();
             config.TransicionSiguienteActivada = TransicionActivada;
             config.TransicionSiguienteSegundos = TransicionSegundos;
+            config.OperadorPantallaCompleta = OperadorPantallaCompleta;
             ConsolaStore.Guardar(config);
         }
         catch (Exception ex)

@@ -105,6 +105,15 @@
                     <Button
                         MinHeight="40"
                         MinWidth="44"
+                        AutomationProperties.Name="Detener efectos del banco"
+                        Command="{x:Bind PaletaVM.DetenerBancoCommand, Mode=OneWay}"
+                        Style="{StaticResource BebeLightButtonStyle}"
+                        ToolTipService.ToolTip="Detener los efectos de este banco">
+                        <fluent:SymbolIcon FontSize="18" Foreground="{StaticResource StateOnAir}" Symbol="Stop" />
+                    </Button>
+                    <Button
+                        MinHeight="40"
+                        MinWidth="44"
                         AutomationProperties.Name="Gestionar categorías"
                         Click="OnGestionarClick"
                         Style="{StaticResource BebeLightButtonStyle}"

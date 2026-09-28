@@ -78,6 +78,11 @@ public sealed partial class ConsolaViewModel : ObservableObject
     [ObservableProperty]
     public partial string TituloOperador { get; set; } = "OPERADOR";
 
+    /// <summary>Modo operador en pantalla completa con 2 paletas (false = 1).</summary>
+    /// <remarks>Se lee del JSON al entrar al modo (opera con lo vigente).</remarks>
+    [ObservableProperty]
+    public partial bool OperadorPantallaCompleta { get; set; } = true;
+
     /// <summary>
     /// Crea el orquestador y cablea la mezcla entre partes.
     /// </summary>
@@ -175,12 +180,14 @@ public sealed partial class ConsolaViewModel : ObservableObject
 
     /// <summary>
     /// Prepara los bancos del modo operador (selectores + despliegue inicial).
-    /// Conserva la selección de cada banco durante la sesión.
+    /// Conserva la selección de cada banco durante la sesión y lee el modo
+    /// vigente (completa/ventana) del JSON.
     /// </summary>
     /// <remarks>Llamar al primer ingreso al modo operador.</remarks>
     public void PrepararOperador()
     {
         RefrescarTituloOperador();
+        OperadorPantallaCompleta = ConsolaStore.Cargar().OperadorPantallaCompleta;
         var actual = Categorias.Selected ?? (Categorias.Categories.Count > 0 ? Categorias.Categories[0] : null);
         if (actual is null)
         {

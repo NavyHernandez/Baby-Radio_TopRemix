@@ -97,10 +97,17 @@ public sealed partial class MainWindow : Window
     private bool _enOperador;
     private Windows.Graphics.SizeInt32 _tamanoPrevio;
 
-    /// <summary>Entra al modo operador: pantalla completa sin barra de título.</summary>
-    public void EntrarOperador()
+    /// <summary>Entra al modo operador (completa o ventana según ajuste).</summary>
+    /// <param name="pantallaCompleta">True = fullscreen sin titlebar (2 paletas);
+    /// false = ventana normal redimensionable (1 paleta, convive con otras apps).</param>
+    public void EntrarOperador(bool pantallaCompleta = true)
     {
         if (_enOperador)
+        {
+            return;
+        }
+
+        if (!pantallaCompleta)
         {
             return;
         }

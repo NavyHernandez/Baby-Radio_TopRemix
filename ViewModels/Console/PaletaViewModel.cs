@@ -5,6 +5,7 @@ using BebeRadio.Models;
 using BebeRadio.Services;
 using BebeRadio.Support;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Dispatching;
 
 namespace BebeRadio.ViewModels.Console;
@@ -276,6 +277,38 @@ public sealed partial class PaletaViewModel : ObservableObject
             });
         });
         return true;
+    }
+
+    /// <summary>Detiene solo las voces de este banco (Stop por pantalla).</summary>
+    /// <remarks>
+    /// No toca la cola ni las voces de otros bancos (el mezclador es
+    /// compartido: solo se detienen los Guid propios). El maestro se restaura
+    /// solo si no queda ninguna voz sonando en toda la mezcla.
+    /// Debe llamarse en el hilo UI.
+    /// </remarks>
+    [RelayCommand]
+    public void DetenerBanco()
+    {
+        List<Guid> voces;
+        lock (_puerta)
+        {
+            _pendientes.Clear();
+            voces = _voces.Keys.ToList();
+            _voces.Clear();
+        }
+
+        foreach (var voz in voces)
+        {
+            _mezclador.Detener(voz);
+        }
+
+        foreach (var item in Sonando.ToList())
+        {
+            item.EstaSonando = false;
+        }
+
+        Sonando.Clear();
+        RestaurarMaestroSiLibre();
     }
 
     /// <summary>Detiene todos los efectos (botón Stop: solo paleta).</summary>

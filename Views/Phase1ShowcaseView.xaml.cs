@@ -89,7 +89,7 @@ public sealed partial class Phase1ShowcaseView : Page
         {
             if (activo)
             {
-                ventana.EntrarOperador();
+                ventana.EntrarOperador(ViewModel.OperadorPantallaCompleta);
             }
             else
             {

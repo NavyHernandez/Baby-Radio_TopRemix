@@ -49,11 +49,11 @@
             </Button>
         </Grid>
 
-        <!-- Dos bancos independientes -->
+        <!-- Uno o dos bancos independientes (según ajuste) -->
         <Grid Grid.Row="1" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition x:Name="ColumnaA" Width="*" />
+                <ColumnDefinition x:Name="ColumnaB" Width="*" />
             </Grid.ColumnDefinitions>
             <console:BancoOperadorPanel
                 x:Name="BancoA"
