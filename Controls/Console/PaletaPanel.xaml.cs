@@ -99,6 +99,7 @@ public sealed partial class PaletaPanel : UserControl
             viejo.Sonando.CollectionChanged -= OnSonandoCambiado;
             viejo.Items.CollectionChanged -= OnPaginaCambiada;
             viejo.PropertyChanged -= OnPaletaCambiada;
+            viejo.SlotVacioAlDisparar -= OnSlotVacioAlDisparar;
         }
 
         _suscrito = nuevo;
@@ -109,6 +110,7 @@ public sealed partial class PaletaPanel : UserControl
             nuevo.Sonando.CollectionChanged += OnSonandoCambiado;
             nuevo.Items.CollectionChanged += OnPaginaCambiada;
             nuevo.PropertyChanged += OnPaletaCambiada;
+            nuevo.SlotVacioAlDisparar += OnSlotVacioAlDisparar;
             SincronizarTitileo();
         }
         else
@@ -145,6 +147,28 @@ public sealed partial class PaletaPanel : UserControl
         if (_suscrito is not null && _suscrito.Sonando.Count > 0)
         {
             SincronizarTitileo();
+        }
+    }
+
+    /// <summary>Muestra aviso al pulsar hotkey en slot sin audio.</summary>
+    private async void OnSlotVacioAlDisparar(PaletteItem item)
+    {
+        try
+        {
+            await new ContentDialog
+            {
+                XamlRoot = XamlRoot,
+                Style = (Style)Application.Current.Resources["BebeDialogStyle"],
+                RequestedTheme = TemaConsola.TemaActual,
+                Title = "Slot vacío",
+                Content = $"El slot «{item.Title}» no tiene audio cargado.\nArrastre un archivo o use «Cargar audio…» en el menú contextual.",
+                CloseButtonText = "Entendido",
+                DefaultButton = ContentDialogButton.Close
+            }.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "Paleta.SlotVacioAviso");
         }
     }
 
@@ -305,7 +329,7 @@ public sealed partial class PaletaPanel : UserControl
     /// <summary>Fija el slot en las opciones: vacíos con carga+edición+guía.</summary>
     /// <param name="sender">Menú contextual.</param>
     /// <param name="args">Args (cancelable).</param>
-    /// <remarks>Limpiar solo en llenos; la guía orienta sin arrastrar.</remarks>
+    /// <remarks>Limpiar solo en llenos; Mapeo siempre disponible; la guía orienta sin arrastrar.</remarks>
     private void OnCartMenuOpening(object sender, object args)
     {
         if (sender is not MenuFlyout menu || menu.Target is not Button boton
@@ -322,6 +346,7 @@ public sealed partial class PaletaPanel : UserControl
             {
                 "GuiaItem" => vacio ? Visibility.Visible : Visibility.Collapsed,
                 "LimpiarItem" => vacio ? Visibility.Collapsed : Visibility.Visible,
+                "MapeoItem" => Visibility.Visible, // Siempre disponible
                 _ => Visibility.Visible,
             };
         }
@@ -400,6 +425,36 @@ public sealed partial class PaletaPanel : UserControl
         finally
         {
             _editando = false;
+        }
+    }
+
+    /// <summary>Abre el diálogo de mapeo de tecla (click derecho → Mapeo…).</summary>
+    /// <param name="sender">Opción del menú.</param>
+    /// <param name="e">Args de enrutado.</param>
+    /// <remarks>Blindado: un fallo abre aviso en vez de cerrar la app.</remarks>
+    private async void OnMapeoClick(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is null
+            || (sender as MenuFlyoutItem)?.CommandParameter is not PaletteItem item)
+        {
+            return;
+        }
+
+        try
+        {
+            var dialogo = new PaletaMapeoDialog(item, ViewModel.PropietariaActual) { XamlRoot = XamlRoot };
+            if (await dialogo.ShowAsync() == ContentDialogResult.Primary)
+            {
+                // El diálogo ya actualiza el item; persistir y registrar hotkey
+                ViewModel.Persistir();
+                ViewModel.RegistrarHotkeySlot(ViewModel.PropietariaActual, item.SlotIndex);
+                RearmarSombras();
+            }
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "Paleta.Mapeo");
+            await MostrarAvisoAsync("No se pudo abrir el mapeo. El error quedó registrado.");
         }
     }
 

@@ -427,9 +427,24 @@ public static class ConsolaStore
         }
     }
 
+    /// <summary>Sale de la sesión portable y vuelve a la configuración local.</summary>
+    /// <remarks>
+    /// Limpia la ruta de sesión y recarga la caché desde el JSON local
+    /// (intacto: la sesión nunca lo tocó). Lo guardado en el portable ya quedó
+    /// en su archivo. El llamador debe redesplegar (categorías + paleta).
+    /// </remarks>
+    public static void SalirSesionPortable()
+    {
+        lock (CandadoConfig)
+        {
+            _rutaSesion = null;
+            _cache = LeerDelDisco();
+        }
+    }
+
     /// <summary>Indica si un slot merece persistirse (audio o edición real).</summary>
     /// <param name="item">Slot a evaluar.</param>
-    /// <returns>True si tiene audio, cues, ganancia, fundidos o color.</returns>
+    /// <returns>True si tiene audio, cues, ganancia, fundidos, color o mapeo.</returns>
     private static bool SlotEsPersistible(PaletteItem item) =>
         item.TieneAudio
         || item.CueInicio > TimeSpan.Zero
@@ -437,5 +452,6 @@ public static class ConsolaStore
         || Math.Abs(item.GananciaDb) > 0.001
         || item.FundidoEntrada > TimeSpan.Zero
         || item.FundidoSalida > TimeSpan.Zero
-        || item.ColorKey is not null;
+        || item.ColorKey is not null
+        || item.TieneMapeo;
 }

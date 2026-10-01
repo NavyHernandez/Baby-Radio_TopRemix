@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    PaletaMapeoDialog — configuración de tecla global para un slot de paleta.
+    Captura la tecla en tiempo real (click en área → titileo 10s → tecla → configura).
+    Modificadores (Ctrl/Alt/Shift/Win), modo (Toggle/Retrigger/Momentáneo).
+    Botón "Limpiar" compacto solo visible si hay mapeo.
+-->
+<ContentDialog
+    x:Class="BebeRadio.Controls.Console.PaletaMapeoDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:BebeRadio.Controls"
+    xmlns:models="using:BebeRadio.Models"
+    xmlns:sys="using:System"
+    Title="Mapeo de tecla"
+    PrimaryButtonText="Guardar"
+    CloseButtonText="Cancelar"
+    DefaultButton="Primary"
+    Style="{StaticResource BebeDialogStyle}"
+    PrimaryButtonClick="OnPrimaryButtonClick">
+
+    <ContentDialog.Resources>
+        <controls:BoolAVisibilidadConverter x:Key="VisibleSi" />
+        <controls:BoolAVisibilidadConverter x:Key="VisibleNo" Invertir="True" />
+    </ContentDialog.Resources>
+
+    <Grid x:Name="RootGrid" MinWidth="420" MaxWidth="520">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Slot info -->
+        <Border
+            Grid.Row="0"
+            Padding="12"
+            Background="{StaticResource BackgroundCard}"
+            BorderBrush="{StaticResource BorderSubtle}"
+            BorderThickness="1"
+            CornerRadius="8">
+            <StackPanel Spacing="4">
+                <TextBlock
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource TextPrimary}"
+                    Text="{x:Bind TituloSlot}" />
+                <TextBlock
+                    FontSize="12"
+                    Foreground="{StaticResource TextSecondary}"
+                    Text="{x:Bind DescripcionSlot}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Captura de tecla -->
+        <Border
+            Grid.Row="1"
+            Margin="0,12,0,0"
+            Padding="12"
+            Background="{StaticResource BackgroundCard}"
+            BorderBrush="{StaticResource BorderSubtle}"
+            BorderThickness="1"
+            CornerRadius="8">
+            <StackPanel Spacing="8">
+                <TextBlock
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource TextPrimary}"
+                    Text="Presiona la tecla deseada" />
+                <TextBlock
+                    FontSize="12"
+                    Foreground="{StaticResource TextSecondary}"
+                    Text="Haz clic en el recuadro, luego presiona una tecla (máx. 10 s). Escape para limpiar." />
+
+                <Border
+                    x:Name="CaptureBorder"
+                    Height="48"
+                    HorizontalAlignment="Stretch"
+                    Background="{StaticResource BackgroundPanel}"
+                    BorderBrush="{StaticResource BorderSubtle}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    IsTabStop="True"
+                    KeyDown="OnCaptureKeyDown"
+                    GotFocus="OnCaptureGotFocus"
+                    LostFocus="OnCaptureLostFocus"
+                    PointerPressed="OnCapturePointerPressed">
+                    <TextBlock
+                        x:Name="CaptureText"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        FontFamily="Cascadia Mono, Consolas"
+                        FontSize="16"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource TextPrimary}"
+                        Text="Haz clic y presiona una tecla..." />
+                </Border>
+
+                <TextBlock
+                    x:Name="ConflictWarning"
+                    Visibility="Collapsed"
+                    FontSize="11"
+                    Foreground="#FF6B6B"
+                    Text="⚠ Esta combinación ya está en uso por el sistema u otra aplicación." />
+            </StackPanel>
+        </Border>
+
+        <!-- Modificadores -->
+        <Border
+            Grid.Row="2"
+            Margin="0,12,0,0"
+            Padding="12"
+            Background="{StaticResource BackgroundCard}"
+            BorderBrush="{StaticResource BorderSubtle}"
+            BorderThickness="1"
+            CornerRadius="8">
+            <StackPanel Spacing="8">
+                <TextBlock
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource TextPrimary}"
+                    Text="Modificadores (opcional)" />
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <CheckBox
+                        x:Name="ChkCtrl"
+                        Content="Ctrl"
+                        IsChecked="{x:Bind ModCtrl, Mode=TwoWay}"
+                        Checked="OnModifierChanged"
+                        Unchecked="OnModifierChanged" />
+                    <CheckBox
+                        x:Name="ChkAlt"
+                        Content="Alt"
+                        IsChecked="{x:Bind ModAlt, Mode=TwoWay}"
+                        Checked="OnModifierChanged"
+                        Unchecked="OnModifierChanged" />
+                    <CheckBox
+                        x:Name="ChkShift"
+                        Content="Shift"
+                        IsChecked="{x:Bind ModShift, Mode=TwoWay}"
+                        Checked="OnModifierChanged"
+                        Unchecked="OnModifierChanged" />
+                    <CheckBox
+                        x:Name="ChkWin"
+                        Content="Win"
+                        IsChecked="{x:Bind ModWin, Mode=TwoWay}"
+                        Checked="OnModifierChanged"
+                        Unchecked="OnModifierChanged" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Modo de interacción + botón Limpiar -->
+        <Border
+            Grid.Row="3"
+            Margin="0,12,0,0"
+            Padding="12"
+            Background="{StaticResource BackgroundCard}"
+            BorderBrush="{StaticResource BorderSubtle}"
+            BorderThickness="1"
+            CornerRadius="8">
+            <StackPanel Spacing="8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource TextPrimary}"
+                        Text="Modo de interacción" />
+                    <Button
+                        x:Name="BtnLimpiar"
+                        Grid.Column="1"
+                        Height="28"
+                        Padding="12,0"
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource TextSecondary}"
+                        Background="Transparent"
+                        BorderBrush="{StaticResource BorderSubtle}"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Content="Limpiar"
+                        Click="OnLimpiarClick"
+                        Visibility="{x:Bind TieneMapeoActual, Converter={StaticResource VisibleSi}}" />
+                </Grid>
+
+                <ComboBox
+                    x:Name="ModoCombo"
+                    HorizontalAlignment="Stretch"
+                    SelectedIndex="{x:Bind ModoIndex, Mode=TwoWay}"
+                    SelectionChanged="OnModoChanged">
+                    <ComboBoxItem Tag="Toggle">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon FontSize="16" Glyph="&#xE735;" />
+                            <StackPanel>
+                                <TextBlock FontWeight="SemiBold" Text="Toggle (Alternar)" />
+                                <TextBlock FontSize="11" Foreground="{StaticResource TextSecondary}" Text="Pulsa para disparar; pulsa de nuevo para detener." />
+                            </StackPanel>
+                        </StackPanel>
+                    </ComboBoxItem>
+                    <ComboBoxItem Tag="Retrigger">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon FontSize="16" Glyph="&#xE75E;" />
+                            <StackPanel>
+                                <TextBlock FontWeight="SemiBold" Text="Retrigger (Re-disparar)" />
+                                <TextBlock FontSize="11" Foreground="{StaticResource TextSecondary}" Text="Cada pulsación dispara; no detiene lo anterior." />
+                            </StackPanel>
+                        </StackPanel>
+                    </ComboBoxItem>
+                    <ComboBoxItem Tag="Momentaneo">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon FontSize="16" Glyph="&#xE7A5;" />
+                            <StackPanel>
+                                <TextBlock FontWeight="SemiBold" Text="Momentáneo (Mantenido)" />
+                                <TextBlock FontSize="11" Foreground="{StaticResource TextSecondary}" Text="Suena mientras mantienes la tecla; al soltar se detiene." />
+                            </StackPanel>
+                        </StackPanel>
+                    </ComboBoxItem>
+                </ComboBox>
+            </StackPanel>
+        </Border>
+    </Grid>
+</ContentDialog>

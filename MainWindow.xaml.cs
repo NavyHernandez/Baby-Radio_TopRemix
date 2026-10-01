@@ -1,6 +1,9 @@
+using BebeRadio.Models;
+using BebeRadio.Services;
 using BebeRadio.Support;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using WinRT.Interop;
 
 namespace BebeRadio;
 
@@ -10,6 +13,8 @@ namespace BebeRadio;
 /// </summary>
 public sealed partial class MainWindow : Window
 {
+    private WindowMessageHook? _messageHook;
+
     /// <summary>
     /// Inicializa la ventana, extiende el contenido a la titlebar y navega
     /// el Frame a la pantalla de la fase actual.
@@ -30,11 +35,25 @@ public sealed partial class MainWindow : Window
         AppTitleBar.Title = "Baby Radio";
         ValidadorRecursos.ValidarEsenciales();
 
+        // Obtener handle de la ventana para hotkeys globales
+        var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+
+        // Inicializar servicio de mapeo con el handle de la ventana
+        KeyMappingService.Instancia.Inicializar(hWnd);
+
+        // Inicializar servicio de sonidos (.wav de captura)
+        SonidoService.Instancia.Inicializar("ms-appx:///Assets/Sounds/beep.wav");
+
+        // Hook de mensajes para hotkeys globales (RegisterHotKey).
+        _messageHook = new WindowMessageHook(this);
+        _messageHook.HotkeyReceived += id => KeyMappingService.Instancia.ProcesarHotkey(id);
+
         // Fase 1: la única pantalla es el showcase (paleta + player mock + carts).
         RootFrame.Navigate(typeof(Views.Phase1ShowcaseView));
 
         // Confirma el cierre si hay una canción sonando en la lista.
         AppWindow.Closing += OnCierreVentana;
+        Closed += OnClosed;
     }
 
     private bool _cierreConfirmado;
@@ -148,5 +167,12 @@ public sealed partial class MainWindow : Window
         {
             // La consola sigue usable en el estado actual.
         }
+    }
+
+    /// <summary>Limpia el hook de mensajes al cerrar la ventana.</summary>
+    private void OnClosed(object sender, WindowEventArgs e)
+    {
+        _messageHook?.Dispose();
+        _messageHook = null;
     }
 }

@@ -7,6 +7,7 @@
     x:Class="BebeRadio.Controls.Console.ConfiguracionDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:support="using:BebeRadio.Support"
     Title="Configuración"
     CloseButtonText="Cerrar"
     DefaultButton="Close"
@@ -17,52 +18,79 @@
     </ContentDialog.Resources>
 
     <!-- Ajustes: transición suave al pasar a Siguiente -->
-    <StackPanel Spacing="12" MinWidth="300" HorizontalAlignment="Stretch">
+    <StackPanel Spacing="10" MinWidth="280" HorizontalAlignment="Stretch">
         <ToggleSwitch
             Header="Transición suave al pasar a Siguiente"
+            FontSize="12"
             AutomationProperties.Name="Transición suave al pasar a Siguiente"
             IsOn="{x:Bind ViewModel.TransicionActivada, Mode=TwoWay}"
             OnContent="Activado"
             OffContent="Desactivado" />
         <RadioButtons
             Header="Duración de la transición"
+            FontSize="12"
             AutomationProperties.Name="Duración de la transición en segundos"
             IsEnabled="{x:Bind ViewModel.TransicionActivada, Mode=OneWay}"
             SelectedIndex="{x:Bind ViewModel.TransicionIndice, Mode=TwoWay}">
             <RadioButton
+                FontSize="12"
                 AutomationProperties.Name="Transición de 3 segundos"
                 Content="3 segundos" />
             <RadioButton
+                FontSize="12"
                 AutomationProperties.Name="Transición de 5 segundos"
                 Content="5 segundos" />
             <RadioButton
+                FontSize="12"
                 AutomationProperties.Name="Transición de 7 segundos"
                 Content="7 segundos" />
         </RadioButtons>
         <TextBlock
-            FontSize="11"
+            FontSize="10"
             Foreground="{StaticResource TextSecondary}"
             Text="Al pulsar Siguiente, el audio baja suavemente antes de avanzar. Los cambios se guardan solos."
             TextWrapping="Wrap" />
         <RadioButtons
             Header="Modo operador"
+            FontSize="12"
             AutomationProperties.Name="Modo operador: pantalla completa con 2 paletas o ventana con 1 paleta"
             SelectedIndex="{x:Bind ViewModel.OperadorIndice, Mode=TwoWay}">
             <RadioButton
+                FontSize="12"
                 AutomationProperties.Name="Operador en pantalla completa con 2 paletas"
                 Content="Pantalla completa · 2 paletas" />
             <RadioButton
+                FontSize="12"
                 AutomationProperties.Name="Operador en ventana redimensionable con 1 paleta"
                 Content="Ventana redimensionable · 1 paleta" />
         </RadioButtons>
         <TextBlock
-            FontSize="11"
+            FontSize="10"
             Foreground="{StaticResource TextSecondary}"
             Text="Se aplica al entrar al modo operador. En ventana solo se ven las categorías, la paleta y la tira (convive con otras apps)."
             TextWrapping="Wrap" />
+        <ComboBox
+            Header="Salida de audio"
+            FontSize="12"
+            MinWidth="220"
+            HorizontalAlignment="Stretch"
+            AutomationProperties.Name="Seleccionar salida de audio"
+            ItemsSource="{x:Bind ViewModel.Dispositivos, Mode=OneWay}"
+            SelectedIndex="{x:Bind ViewModel.DispositivoIndice, Mode=TwoWay}">
+            <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="support:DispositivoAudio">
+                    <TextBlock FontSize="12" Text="{x:Bind Nombre}" />
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
+        <TextBlock
+            FontSize="10"
+            Foreground="{StaticResource TextSecondary}"
+            Text="El cambio se aplica al instante. Si un dispositivo desaparece, se vuelve al predeterminado."
+            TextWrapping="Wrap" />
         <TextBlock
             HorizontalAlignment="Center"
-            FontSize="11"
+            FontSize="10"
             Foreground="{StaticResource TextSecondary}"
             AutomationProperties.Name="Personalización solo en versión PRO"
             TextAlignment="Center"

@@ -1,5 +1,6 @@
 using BebeRadio.Support;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Windows.System;
 
 namespace BebeRadio.Models;
 
@@ -68,6 +69,21 @@ public sealed partial class PaletteItem : ObservableObject
     [ObservableProperty]
     public partial bool EstaSonando { get; set; }
 
+    /// <summary>Tecla mapeada para disparar este slot (VirtualKey.None = sin mapear).</summary>
+    [ObservableProperty]
+    public partial VirtualKey MapeoTecla { get; set; } = VirtualKey.None;
+
+    /// <summary>Modificadores de la tecla mapeada (Control, Alt, Shift, Win).</summary>
+    [ObservableProperty]
+    public partial VirtualKeyModifiers MapeoModifiers { get; set; } = VirtualKeyModifiers.None;
+
+    /// <summary>Modo de interacción del mapeo (Toggle, Retrigger, Momentaneo).</summary>
+    [ObservableProperty]
+    public partial ModoMapeo MapeoModo { get; set; } = ModoMapeo.Toggle;
+
+    /// <summary>True si el slot tiene un mapeo de tecla configurado.</summary>
+    public bool TieneMapeo => MapeoTecla != VirtualKey.None;
+
     /// <summary>Crea un slot de efecto (sin audio hasta arrastrar).</summary>
     /// <param name="category">Categoría propietaria.</param>
     /// <param name="title">Título.</param>
@@ -119,6 +135,9 @@ public sealed partial class PaletteItem : ObservableObject
         EstaSonando = false;
         ColorCategoria = string.Empty;
         ColorKey = colorKey;
+        MapeoTecla = VirtualKey.None;
+        MapeoModifiers = VirtualKeyModifiers.None;
+        MapeoModo = ModoMapeo.Toggle;
         RefrescarDerivados();
     }
 
@@ -190,6 +209,24 @@ public sealed partial class PaletteItem : ObservableObject
         OnPropertyChanged(nameof(TintaCart));
     }
 
+    /// <summary>Refresca mapeo al cambiar la tecla.</summary>
+    partial void OnMapeoTeclaChanged(VirtualKey value)
+    {
+        OnPropertyChanged(nameof(TieneMapeo));
+    }
+
+    /// <summary>Refresca mapeo al cambiar modificadores.</summary>
+    partial void OnMapeoModifiersChanged(VirtualKeyModifiers value)
+    {
+        OnPropertyChanged(nameof(TieneMapeo));
+    }
+
+    /// <summary>Refresca mapeo al cambiar modo.</summary>
+    partial void OnMapeoModoChanged(ModoMapeo value)
+    {
+        OnPropertyChanged(nameof(TieneMapeo));
+    }
+
     /// <summary>Notifica todas las propiedades derivadas.</summary>
     private void RefrescarDerivados()
     {
@@ -199,6 +236,7 @@ public sealed partial class PaletteItem : ObservableObject
         OnPropertyChanged(nameof(BrushKey));
         OnPropertyChanged(nameof(ColorFantasma));
         OnPropertyChanged(nameof(TintaCart));
+        OnPropertyChanged(nameof(TieneMapeo));
     }
 
     /// <summary>Clona el slot para editarlo como borrador.</summary>
@@ -214,6 +252,9 @@ public sealed partial class PaletteItem : ObservableObject
         ColorKey = ColorKey,
         PropietariaId = PropietariaId,
         SlotIndex = SlotIndex,
+        MapeoTecla = MapeoTecla,
+        MapeoModifiers = MapeoModifiers,
+        MapeoModo = MapeoModo,
     };
 
     /// <summary>Copia los campos editables de un borrador.</summary>
@@ -229,10 +270,14 @@ public sealed partial class PaletteItem : ObservableObject
         FundidoEntrada = borrador.FundidoEntrada;
         FundidoSalida = borrador.FundidoSalida;
         ColorKey = borrador.ColorKey;
+        MapeoTecla = borrador.MapeoTecla;
+        MapeoModifiers = borrador.MapeoModifiers;
+        MapeoModo = borrador.MapeoModo;
         OnPropertyChanged(nameof(DisplayMeta));
         OnPropertyChanged(nameof(BrushKey));
         OnPropertyChanged(nameof(TieneAudio));
         OnPropertyChanged(nameof(DuracionEfectiva));
+        OnPropertyChanged(nameof(TieneMapeo));
     }
 
     /// <summary>Convierte el slot a guardado portable.</summary>
@@ -240,5 +285,6 @@ public sealed partial class PaletteItem : ObservableObject
     public SlotEfectoGuardado Guardar() => new(
         SlotIndex, Title, Duration.Ticks, FilePath,
         CueInicio.Ticks, CueFin?.Ticks, GananciaDb,
-        FundidoEntrada.Ticks, FundidoSalida.Ticks, ColorKey);
+        FundidoEntrada.Ticks, FundidoSalida.Ticks, ColorKey,
+        MapeoTecla, MapeoModifiers, MapeoModo);
 }

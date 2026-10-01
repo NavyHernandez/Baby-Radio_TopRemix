@@ -506,3 +506,33 @@ www.top-remix.com movido de la columna del VU a encima de los botones del reprod
 ### Verificacion
 - dotnet build -c Debug: 0 advertencias, 0 errores (build Release del publish OK).
 - releases/: 0.1.10-full + 0.1.10-delta + Setup + RELEASES presentes.
+
+## 2026-10-01 - Volver a configuración local + iconos en menú portable
+
+1. **Salida de sesión**: `ConsolaStore.SalirSesionPortable` limpia `_rutaSesion` y recarga la caché desde el JSON local (intacto); el riel suma `OnConfiguracionLocalClick` que la invoca y reutiliza el evento `ConfiguracionImportada` (redespliega todo). Lo guardado en el portable ya quedó en su archivo, nada se pierde.
+2. **Menú**: `CategoriasRailPanel` suma item corto "Configuración local" (icono Home), visible solo con `SesionPortableActiva` (vía `Opening`); Exportar lleva icono Save e Importar FolderOpen (FluentIcons, mismo peso).
+3. **Docs**: apéndice en `progress/history.md` (este).
+
+### Verificacion
+- dotnet build -c Debug: 0 advertencias, 0 errores.
+- Pendiente funcional del owner: importar → aparece "Configuración local"; pulsarlo vuelve a la consola local; sin sesión no se muestra.
+
+## 2026-10-01 - Release v0.1.11 (features 49-52) + ejecutable
+
+1. **Versionado**: `<Version>` 0.1.10 → 0.1.11 en `BebeRadio.csproj`.
+2. **Release**: `publish.ps1 -SkipUpload` (dotnet publish Release win-x64 self-contained + `vpk pack`: full + delta 0.1.10→0.1.11 + `BabyRadio-win-Setup.exe` + `RELEASES`). Sin subida a GitHub (sin orden del owner).
+3. **Limpieza de `releases/`**: borrados `BabyRadio-0.1.10-*.nupkg`; solo queda la versión vigente.
+4. **Docs**: entrada v0.1.11 en `Assets/release_notes.txt`; features 49-52 en done.
+5. Incluye: mapeo sin falso conflicto al cambiar modo (49), Momentáneo push-to-talk real (50), fundido de salida 120 ms en reemplazo y Stop (51), volver a configuración local + iconos en menú portable (52).
+
+### Verificacion
+- `dotnet build -c Debug`: 0 advertencias, 0 errores (build Release del publish OK).
+- `releases/`: 0.1.11-full + 0.1.11-delta + Setup + RELEASES presentes.
+
+## 2026-10-01 - Menú portable se refresca en cada despliegue
+
+1. **Fix**: `ActualizarMenuPortable()` lee `SesionPortableActiva` en cada despliegue (al pulsar el iconito y en `Opening` del flyout, cubriendo clic izquierdo y derecho) y alterna "Configuración local" + separador. Antes solo se evaluaba en `Opening`.
+2. **Docs**: apéndice en `progress/history.md` (este).
+
+### Verificacion
+- dotnet build -c Debug: 0 advertencias, 0 errores.

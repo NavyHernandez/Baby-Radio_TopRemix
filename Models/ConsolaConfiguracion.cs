@@ -48,4 +48,9 @@ public sealed class ConsolaConfiguracion
     /// redimensionable con 1 paleta, para convivir con otras apps).
     /// </summary>
     public bool OperadorPantallaCompleta { get; set; } = true;
+
+    /// <summary>
+    /// ID del dispositivo de salida de audio seleccionado (vacío = predeterminado).
+    /// </summary>
+    public string DispositivoSalidaId { get; set; } = string.Empty;
 }

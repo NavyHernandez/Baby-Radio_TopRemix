@@ -637,6 +637,59 @@
         "dotnet build sin warnings ni errores"
       ],
       "status": "done"
+    },
+    {
+      "id": 49,
+      "name": "mapeo-cambio-modo-sin-falso-conflicto",
+      "title": "Mapeo: cambiar solo el modo ya guarda (sin falso conflicto)",
+      "description": "Guardar el diálogo con la misma tecla fallaba con 'ya está en uso' porque el test re-registraba su propio hotkey (1409 contra sí mismo). Registrar() idempotente (misma tecla+mod solo actualiza modo), HayConflicto() self-aware (ignora el propio slot, detecta duplicados de otros slots) + ActualizarModo(); el diálogo ya no registra de prueba y RegistrarHotkeySlot() reemplaza sin huérfanos.",
+      "acceptance": [
+        "Abrir mapeo de slot ya mapeado no muestra aviso",
+        "Cambiar solo el modo guarda y persiste en el JSON",
+        "Cambiar a tecla libre guarda; tecla del SO u otro slot sí avisa",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 50,
+      "name": "momentaneo-push-to-talk-real",
+      "title": "Momentáneo push-to-talk real (sin re-disparos al mantener)",
+      "description": "Mantener la tecla re-disparaba por auto-repeat de WM_HOTKEY y el modo hacía toggle (corte/rearranque). KeyMappingService suprime repeats con set _pulsados (el KeyUp libera) y PaletaViewModel lo hace idempotente (si ya suena no reinicia; si terminó solo con la tecla pulsada queda parado hasta re-pulsar). El KeyUp libera por tecla principal con o sin modificadores (antes con Ctrl/Alt/Shift/Win se quedaba sonando).",
+      "acceptance": [
+        "Mantener la tecla arranca 1 vez y suena continuo hasta soltar",
+        "Momentáneo con modificadores para al soltar la tecla",
+        "Toggle/Retrigger sin cambios",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 51,
+      "name": "fundido-salida-120ms",
+      "title": "Fundido de salida 120 ms al reemplazar sin Mix y en Stop",
+      "description": "Sin Mix la 2ª paleta cortaba en seco a la 1ª (clic). Voz.FundirYSoltar() rampa el volumen propio en pasos de 10 ms hasta silencio; DetenerConFundido()/DetenerTodosConFundido() desvinculan al instante (liberan slot y VU) y la cola cae por debajo de la nueva. Aplica a reemplazo sin Mix, Stop global, Stop por banco y stops simples; Detener/DetenerTodos inmediatos se conservan para cambio de dispositivo y arranques cancelados.",
+      "acceptance": [
+        "2ª paleta sin Mix: la 1ª baja suave bajo la 2ª, sin clic",
+        "Stop global y por banco con caída suave",
+        "Pulsaciones rápidas sin voces huérfanas",
+        "Mix encendido sin cambios",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 52,
+      "name": "volver-configuracion-local-menu-portable",
+      "title": "Volver a configuración local + iconos en menú portable",
+      "description": "Tras importar no había forma de volver a la local sin reiniciar. ConsolaStore.SalirSesionPortable limpia la sesión y recarga el JSON local; el menú del riel suma 'Configuración local' (corto, icono Home) visible solo en sesión, Exportar con Save e Importar con FolderOpen, y refresca su estado en cada despliegue (clic y Opening).",
+      "acceptance": [
+        "En sesión aparece 'Configuración local'; pulsarlo vuelve a la local",
+        "Sin sesión el item no se muestra (ni su separador)",
+        "Iconos Fluent en las 3 opciones",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
     }
   ]
 }

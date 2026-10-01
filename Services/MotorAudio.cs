@@ -1,7 +1,9 @@
 using BebeRadio.Models;
 using BebeRadio.Support;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
+using NAudio.Wasapi;
 
 namespace BebeRadio.Services;
 
@@ -16,7 +18,7 @@ public sealed class MotorAudio : IDisposable
     /// <summary>Instancia única (una sola WaveOut).</summary>
     public static MotorAudio Instancia { get; } = new();
 
-    private WaveOutEvent? _salida;
+    private IWavePlayer? _salida;
     private WaveStream? _lector;
     private VolumeSampleProvider? _volumenMaestro;
     private float _maestroLineal = 1f;
@@ -26,6 +28,9 @@ public sealed class MotorAudio : IDisposable
     private bool _disposed;
     private bool _cierreManual;
     private int _generacion;
+    private string _dispositivoId = string.Empty;
+    private string _pathActual = string.Empty;
+    private TimeSpan? _finEfectivoActual;
 
     /// <summary>Modo actual de reproducción.</summary>
     public ModoMotor Modo { get; private set; } = ModoMotor.Detenido;
@@ -121,6 +126,55 @@ public sealed class MotorAudio : IDisposable
     /// <summary>Crea el motor (usar <see cref="Instancia"/>).</summary>
     public MotorAudio()
     {
+    }
+
+    /// <summary>
+    /// Cambia el dispositivo de salida de audio en caliente.
+    /// </summary>
+    /// <param name="deviceId">ID del dispositivo (vacío = predeterminado).</param>
+    /// <remarks>
+    /// Si hay audio reproduciéndose, se detiene, se recrea la salida con el
+    /// nuevo dispositivo y se reanuda desde la posición actual. Si no hay audio,
+    /// solo se actualiza el dispositivo para la próxima reproducción.
+    /// </remarks>
+    public void EstablecerDispositivo(string deviceId)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        var reproducciendo = Reproduciendo;
+        var posicion = Posicion;
+        var modo = Modo;
+
+        if (reproducciendo && !string.IsNullOrEmpty(_pathActual))
+        {
+            _cierreManual = true;
+            Cerrar();
+            _dispositivoId = deviceId;
+            Abrir(_pathActual, posicion, _finEfectivoActual, 0, modo);
+            return;
+        }
+
+        _dispositivoId = deviceId;
+    }
+
+    /// <summary>Crea la salida WasapiOut con el dispositivo seleccionado.</summary>
+    /// <param name="latenciaMs">Latencia en milisegundos.</param>
+    /// <returns>La salida de audio lista para Init.</returns>
+    private IWavePlayer CrearSalida(int latenciaMs)
+    {
+        var dispositivo = string.IsNullOrEmpty(_dispositivoId)
+            ? EnumeradorDispositivosAudio.Instancia.ObtenerDispositivoPorDefecto()
+            : EnumeradorDispositivosAudio.Instancia.ObtenerMMDevice(_dispositivoId);
+
+        if (dispositivo is null)
+        {
+            dispositivo = EnumeradorDispositivosAudio.Instancia.ObtenerDispositivoPorDefecto();
+        }
+
+        return new WasapiOut(dispositivo, AudioClientShareMode.Shared, true, latenciaMs);
     }
 
     /// <summary>Reproduce una entrada desde cero (corta en su fin efectivo).</summary>
@@ -236,7 +290,7 @@ public sealed class MotorAudio : IDisposable
 
             var medidor = new MedidorPicos(maestro);
             medidor.Niveles += (izq, der) => Niveles?.Invoke(izq, der);
-            _salida = new WaveOutEvent { DesiredLatency = 150 };
+            _salida = CrearSalida(150);
             _generacion++;
             var generacion = _generacion;
             _salida.PlaybackStopped += (_, _) =>
@@ -248,6 +302,8 @@ public sealed class MotorAudio : IDisposable
             };
             _salida.Init(medidor.ToWaveProvider());
             _lector = lector;
+            _pathActual = path;
+            _finEfectivoActual = hasta;
             Modo = modo;
             _salida.Play();
             _cierreManual = false;
@@ -333,5 +389,7 @@ public sealed class MotorAudio : IDisposable
         _lector?.Dispose();
         _lector = null;
         _volumenMaestro = null;
+        _pathActual = string.Empty;
+        _finEfectivoActual = null;
     }
 }

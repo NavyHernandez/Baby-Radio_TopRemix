@@ -1,3 +1,4 @@
+using BebeRadio.Services;
 using BebeRadio.Support;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -41,6 +42,14 @@ public sealed partial class ConfiguracionViewModel : ObservableObject
         }
     }
 
+    /// <summary>Lista de dispositivos de salida de audio disponibles.</summary>
+    [ObservableProperty]
+    public partial List<DispositivoAudio> Dispositivos { get; set; } = [];
+
+    /// <summary>Índice del dispositivo seleccionado (-1 = predeterminado).</summary>
+    [ObservableProperty]
+    public partial int DispositivoIndice { get; set; } = -1;
+
     /// <summary>Índice 0-2 de la duración (puente TwoWay para RadioButtons).</summary>
     public int TransicionIndice
     {
@@ -68,6 +77,8 @@ public sealed partial class ConfiguracionViewModel : ObservableObject
             TransicionActivada = config.TransicionSiguienteActivada;
             TransicionSegundos = NormalizarSegundos(config.TransicionSiguienteSegundos);
             OperadorPantallaCompleta = config.OperadorPantallaCompleta;
+            CargarDispositivos();
+            EstablecerDispositivoIndice(config.DispositivoSalidaId);
         }
         catch (Exception ex)
         {
@@ -76,6 +87,47 @@ public sealed partial class ConfiguracionViewModel : ObservableObject
         finally
         {
             _cargando = false;
+        }
+
+        EnumeradorDispositivosAudio.Instancia.DispositivosCambiaron += OnDispositivosCambiaron;
+    }
+
+    /// <summary>Carga la lista de dispositivos de salida de audio.</summary>
+    private void CargarDispositivos()
+    {
+        Dispositivos = [.. EnumeradorDispositivosAudio.Instancia.ObtenerDispositivos()];
+    }
+
+    /// <summary>Establece el índice del dispositivo por su ID.</summary>
+    /// <param name="deviceId">ID del dispositivo (vacío = predeterminado).</param>
+    private void EstablecerDispositivoIndice(string deviceId)
+    {
+        if (string.IsNullOrEmpty(deviceId))
+        {
+            DispositivoIndice = -1;
+            return;
+        }
+
+        var indice = Dispositivos.FindIndex(d => d.Id == deviceId);
+        DispositivoIndice = indice >= 0 ? indice : -1;
+    }
+
+    /// <summary>Actualiza la lista cuando cambian los dispositivos del sistema.</summary>
+    private void OnDispositivosCambiaron()
+    {
+        var seleccionado = DispositivoIndice >= 0 && DispositivoIndice < Dispositivos.Count
+            ? Dispositivos[DispositivoIndice].Id
+            : string.Empty;
+
+        CargarDispositivos();
+
+        if (!string.IsNullOrEmpty(seleccionado))
+        {
+            var nuevoIndice = Dispositivos.FindIndex(d => d.Id == seleccionado);
+            if (nuevoIndice >= 0)
+            {
+                DispositivoIndice = nuevoIndice;
+            }
         }
     }
 
@@ -112,6 +164,24 @@ public sealed partial class ConfiguracionViewModel : ObservableObject
         Guardar();
     }
 
+    /// <summary>Aplica el cambio de dispositivo de salida de audio.</summary>
+    /// <param name="value">Índice del dispositivo (-1 = predeterminado).</param>
+    partial void OnDispositivoIndiceChanged(int value)
+    {
+        if (_cargando)
+        {
+            return;
+        }
+
+        var deviceId = value >= 0 && value < Dispositivos.Count
+            ? Dispositivos[value].Id
+            : string.Empty;
+
+        MotorAudio.Instancia.EstablecerDispositivo(deviceId);
+        MezcladorEfectos.Instancia.EstablecerDispositivo(deviceId);
+        Guardar();
+    }
+
     /// <summary>Índice 0-2 de unos segundos normalizados.</summary>
     /// <param name="segundos">Duración (se normaliza primero).</param>
     /// <returns>0 para 3 s, 1 para 5 s, 2 para 7 s.</returns>
@@ -137,6 +207,9 @@ public sealed partial class ConfiguracionViewModel : ObservableObject
             config.TransicionSiguienteActivada = TransicionActivada;
             config.TransicionSiguienteSegundos = TransicionSegundos;
             config.OperadorPantallaCompleta = OperadorPantallaCompleta;
+            config.DispositivoSalidaId = DispositivoIndice >= 0 && DispositivoIndice < Dispositivos.Count
+                ? Dispositivos[DispositivoIndice].Id
+                : string.Empty;
             ConsolaStore.Guardar(config);
         }
         catch (Exception ex)

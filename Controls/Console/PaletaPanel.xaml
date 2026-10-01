@@ -60,6 +60,11 @@
                                     Text="Editar…"
                                     Click="OnEditarCartClick" />
                                 <MenuFlyoutItem
+                                    x:Name="MapeoItem"
+                                    CommandParameter="{Binding}"
+                                    Text="Mapeo…"
+                                    Click="OnMapeoClick" />
+                                <MenuFlyoutItem
                                     x:Name="LimpiarItem"
                                     CommandParameter="{Binding}"
                                     Text="Limpiar"

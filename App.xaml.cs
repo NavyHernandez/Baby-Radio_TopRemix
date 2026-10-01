@@ -1,4 +1,5 @@
-﻿using Microsoft.UI.Xaml;
+﻿using BebeRadio.Services;
+using Microsoft.UI.Xaml;
 
 namespace BebeRadio;
 
@@ -76,6 +77,7 @@ public partial class App : Application
 
         _window = new MainWindow();
         _window.Activate();
+        _window.Closed += (_, _) => KeyMappingService.Instancia.Dispose();
 
         // Telemetría fire-and-forget (nunca bloquea el arranque).
         _ = Support.Telemetria.TelemetriaFirebase.ReportarAsync();

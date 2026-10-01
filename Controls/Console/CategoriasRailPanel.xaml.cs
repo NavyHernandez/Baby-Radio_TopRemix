@@ -404,17 +404,66 @@ public sealed partial class CategoriasRailPanel : UserControl
         }
     }
 
-    /// <summary>Se eleva al importar: el orquestador redespliega todo.</summary>
+    /// <summary>Se eleva al importar o volver a local: el orquestador redespliega todo.</summary>
     public event Action? ConfiguracionImportada;
+
+    /// <summary>
+    /// Refresca el menú portable leyendo el estado actual de sesión.
+    /// "Configuración local" (y su separador) solo aparece en sesión portable.
+    /// </summary>
+    /// <remarks>Leer aquí (no una sola vez al cargar) para que cada despliegue refleje lo vigente.</remarks>
+    private void ActualizarMenuPortable()
+    {
+        var enSesion = ConsolaStore.SesionPortableActiva;
+        var visibilidad = enSesion
+            ? Microsoft.UI.Xaml.Visibility.Visible
+            : Microsoft.UI.Xaml.Visibility.Collapsed;
+        ConfiguracionLocalItem.Visibility = visibilidad;
+        PortableSeparador.Visibility = visibilidad;
+    }
+
+    /// <summary>Muestra "Configuración local" solo en sesión portable.</summary>
+    /// <param name="sender">Menú portable.</param>
+    /// <param name="e">Args de apertura.</param>
+    private void OnPortableMenuOpening(object? sender, object e)
+    {
+        if (sender is MenuFlyout)
+        {
+            ActualizarMenuPortable();
+        }
+    }
+
+    /// <summary>Sale de la sesión portable y vuelve a la configuración local.</summary>
+    /// <param name="sender">Opción del menú.</param>
+    /// <param name="e">Args de enrutado.</param>
+    /// <remarks>
+    /// Lo guardado en el portable ya quedó en su archivo; el JSON local está
+    /// intacto. Blindado: un fallo avisa en vez de cerrar la app.
+    /// </remarks>
+    private async void OnConfiguracionLocalClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            ConsolaStore.SalirSesionPortable();
+            ConfiguracionImportada?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "Riel.ConfiguracionLocal");
+            await MostrarAvisoAsync("No se pudo volver a la configuración local.", "Consola portable");
+        }
+    }
 
     /// <summary>Abre el menú portable con click izquierdo en el iconito.</summary>
     /// <param name="sender">Iconito portable.</param>
     /// <param name="e">Args del puntero.</param>
+    /// <remarks>Refresca el menú antes de desplegarlo (lee la sesión vigente).</remarks>
     private void OnPortablePressed(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
         e.Handled = true;
         if (sender is FrameworkElement icono && icono.ContextFlyout is MenuFlyout menu)
         {
+            ActualizarMenuPortable();
             menu.ShowAt(icono);
         }
     }

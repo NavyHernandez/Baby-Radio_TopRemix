@@ -1,3 +1,11 @@
+Baby Radio v0.1.11 — mapeo sin falsos conflictos, Momentáneo real, fundido suave y vuelta a local.
+
+- FIX mapeo: cambiar solo el modo de interacción ya guarda (antes decía "ya está en uso" por chocar con su propio hotkey); además detecta duplicados entre tus propios slots.
+- FIX Momentáneo: mantener la tecla suena continuo hasta soltar (antes se cortaba y reiniciaba); también para bien con Ctrl/Alt/Shift/Win.
+- NUEVO fundido de salida (120 ms): sin Mix, la 2ª paleta entra suave sobre la 1ª en vez de cortarla en seco; el Stop global y el de cada banco también caen suave.
+- NUEVO "Configuración local" en el menú portable (con iconos): tras importar puedes volver a tu consola local sin reiniciar; solo aparece durante la sesión portable.
+- Resto de la consola sin cambios.
+
 Baby Radio v0.1.10 — modo operador persistente y en vivo.
 
 - FIX: el ajuste de 1/2 pantallas ya no se revierte a 2 pantallas: persiste en la configuración al reabrir y al reiniciar.

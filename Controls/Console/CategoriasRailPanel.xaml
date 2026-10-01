@@ -185,9 +185,26 @@
                     Symbol="ArrowDownload"
                     ToolTipService.ToolTip="Exportar / importar configuración">
                     <fluent:SymbolIcon.ContextFlyout>
-                        <MenuFlyout>
-                            <MenuFlyoutItem Text="Exportar configuración…" Click="OnExportarClick" />
-                            <MenuFlyoutItem Text="Importar configuración…" Click="OnImportarClick" />
+                        <MenuFlyout Opening="OnPortableMenuOpening">
+                            <MenuFlyoutItem Text="Exportar configuración…" Click="OnExportarClick">
+                                <MenuFlyoutItem.Icon>
+                                    <fluent:SymbolIcon Symbol="Save" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem Text="Importar configuración…" Click="OnImportarClick">
+                                <MenuFlyoutItem.Icon>
+                                    <fluent:SymbolIcon Symbol="FolderOpen" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutSeparator x:Name="PortableSeparador" />
+                            <MenuFlyoutItem
+                                x:Name="ConfiguracionLocalItem"
+                                Click="OnConfiguracionLocalClick"
+                                Text="Configuración local">
+                                <MenuFlyoutItem.Icon>
+                                    <fluent:SymbolIcon Symbol="Home" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
                         </MenuFlyout>
                     </fluent:SymbolIcon.ContextFlyout>
                 </fluent:SymbolIcon>
