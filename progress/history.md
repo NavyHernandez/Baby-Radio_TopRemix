@@ -588,3 +588,8 @@ www.top-remix.com movido de la columna del VU a encima de los botones del reprod
 ### Verificacion
 - `dotnet build BebeRadio.csproj -c Debug -p:Platform=x64`: 0 advertencias, 0 errores (build Release del publish OK).
 - `releases/`: solo la versión vigente (full + Setup + RELEASES).
+
+## 2026-10-05 - Push v0.1.12 al repositorio
+
+- Commit `751e968` + push a `origin/main` (9 archivos; `.opencode/*` excluido: bump de plugin del entorno, ajeno al cambio).
+- Sin upload a GitHub Releases (solo `-SkipUpload`, sin orden del owner).
