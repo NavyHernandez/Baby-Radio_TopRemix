@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
     OperadorConsolaPanel — pantalla del modo operador: dos bancos de paletas
-    lado a lado (cada uno con su categoría y páginas propias, 5x5) + tira
-    compacta de acciones (Config·Categorías·Stop·Mix) + botón para salir.
-    Sin reproductor ni cola: solo categorías y paletas (estilo cartwall).
+    lado a lado (cada uno con su categoría y páginas propias, 5x5) + fader
+    maestro amplio en la barra superior (mismo Reproductor que la consola
+    normal: cola + efectos) + tira compacta de acciones
+    (Config·Categorías·Stop·Mix) + botón para salir.
+    Sin cola: solo categorías y paletas (estilo cartwall).
     La lógica vive en ConsolaViewModel; aquí solo composición y diálogos.
 -->
 <UserControl
@@ -21,28 +23,43 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Barra superior: título + logo centrado + salida -->
-        <Grid>
-            <Image
-                MaxHeight="30"
-                MaxWidth="130"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                AutomationProperties.AccessibilityView="Raw"
-                IsHitTestVisible="False"
-                Opacity="0.9"
-                Source="ms-appx:///Assets/Baby-Radio-Watermark.png"
-                Stretch="Uniform"
-                ToolTipService.ToolTip="Baby Radio" />
+        <!-- Barra superior: título + fader maestro amplio + salida -->
+        <Grid ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
             <TextBlock
+                Grid.Column="0"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center"
                 FontSize="15"
                 FontWeight="SemiBold"
                 Foreground="{StaticResource TextPrimary}"
                 Text="{x:Bind Consola.TituloOperador, Mode=OneWay}" />
+            <!-- Fader maestro centrado al 50 % (mismo volumen total que la
+                 consola normal: cola vía MotorAudio + efectos vía
+                 MezcladorEfectos, con mute, curva cuadrática y persistencia
+                 en PlayerViewModel). Las columnas laterales absorben el
+                 50 % restante para que no ocupe todo el ancho. -->
+            <Grid Grid.Column="1" VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="1*" />
+                </Grid.ColumnDefinitions>
+                <controls:MasterFaderControl
+                    Grid.Column="1"
+                    MinWidth="320"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Center"
+                    ViewModel="{x:Bind Consola.Reproductor, Mode=OneWay}" />
+            </Grid>
             <Button
+                Grid.Column="2"
                 HorizontalAlignment="Right"
+                VerticalAlignment="Center"
                 MinHeight="32"
                 MinWidth="72"
                 Padding="12,0"

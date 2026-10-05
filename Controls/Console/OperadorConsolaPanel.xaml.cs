@@ -100,12 +100,17 @@ public sealed partial class OperadorConsolaPanel : UserControl
     }
 
     /// <summary>Muestra 1 o 2 bancos según el ajuste vigente.</summary>
-    /// <remarks>Composición: con 1 banco la columna B queda en ancho 0.</remarks>
+    /// <remarks>
+    /// Composición: con 1 banco la columna B queda en ancho 0 y el banco A
+    /// usa el riel lateral derecho (categorías + ▲▼/gestionar, sin Stop
+    /// propio: lo cubre el Stop global de la tira).
+    /// </remarks>
     private void ActualizarBancos()
     {
         var dos = Consola?.OperadorPantallaCompleta != false;
         BancoB.Visibility = dos ? Visibility.Visible : Visibility.Collapsed;
         ColumnaB.Width = dos ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+        BancoA.UsarRielLateral = !dos;
     }
 
     /// <summary>Sincroniza el titileo de Mix con su armado.</summary>

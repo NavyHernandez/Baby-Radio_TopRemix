@@ -536,3 +536,55 @@ www.top-remix.com movido de la columna del VU a encima de los botones del reprod
 
 ### Verificacion
 - dotnet build -c Debug: 0 advertencias, 0 errores.
+
+## 2026-10-05 - Fader master en modo operador
+
+1. **UI**: `OperadorConsolaPanel.xaml` suma fila `Auto` con `MasterFaderControl` reutilizado (centrado, `MaxWidth=560`, `ViewModel={x:Bind Consola.Reproductor}`) entre bancos y tira; la tira pasa a `Grid.Row=3`. Cabecera del XAML actualizada. Sin lógica nueva: mismo volumen total (cola vía `MotorAudio.FijarMaestroUsuario` + efectos vía `MezcladorEfectos.FijarMaestro`), mute, curva cuadrática y persistencia de `PlayerViewModel`.
+2. **Docs**: feature 53 en done en `progress/feature_list.json` + apéndice en `progress/history.md` (este).
+
+### Verificacion
+- `dotnet build BebeRadio.csproj -c Debug -p:Platform=x64`: 0 advertencias, 0 errores (nota: `dotnet build` pelado falla en esta máquina por `NETSDK1032` win-x64 vs PlatformTarget arm64; quirk de entorno, no del cambio).
+
+## 2026-10-05 - Fader operador arriba amplio y centrado (sin logo)
+
+1. **UI**: `OperadorConsolaPanel.xaml` mueve el `MasterFaderControl` a la barra superior (header de 3 columnas `Auto/*/Auto`, `ColumnSpacing=12`): título izq + fader `Stretch` `MinWidth=320` centrado + Salir der. Se elimina el `Image` watermark del header operador y la fila intermedia (vuelve a 3 filas `Auto/* /Auto`).
+2. **Docs**: feature 53 enmendada + apéndice en `progress/history.md` (este).
+
+### Verificacion
+- `dotnet build BebeRadio.csproj -c Debug -p:Platform=x64`: 0 advertencias, 0 errores.
+
+## 2026-10-05 - Fader operador al 60 % del ancho
+
+1. **UI**: el contenedor del fader en el header operador pasa de `1.5*/7*/1.5*` (70 %) a `2*/6*/2*` (60 % centrado, laterales absorben el 40 %); `MinWidth=320` intacto.
+2. **Docs**: feature 53 enmendada + apéndice en `progress/history.md` (este).
+
+### Verificacion
+- `dotnet build BebeRadio.csproj -c Debug -p:Platform=x64`: 0 advertencias, 0 errores.
+
+## 2026-10-05 - Fader operador al 50 % del ancho
+
+1. **UI**: el contenedor del fader en el header operador pasa de `2*/6*/2*` (60 %) a `1*/2*/1*` (50 % centrado); `MinWidth=320` intacto.
+2. **Docs**: feature 53 enmendada + apéndice en `progress/history.md` (este).
+
+### Verificacion
+- `dotnet build BebeRadio.csproj -c Debug -p:Platform=x64`: 0 advertencias, 0 errores.
+
+## 2026-10-05 - Modo 1 banco: riel derecho sin Stop propio
+
+1. **UI**: `BancoOperadorPanel` suma DP `UsarRielLateral`: colapsa `HeaderClasico` y muestra `RielDerecho` (140px: categorías en 2 columnas con scroll + indicador y ▲▼/gestionar apilados a todo lo ancho, sin Stop pequeño). La `PaletaPanel` es única y compartida por ambos layouts (sin doble suscripción de eventos).
+2. **Activación**: `OperadorConsolaPanel.ActualizarBancos` fija `BancoA.UsarRielLateral = !dos`; modo 2 bancos intacto (con Stop propio por banco). Stop global de la tira sigue cortando todo.
+3. **Docs**: feature 54 en done + apéndice en `progress/history.md` (este).
+
+### Verificacion
+- `dotnet build BebeRadio.csproj -c Debug -p:Platform=x64`: 0 advertencias, 0 errores.
+
+## 2026-10-05 - Release v0.1.12 (features 53-54) + ejecutable
+
+1. **Versionado**: `<Version>` 0.1.11 → 0.1.12 en `BebeRadio.csproj`.
+2. **Release**: `publish.ps1 -SkipUpload` (dotnet publish Release win-x64 self-contained + `vpk pack`: full + `BabyRadio-win-Setup.exe` + `RELEASES`). Sin subida a GitHub (sin orden del owner).
+3. **Docs**: entrada v0.1.12 en `Assets/release_notes.txt`; features 53-54 en done.
+4. Incluye: fader maestro en la barra superior del operador (53), modo 1 banco con riel derecho sin Stop propio (54).
+
+### Verificacion
+- `dotnet build BebeRadio.csproj -c Debug -p:Platform=x64`: 0 advertencias, 0 errores (build Release del publish OK).
+- `releases/`: solo la versión vigente (full + Setup + RELEASES).

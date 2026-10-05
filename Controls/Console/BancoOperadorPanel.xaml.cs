@@ -41,6 +41,42 @@ public sealed partial class BancoOperadorPanel : UserControl
         set => SetValue(SelectorProperty, value);
     }
 
+    /// <summary>Propiedad de dependencia del layout de riel lateral.</summary>
+    public static readonly DependencyProperty UsarRielLateralProperty =
+        DependencyProperty.Register(
+            nameof(UsarRielLateral),
+            typeof(bool),
+            typeof(BancoOperadorPanel),
+            new PropertyMetadata(false, OnUsarRielLateralChanged));
+
+    /// <summary>
+    /// True en modo 1 banco: colapsa el header clásico y muestra el riel
+    /// derecho (categorías + ▲▼/gestionar, sin Stop propio).
+    /// </summary>
+    public bool UsarRielLateral
+    {
+        get => (bool)GetValue(UsarRielLateralProperty);
+        set => SetValue(UsarRielLateralProperty, value);
+    }
+
+    /// <summary>Alterna header clásico y riel derecho al cambiar el layout.</summary>
+    /// <param name="sender">Este control.</param>
+    /// <param name="args">Valor nuevo del layout.</param>
+    private static void OnUsarRielLateralChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
+    {
+        if (sender is BancoOperadorPanel banco)
+        {
+            banco.ActualizarDisposicion();
+        }
+    }
+
+    /// <summary>Muestra el header clásico o el riel derecho (nunca ambos).</summary>
+    private void ActualizarDisposicion()
+    {
+        HeaderClasico.Visibility = UsarRielLateral ? Visibility.Collapsed : Visibility.Visible;
+        RielDerecho.Visibility = UsarRielLateral ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     /// <summary>Se eleva al pedir gestionar categorías.</summary>
     public event Action? PideGestionarCategorias;
 
@@ -55,11 +91,14 @@ public sealed partial class BancoOperadorPanel : UserControl
         PaletaInterna.PideNuevaCategoria += () => PideNuevaCategoria?.Invoke();
     }
 
-    /// <summary>Anexa sombras GPU al cargar.</summary>
+    /// <summary>Anexa sombras GPU al cargar y aplica el layout vigente.</summary>
     /// <param name="sender">Este control.</param>
     /// <param name="e">Args de enrutado.</param>
-    private void OnLoaded(object sender, RoutedEventArgs e) =>
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
         ConsolaSombraHelper.AttachAllShadows(this);
+        ActualizarDisposicion();
+    }
 
     /// <summary>Despliega la categoría pulsada en este banco.</summary>
     /// <param name="sender">Botón de la tira.</param>

@@ -690,6 +690,31 @@
         "dotnet build sin warnings ni errores"
       ],
       "status": "done"
+    },
+    {
+      "id": 53,
+      "name": "fader-master-en-modo-operador",
+      "title": "Fader master en modo operador",
+      "description": "MasterFaderControl en la barra superior del modo operador (header 3 columnas: titulo + contenedor 1*/2*/1* con fader Stretch MinWidth 320 ColumnSpacing 12 + Salir), sin logo watermark; bindeado a Consola.Reproductor: mismo volumen total cola+efectos, mute, curva cuadratica y persistencia; sin logica nueva.",
+      "acceptance": [
+        "El modo operador muestra fader + mute + % y mueve el mismo volumen que la consola normal",
+        "Mute en operador silencia/restaura igual que en consola normal",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 54,
+      "name": "banco-unico-riel-derecho-sin-stop",
+      "title": "Modo 1 banco: riel derecho sin Stop propio",
+      "description": "BancoOperadorPanel suma DP UsarRielLateral: en modo 1 banco colapsa el header clasico y muestra riel derecho (categorias 2 col con scroll + indicador y subir/bajar/gestionar apilados, sin Stop pequeno; lo cubre el Stop global). Modo 2 bancos intacto. OperadorConsolaPanel.ActualizarBancos lo activa con !OperadorPantallaCompleta.",
+      "acceptance": [
+        "Con 1 banco: categorias a la derecha con scroll, subir/bajar y gestionar abajo, sin Stop pequeno",
+        "Con 2 bancos: layout clasico sin cambios",
+        "Stop global sigue deteniendo todo",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
     }
   ]
 }

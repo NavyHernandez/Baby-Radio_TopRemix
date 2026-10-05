@@ -76,8 +76,8 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 │       └── AccionesConsolaStrip.xaml(.cs)   ← abajo: 7 aluminio + Mix/Ganancia titilan (abre Config)
 │       ├── ConfiguracionDialog.xaml(.cs)    ← ajustes: toggle transición + 3/5/7 s (inyecta su VM)
 │       ├── TitileoArmado.cs                 ← titileo de armado reutilizable
-│       ├── BancoOperadorPanel.xaml(.cs)     ← banco 5×N + selector + páginas propias + Stop propio
-│       └── OperadorConsolaPanel.xaml(.cs)   ← modo operador: 1-2 bancos + tira + salir + Esc
+│   ├── BancoOperadorPanel.xaml(.cs)     ← banco 5×N + selector + páginas propias + Stop propio (riel der sin Stop en 1 banco)
+│       └── OperadorConsolaPanel.xaml(.cs)   ← modo operador: 1-2 bancos + fader maestro amplio arriba + tira + salir + Esc
 └── Views/Phase1ShowcaseView.xaml(.cs) ← shell dual normal/operador (perezoso) vía ConsolaViewModel
 ```
 
@@ -291,8 +291,8 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `Controls/Console/AccionesConsolaStrip.xaml(.cs)` | Abajo: 7 aluminio + Mix/Ganancia titilan (abre Config) |
 | `Controls/Console/ConfiguracionDialog.xaml(.cs)` | Ajustes: toggle transición + 3/5/7 s (inyecta su VM) |
 | `Controls/Console/TitileoArmado.cs` | Titileo de armado reutilizable |
-| `Controls/Console/BancoOperadorPanel.xaml(.cs)` | Banco 5×N + selector + páginas propias + Stop propio |
-| `Controls/Console/OperadorConsolaPanel.xaml(.cs)` | Modo operador: 1-2 bancos + tira + salir + Esc |
+| `Controls/Console/BancoOperadorPanel.xaml(.cs)` | Banco 5×N + selector + páginas propias + Stop propio (riel der sin Stop en 1 banco) |
+| `Controls/Console/OperadorConsolaPanel.xaml(.cs)` | Modo operador: 1-2 bancos + fader maestro amplio arriba (mismo Reproductor) + tira + salir + Esc |
 | `Views/Phase1ShowcaseView.xaml(.cs)` | Shell dual normal/operador (perezoso) + sombras |
 
 ## 8. Progreso por features (obligatorio)

@@ -1,3 +1,10 @@
+Baby Radio v0.1.12 — fader maestro en el operador + banco único con riel derecho.
+
+- NUEVO fader maestro en la barra superior del modo operador (mismo volumen total, mute y porcentaje que la consola; sin logo para darle ancho).
+- NUEVO modo 1 banco con riel derecho: categorías a la derecha con scroll + subir/bajar y gestionar abajo; sin botón Stop pequeño (lo cubre el Stop de la tira).
+- Con 2 bancos todo sigue igual (incluido el Stop propio de cada banco).
+- Resto de la consola sin cambios.
+
 Baby Radio v0.1.11 — mapeo sin falsos conflictos, Momentáneo real, fundido suave y vuelta a local.
 
 - FIX mapeo: cambiar solo el modo de interacción ya guarda (antes decía "ya está en uso" por chocar con su propio hotkey); además detecta duplicados entre tus propios slots.

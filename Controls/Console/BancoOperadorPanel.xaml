@@ -2,7 +2,10 @@
 <!--
     BancoOperadorPanel — un banco del modo operador: tira compacta de
     categorías (independiente por banco) + indicador de página con flechas
-    propias + grilla de 30 carts (PaletaPanel reutilizada).
+    propias + grilla de 30 carts (PaletaPanel reutilizada) + Stop propio.
+    En modo 1 banco (UsarRielLateral) el header se colapsa y aparece un riel
+    derecho vertical (categorías arriba con scroll + indicador y ▲▼/gestionar
+    abajo, sin Stop: lo cubre el Stop global de la tira inferior).
     Click dispara el efecto; click derecho edita/limpia; arrastre carga.
 -->
 <UserControl
@@ -30,8 +33,10 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
-            <!-- Header del banco: selector + páginas + gestionar -->
-            <Grid ColumnSpacing="8">
+            <!-- Header del banco: selector + páginas + gestionar (modo 2 bancos) -->
+            <Grid
+                x:Name="HeaderClasico"
+                ColumnSpacing="8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -123,11 +128,114 @@
                 </StackPanel>
             </Grid>
 
-            <!-- Grilla de 30 carts (paleta reutilizada) -->
-            <console:PaletaPanel
-                x:Name="PaletaInterna"
+            <!-- Contenido: carts + riel derecho (solo modo 1 banco) -->
+            <Grid
                 Grid.Row="1"
-                ViewModel="{x:Bind PaletaVM, Mode=OneWay}" />
+                ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Grilla de 30 carts (paleta reutilizada) -->
+                <console:PaletaPanel
+                    x:Name="PaletaInterna"
+                    Grid.Column="0"
+                    ViewModel="{x:Bind PaletaVM, Mode=OneWay}" />
+
+                <!-- Riel derecho (modo 1 banco): categorías con scroll +
+                     indicador y ▲▼/gestionar abajo. Sin Stop: lo cubre el
+                     Stop global de la tira inferior. -->
+                <Grid
+                    x:Name="RielDerecho"
+                    Grid.Column="1"
+                    Width="140"
+                    RowSpacing="6"
+                    Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ScrollViewer
+                        Grid.Row="0"
+                        HorizontalScrollMode="Disabled"
+                        VerticalScrollBarVisibility="Auto"
+                        VerticalScrollMode="Auto">
+                        <ItemsControl ItemsSource="{x:Bind Selector.Opciones, Mode=OneWay}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <controls:UniformGridPanel Columns="2" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="consolevm:OpcionCategoria">
+                                    <Button
+                                        MinHeight="58"
+                                        Padding="2"
+                                        HorizontalAlignment="Stretch"
+                                        Margin="0,0,2,0"
+                                        AutomationProperties.Name="{x:Bind Categoria.Swatch.Label, Mode=OneWay}"
+                                        Click="OnCategoriaClick"
+                                        Opacity="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource DimSegunSeleccion}}"
+                                        controls:BebeButtonHelper.CategoryColor="{x:Bind Categoria.ColorFantasma, Mode=OneWay, Converter={StaticResource CategoryBrush}}"
+                                        Style="{StaticResource BebeCategoryButtonStyle}"
+                                        ToolTipService.ToolTip="{x:Bind Categoria.Swatch.Label, Mode=OneWay}">
+                                        <StackPanel Spacing="0">
+                                            <fluent:SymbolIcon
+                                                HorizontalAlignment="Center"
+                                                FontSize="18"
+                                                Foreground="{StaticResource TextPrimary}"
+                                                Symbol="{x:Bind Categoria.Icono, Mode=OneWay}" />
+                                            <TextBlock
+                                                HorizontalAlignment="Center"
+                                                FontSize="9"
+                                                FontWeight="SemiBold"
+                                                Foreground="{StaticResource TextPrimary}"
+                                                Text="{x:Bind Categoria.Swatch.Label, Mode=OneWay}"
+                                                TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <StackPanel
+                        Grid.Row="1"
+                        Spacing="4">
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            FontFamily="Cascadia Mono, Consolas"
+                            FontSize="12"
+                            Foreground="{StaticResource TextSecondary}"
+                            Text="{x:Bind PaletaVM.IndicadorPagina, Mode=OneWay}" />
+                        <Button
+                            MinHeight="40"
+                            HorizontalAlignment="Stretch"
+                            AutomationProperties.Name="Página anterior del banco"
+                            Click="OnPaginaAnterior"
+                            Style="{StaticResource BebeLightButtonStyle}">
+                            <fluent:SymbolIcon FontSize="18" Foreground="{StaticResource CategoryProgram}" Symbol="ArrowUp" />
+                        </Button>
+                        <Button
+                            MinHeight="40"
+                            HorizontalAlignment="Stretch"
+                            AutomationProperties.Name="Página siguiente del banco"
+                            Click="OnPaginaSiguiente"
+                            Style="{StaticResource BebeLightButtonStyle}">
+                            <fluent:SymbolIcon FontSize="18" Foreground="{StaticResource CategoryProgram}" Symbol="ArrowDown" />
+                        </Button>
+                        <Button
+                            MinHeight="40"
+                            HorizontalAlignment="Stretch"
+                            AutomationProperties.Name="Gestionar categorías"
+                            Click="OnGestionarClick"
+                            Style="{StaticResource BebeLightButtonStyle}"
+                            ToolTipService.ToolTip="Gestionar categorías">
+                            <fluent:SymbolIcon FontSize="18" Foreground="{StaticResource CategoryFiller}" Symbol="Options" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Grid>
         </Grid>
     </Border>
 </UserControl>
