@@ -7,6 +7,7 @@
     .\publish.ps1 -Version "0.1.0"         # Forzar versión
     .\publish.ps1 -SkipUpload              # Solo publicar + paquetear (sin subir)
     .\publish.ps1 -Token $env:GH_TOKEN     # Token por variable de entorno
+    .\publish.ps1 -ForceUpload             # Re-subir aunque la release ya exista
 
 .DESCPRIPCIÓN
     Requisitos:
@@ -16,16 +17,19 @@
 
     Flujo:
       1. Lee la versión del .csproj (o usa la del parámetro)
-      2. dotnet publish (Release, win-x64, self-contained, unpackaged,
+      2. Si la release de esa versión ya está publicada con assets, termina
+         sin re-subir (idempotente; ver -ForceUpload)
+      3. dotnet publish (Release, win-x64, self-contained, unpackaged,
          con Windows App SDK Runtime incluido: el cliente no instala nada aparte)
-      3. vpk pack (crea el paquete .nupkg en releases/)
-      4. vpk upload github (sube a GitHub Releases, con limpieza idempotente)
+      4. vpk pack (crea el paquete .nupkg en releases/)
+      5. vpk upload github (sube a GitHub Releases, con limpieza idempotente)
 #>
 
 param(
     [string]$Version,
     [string]$Token,
-    [switch]$SkipUpload
+    [switch]$SkipUpload,
+    [switch]$ForceUpload
 )
 
 $ErrorActionPreference = "Stop"
@@ -51,6 +55,30 @@ if (-not $Version) {
     }
 }
 Write-Host "==> Versión: $Version" -ForegroundColor Cyan
+
+# ─── 2b. Guard idempotente ──────────────────────────────────────
+# Si la release de esta versión ya está publicada con assets, no se repite
+# el upload. Cada push a main re-ejecuta este workflow: volver a subir la
+# MISMA versión hace que la limpieza borre y vpk recree el tag en carrera
+# y falle con "vpk upload github falló (código -1)". Para re-subir a mano
+# usa -ForceUpload o borra la release en GitHub.
+if (-not $SkipUpload -and -not $ForceUpload) {
+    try {
+        $existente = Invoke-RestMethod `
+            -Uri "https://api.github.com/repos/$RepoOwner/$RepoName/releases/tags/v$Version" `
+            -Headers @{ "User-Agent" = "publish.ps1" } `
+            -Method Get
+        if ($existente -and $existente.assets -and $existente.assets.Count -gt 0) {
+            Write-Host "`n==> La release v$Version ya está publicada con $($existente.assets.Count) assets." -ForegroundColor DarkYellow
+            Write-Host "==> Nada que subir (usa -ForceUpload para volver a subirla)." -ForegroundColor DarkYellow
+            exit 0
+        }
+    }
+    catch {
+        # 404 u otro fallo de consulta: la release no existe (o no se pudo
+        # comprobar); continúa con el flujo normal de publicación.
+    }
+}
 
 # ─── 2. dotnet publish ──────────────────────────────────────────
 Write-Host "`n==> Publicando $AppId (Release, $RID, self-contained)..." -ForegroundColor Yellow

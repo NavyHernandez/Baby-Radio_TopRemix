@@ -769,6 +769,19 @@
         "dotnet build sin warnings ni errores"
       ],
       "status": "done"
+    },
+    {
+      "id": 59,
+      "name": "ci-publish-idempotente-sin-reintento-misma-version",
+      "title": "CI publish idempotente (el reintento de la misma versión ya no falla)",
+      "description": "El workflow publish.yml corre en cada push a main y re-ejecutaba vpk upload con la MISMA version ya publicada (p. ej. un push de docs tras publicar v0.1.13): la limpieza borraba la release y vpk recreaba el tag en carrera, fallando con 'vpk upload github falló (código -1)'. Doble capa: (1) el workflow solo corre si cambian BebeRadio.csproj, publish.ps1 o el propio workflow (paths) + permissions contents:write; (2) publish.ps1 consulta la release por API y termina con exit 0 si ya existe con assets (param -ForceUpload para re-subir a mano). vpk local actualizado 1.2.0 → 1.2.161.",
+      "acceptance": [
+        "Push de docs tras publicar: el workflow termina success sin re-subir",
+        "Push que cambia <Version> en el csproj: publica la versión nueva",
+        "ForceUpload permite re-subir la misma versión a mano",
+        "La release v0.1.13 publicada sigue intacta"
+      ],
+      "status": "done"
     }
   ]
 }

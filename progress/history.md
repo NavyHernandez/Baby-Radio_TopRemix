@@ -650,3 +650,15 @@ www.top-remix.com movido de la columna del VU a encima de los botones del reprod
 - Commit `5cfcc5a` + push a `origin/main` (23 archivos; `.opencode/*` excluido: bump de plugin del entorno, ajeno al cambio).
 - Paquete Velopack 0.1.13 generado (`releases/` solo con la versión vigente: full + delta + Setup + Portable + RELEASES).
 - Upload a GitHub Releases pendiente de token `GH_TOKEN` (no disponible en el entorno).
+
+## 2026-10-09 – CI publish idempotente (feature 59)
+
+1. **Síntoma**: el run del push de docs (`43c18f0`) falló con `vpk upload github falló (código -1)`; el run anterior (`5cfcc5a`) había publicado v0.1.13 correctamente (5 assets).
+2. **Causa**: el workflow corre en cada push a main y volvió a subir la MISMA versión: la limpieza de publish.ps1 borró la release y vpk recreó el tag en carrera → fallo -1. La release v0.1.13 no se tocó.
+3. **Fix doble capa**: (a) workflow con `paths` (solo cambian `BebeRadio.csproj`, `publish.ps1` o el workflow) + `permissions: contents: write`; (b) `publish.ps1` consulta la release por API pública y termina con exit 0 si ya existe con assets (`-ForceUpload` para re-subir a mano). Guard probado localmente: exit 0 sobre v0.1.13.
+4. **Nota**: vpk local actualizado 1.2.0 → 1.2.161 (en CI ya instalaba la última).
+5. **Docs**: feature 59 en done + apéndice en `progress/history.md` (este).
+
+### Verificación
+- Guard local: `.\publish.ps1` con v0.1.13 publicada → "Nada que subir", exit 0.
+- `dotnet build -c Debug` no aplica (solo PS1/YAML/docs); release v0.1.13 intacta en GitHub.
