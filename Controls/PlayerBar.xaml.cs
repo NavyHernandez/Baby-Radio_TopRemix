@@ -1,7 +1,9 @@
 using System.ComponentModel;
+using BebeRadio.Support;
 using BebeRadio.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace BebeRadio.Controls;
 
@@ -27,6 +29,7 @@ public sealed partial class PlayerBar : UserControl
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _parpadeoStop;
     private bool _faseStop;
     private int _pasosStop;
+    private AdaptiveTriggerHelper? _layoutHelper;
 
     /// <summary>Propiedad de dependencia del ViewModel inyectado.</summary>
     public static readonly DependencyProperty ViewModelProperty =
@@ -104,6 +107,45 @@ public sealed partial class PlayerBar : UserControl
         RefreshParpadeo();
         RefreshRepeatBlink();
         RefreshNextBlink();
+        ConectarLayoutAdaptativo();
+    }
+
+    /// <summary>Conecta los AdaptiveTriggers con el helper de la ventana.</summary>
+    private void ConectarLayoutAdaptativo()
+    {
+        if ((Application.Current as App)?.VentanaPrincipal is not MainWindow ventana)
+        {
+            return;
+        }
+
+        _layoutHelper = new AdaptiveTriggerHelper(ventana);
+
+        var triggers = FindVisualChildren<LayoutStateTrigger>(this);
+        foreach (var trigger in triggers)
+        {
+            trigger.Connect(_layoutHelper);
+        }
+    }
+
+    /// <summary>Busca todos los elementos visuales de un tipo en el árbol.</summary>
+    /// <typeparam name="T">Tipo a buscar.</typeparam>
+    /// <param name="parent">Elemento padre.</param>
+    /// <returns>Elementos encontrados.</returns>
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T typed)
+            {
+                yield return typed;
+            }
+
+            foreach (var descendant in FindVisualChildren<T>(child))
+            {
+                yield return descendant;
+            }
+        }
     }
 
     /// <summary>Desuscribe eventos y apaga parpadeos al descargar.</summary>
@@ -114,6 +156,8 @@ public sealed partial class PlayerBar : UserControl
         ViewModel.PropertyChanged -= OnViewModelChanged;
         ApagarParpadeo();
         ApagarParpadeoPlay();
+        _layoutHelper?.Dispose();
+        _layoutHelper = null;
         ApagarParpadeoRepeat();
         ApagarParpadeoNext();
         ApagarParpadeoStop();

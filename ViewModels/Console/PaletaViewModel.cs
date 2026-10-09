@@ -11,7 +11,7 @@ using Microsoft.UI.Dispatching;
 namespace BebeRadio.ViewModels.Console;
 
 /// <summary>
-/// Paleta de 50 slots por categoría (25+25, 5×5 por vista).
+/// Paleta de 60 slots por categoría (30+30, 5×6 por vista).
 /// Sin mocks: todo slot arranca vacío y elegante; solo lo guardado en JSON
 /// o arrastrado se ve lleno. Escucha a <see cref="CategoriasRailViewModel"/>.
 /// El clic dispara por el <see cref="MezcladorEfectos"/> (polifonía con Mix,
@@ -19,8 +19,8 @@ namespace BebeRadio.ViewModels.Console;
 /// </summary>
 public sealed partial class PaletaViewModel : ObservableObject
 {
-    /// <summary>Slots por categoría (2 páginas de 25).</summary>
-    public const int SlotsPorCategoria = 50;
+    /// <summary>Slots por categoría (2 páginas de 30).</summary>
+    public const int SlotsPorCategoria = 60;
 
     /// <summary>Carts visibles por página en modo normal (5 columnas × 5 filas).</summary>
     public const int ItemsPorPagina = 25;
@@ -76,6 +76,10 @@ public sealed partial class PaletaViewModel : ObservableObject
     private readonly List<PaletteItem> _todos = new(SlotsPorCategoria);
     private readonly Dictionary<Guid, (string Duena, int Slot)> _voces = new();
     private readonly HashSet<PaletteItem> _pendientes = new();
+
+    /// <summary>Arranques de retrigger en vuelo por slot (contador: aguanta el layering).</summary>
+    /// <remarks>Se vacía con Stop/limpieza y se quita por slot en <see cref="DetenerVozDe"/>.</remarks>
+    private readonly Dictionary<PaletteItem, int> _pendientesRetrigger = new();
     private readonly object _puerta = new();
     private readonly MezcladorEfectos _mezclador = MezcladorEfectos.Instancia;
     private readonly KeyMappingService _keyMapping = KeyMappingService.Instancia;
@@ -88,7 +92,7 @@ public sealed partial class PaletaViewModel : ObservableObject
         _keyMapping.OnHotkeyPressed += OnHotkeyPressed;
         _keyMapping.OnHotkeyReleased += OnHotkeyReleased;
 
-        // Pool estable: los 50 slots y los visibles se crean una sola vez y se
+        // Pool estable: los 60 slots y los visibles se crean una sola vez y se
         // mutan en el lugar. Así cambiar de categoría no recrea contenedores de UI.
         for (var i = 0; i < SlotsPorCategoria; i++)
         {
@@ -105,7 +109,7 @@ public sealed partial class PaletaViewModel : ObservableObject
     /// <param name="cola">Cola del dispatcher de la vista.</param>
     public void UsarHiloUi(DispatcherQueue cola) => _hiloUi = cola;
 
-    /// <summary>Reconstruye la paleta (50 slots mutados en el lugar).</summary>
+    /// <summary>Reconstruye la paleta (60 slots mutados en el lugar).</summary>
     /// <param name="category">Categoría desplegada.</param>
     /// <remarks>
     /// Vuelve a la página 1 sin cortar efectos (siguen y retoman titileo).
@@ -449,10 +453,16 @@ public sealed partial class PaletaViewModel : ObservableObject
     /// <summary>
     /// Dispara un efecto en modo Retrigger: crea NUEVA voz superpuesta (layering),
     /// sin detener las voces anteriores de este slot. El mixer permite hasta 6
-    /// voces globales; si se satura, retorna false. El Stop global detiene todas.
+    /// voces globales; si se satura, se deshace el titileo del slot. El Stop global detiene todas.
     /// </summary>
     /// <param name="item">Slot a disparar.</param>
-    /// <returns>True si se inició la voz; false si slot sin audio, archivo inválido o mixer saturado.</returns>
+    /// <returns>True si el slot quedó aceptado (titila y el audio engancha enseguida); false si slot sin audio.</returns>
+    /// <remarks>
+    /// La apertura pesada (lector + salida) corre en background como en
+    /// <see cref="Disparar"/>: no bloquea el hilo UI del hotkey. Mientras está en
+    /// vuelo queda anotada en <see cref="_pendientesRetrigger"/> para que un Stop
+    /// o una edición del slot descarte la voz que llegue tarde. Debe llamarse en el hilo UI.
+    /// </remarks>
     public bool DispararRetrigger(PaletteItem item)
     {
         if (!item.TieneAudio
@@ -467,39 +477,122 @@ public sealed partial class PaletaViewModel : ObservableObject
             MotorAudio.Instancia.FijarMaestro(Math.Pow(10, AtenuacionColaDb / 20));
         }
 
-        var ruta = item.FilePath;
-        var inicio = item.CueInicio;
-        var fin = item.CueFin;
-        var ganancia = item.GananciaDb;
-        var clave = (Duena: item.PropietariaId, Slot: item.SlotIndex);
-
-        var voz = _mezclador.Disparar(ruta, inicio, fin, ganancia);
-        if (voz is null)
-        {
-            return false; // Mixer saturado (6 voces máx)
-        }
-
-        // Rastrear esta voz para poder detenerla con Stop global
-        lock (_puerta)
-        {
-            _voces[voz.Value] = clave;
-        }
-
-        // UI: marcar como sonando y titilar
+        // UI al instante: el titileo no espera a abrir el archivo.
         item.EstaSonando = true;
         if (!Sonando.Contains(item))
         {
             Sonando.Add(item);
         }
 
-        // Auto-limpieza al terminar natural
+        var ruta = item.FilePath;
+        var inicio = item.CueInicio;
+        var fin = item.CueFin;
+        var ganancia = item.GananciaDb;
+        var clave = (Duena: item.PropietariaId, Slot: item.SlotIndex);
+        AnotarPendienteRetrigger(item);
+
         _ = Task.Run(() =>
         {
-            // Esperar a que la voz termine (evento VozTerminada ya maneja limpieza vía MarcarFinVoz)
-            // Solo asegurar que si la voz se cancela antes, se limpie
+            var voz = _mezclador.Disparar(ruta, inicio, fin, ganancia);
+            EnHiloUi(() => CerrarDisparoRetrigger(item, clave, voz));
         });
-
         return true;
+    }
+
+    /// <summary>Anota en vuelo un arranque de retrigger de este slot.</summary>
+    /// <param name="item">Slot.</param>
+    private void AnotarPendienteRetrigger(PaletteItem item)
+    {
+        lock (_puerta)
+        {
+            _pendientesRetrigger[item] = _pendientesRetrigger.TryGetValue(item, out var enVuelo)
+                ? enVuelo + 1
+                : 1;
+        }
+    }
+
+    /// <summary>Quita un arranque de retrigger en vuelo de este slot.</summary>
+    /// <param name="item">Slot.</param>
+    /// <returns>True si seguía pendiente; false si ya lo cancelaron (Stop o edición).</returns>
+    private bool QuitarPendienteRetrigger(PaletteItem item)
+    {
+        lock (_puerta)
+        {
+            if (!_pendientesRetrigger.TryGetValue(item, out var enVuelo))
+            {
+                return false;
+            }
+
+            if (enVuelo <= 1)
+            {
+                _pendientesRetrigger.Remove(item);
+            }
+            else
+            {
+                _pendientesRetrigger[item] = enVuelo - 1;
+            }
+
+            return true;
+        }
+    }
+
+    /// <summary>Finaliza en el hilo UI un retrigger cuya apertura terminó.</summary>
+    /// <param name="item">Slot pulsado.</param>
+    /// <param name="clave">Clave (dueña + slot) del slot.</param>
+    /// <param name="voz">Voz abierta o null si el mixer está saturado.</param>
+    /// <remarks>Si el slot ya no espera este arranque (Stop o edición), corta la voz recién abierta.</remarks>
+    private void CerrarDisparoRetrigger(PaletteItem item, (string Duena, int Slot) clave, Guid? voz)
+    {
+        if (!QuitarPendienteRetrigger(item))
+        {
+            // Stop/limpieza o edición mientras se abría: la voz llega tarde.
+            if (voz.HasValue)
+            {
+                _mezclador.Detener(voz.Value);
+            }
+
+            RestaurarMaestroSiLibre();
+            return;
+        }
+
+        if (!voz.HasValue)
+        {
+            // Mixer saturado (6 voces): deshacer el titileo si no queda nada más.
+            ApagarSlotSiSinVoces(item, clave);
+            RestaurarMaestroSiLibre();
+            return;
+        }
+
+        lock (_puerta)
+        {
+            _voces[voz.Value] = clave;
+        }
+
+        var actual = BuscarSlot(clave.Duena, clave.Slot);
+        if (actual is not null && !Sonando.Contains(actual))
+        {
+            actual.EstaSonando = true;
+            Sonando.Add(actual);
+        }
+    }
+
+    /// <summary>Apaga el slot solo si no queda voz rastreada ni otro arranque en vuelo.</summary>
+    /// <param name="item">Slot.</param>
+    /// <param name="clave">Clave (dueña + slot).</param>
+    private void ApagarSlotSiSinVoces(PaletteItem item, (string Duena, int Slot) clave)
+    {
+        bool hay;
+        lock (_puerta)
+        {
+            hay = _voces.ContainsValue(clave)
+                || _pendientes.Contains(item)
+                || _pendientesRetrigger.ContainsKey(item);
+        }
+
+        if (!hay)
+        {
+            ApagarSlot(clave.Duena, clave.Slot);
+        }
     }
 
     /// <summary>Detiene solo las voces de este banco (Stop por pantalla) con fundido suave.</summary>
@@ -516,6 +609,7 @@ public sealed partial class PaletaViewModel : ObservableObject
         lock (_puerta)
         {
             _pendientes.Clear();
+            _pendientesRetrigger.Clear();
             voces = _voces.Keys.ToList();
             _voces.Clear();
         }
@@ -556,6 +650,7 @@ public sealed partial class PaletaViewModel : ObservableObject
         lock (_puerta)
         {
             _pendientes.Clear();
+            _pendientesRetrigger.Clear();
         }
 
         foreach (var item in Sonando)
@@ -568,7 +663,10 @@ public sealed partial class PaletaViewModel : ObservableObject
 
     /// <summary>Apaga el estado de una voz terminada natural.</summary>
     /// <param name="voz">Id de voz.</param>
-    /// <remarks>Llamar en el hilo UI (lo invoca la vista tras el evento).</remarks>
+    /// <remarks>
+    /// Llamar en el hilo UI (lo invoca la vista tras el evento). Con Retrigger
+    /// puede seguir otra capa del mismo slot: el titileo solo cae al terminar la última.
+    /// </remarks>
     public void MarcarFinVoz(Guid voz)
     {
         if (!_voces.Remove(voz, out var clave))
@@ -577,7 +675,11 @@ public sealed partial class PaletaViewModel : ObservableObject
         }
 
         _mezclador.Liberar(voz);
-        ApagarSlot(clave.Duena, clave.Slot);
+        if (!_voces.ContainsValue(clave))
+        {
+            ApagarSlot(clave.Duena, clave.Slot);
+        }
+
         RestaurarMaestroSiLibre();
     }
 
@@ -587,14 +689,16 @@ public sealed partial class PaletaViewModel : ObservableObject
     {
         lock (_puerta)
         {
-            if (_mezclador.VocesActivas == 0 && _pendientes.Count == 0)
+            if (_mezclador.VocesActivas == 0
+                && _pendientes.Count == 0
+                && _pendientesRetrigger.Count == 0)
             {
                 MotorAudio.Instancia.FijarMaestro(1.0);
             }
         }
     }
 
-    /// <summary>Persiste los 50 slots de la paleta actual.</summary>
+    /// <summary>Persiste los 60 slots de la paleta actual.</summary>
     public void Persistir()
     {
         if (!string.IsNullOrEmpty(PropietariaActual))
@@ -664,19 +768,28 @@ public sealed partial class PaletaViewModel : ObservableObject
         }
     }
 
-    /// <summary>Detiene solo la voz de un slot (o su arranque pendiente) con fundido suave.</summary>
+    /// <summary>Detiene todas las voces de un slot (o su arranque pendiente) con fundido suave.</summary>
     /// <param name="item">Slot.</param>
-    /// <remarks>La UI se apaga al instante; el audio cae en 120 ms.</remarks>
+    /// <remarks>
+    /// La UI se apaga al instante; el audio cae en 120 ms. Con Retrigger puede
+    /// haber varias voces del mismo slot (layering): se cortan todas.
+    /// </remarks>
     private void DetenerVozDe(PaletteItem item)
     {
+        var clave = (Duena: item.PropietariaId, Slot: item.SlotIndex);
+        List<Guid> voces;
         lock (_puerta)
         {
             _pendientes.Remove(item);
+            _pendientesRetrigger.Remove(item);
+            voces = _voces.Where(par => par.Value == clave).Select(par => par.Key).ToList();
+            foreach (var voz in voces)
+            {
+                _voces.Remove(voz);
+            }
         }
 
-        var clave = (Duena: item.PropietariaId, Slot: item.SlotIndex);
-        var voz = _voces.FirstOrDefault(par => par.Value == clave).Key;
-        if (voz != Guid.Empty && _voces.Remove(voz))
+        foreach (var voz in voces)
         {
             _mezclador.DetenerConFundido(voz);
         }

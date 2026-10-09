@@ -715,6 +715,60 @@
         "dotnet build sin warnings ni errores"
       ],
       "status": "done"
+    },
+    {
+      "id": 55,
+      "name": "config-popup-horizontal-2x2",
+      "title": "Popup de Configuración en rejilla horizontal 2x2",
+      "description": "ConfiguracionDialog deja el StackPanel vertical plano por una rejilla 2 columnas de 4 tarjetas (BackgroundCard + borde sutil + CornerRadius 12) con encabezado icono Fluent coloreado + titulo SemiBold: Transicion suave (toggle a la derecha del titulo + duracion 3/5/7 s con RadioButtons MaxColumns=3 en fila), Modo operador (2 opciones con MaxColumns=2 en fila), Salida de audio (combo) y Personalizacion (pill PRO con CategoryPromoWash + LockClosed). Sin cambios de logica: mismos x:Bind del ConfiguracionViewModel.",
+      "acceptance": [
+        "Las opciones de duracion y modo operador se ven en fila (una sola linea cada una)",
+        "El popup ocupa bastante menos alto que antes (4 tarjetas en 2 filas)",
+        "Sin cambios en ViewModel ni guardado inmediato",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 56,
+      "name": "latencia-disparo-30ms-retrigger-async-log-sesion",
+      "title": "Latencia de disparo (30 ms + Retrigger async) y log por sesión",
+      "description": "El disparo abría lector+WASAPI con buffer de 80 ms y, en Retrigger, hacía todo en el hilo UI (bloqueaba el hotkey). MezcladorEfectos suma LatenciaVozMs=30 (antes 80) por voz; DispararRetrigger pasa a Task.Run con _pendientesRetrigger (contador por slot) para que un Stop o edición descarte la voz que llegue tarde; DetenerVozDe corta todas las capas del slot (antes solo la primera) y MarcarFinVoz mantiene el titileo hasta terminar la última. RegistroErrores.IniciarSesion vacía baby-radio-error.log al arrancar (best-effort, idempotente; lo llama App.OnLaunched y la primera escritura). Nota: el primer disparo de la sesión sigue tardando ~1 s (frío de Media Foundation/endpoint WASAPI); el precalentamiento quedó fuera por decisión del owner.",
+      "acceptance": [
+        "Latencia de cada voz de 30 ms (constante LatenciaVozMs ajustable)",
+        "Retrigger no bloquea el hilo UI: el titileo sale al instante",
+        "Stop o edición durante un arranque en vuelo descarta la voz tardía",
+        "El log arranca vacío en cada sesión (solo conserva la actual)",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 57,
+      "name": "pulso-glow-timer-anclado-flechas",
+      "title": "Pulso de glow con timer anclado (borde de flechas no se queda encendido)",
+      "description": "Al pulsar Arriba/Abajo el borde del color de la categoría (GlowBorder/GlowWash del BebeLightButtonStyle) quedaba encendido para siempre. Causa: FlashActive creaba el DispatcherQueueTimer del pulso de 300 ms en una variable local (el único timer de la app sin campo); si el GC lo colectaba antes del Tick, el DP IsActive seguía en true. Pasaba justo con las flechas porque cambiar de página crea 25 carts y dispara una recolección dentro de esa ventana de 300 ms. El timer ahora se ancla en Dictionary<Button, DispatcherQueueTimer> con candado y se vacía en cada Tick (≤300 ms, no retiene botones); un pulso nuevo cancela el pendiente del mismo botón y el apagado solo ocurre si el Tick pertenece al pulso vigente. Sin cambios visuales: mismo pulso de 300 ms.",
+      "acceptance": [
+        "Flechas Arriba/Abajo repetidas: el borde se apaga siempre (300 ms)",
+        "Re-pulsar dentro de los 300 ms reinicia el pulso sin apagarse a mitad",
+        "Stop, Config y carts usan el mismo pulso anclado",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 58,
+      "name": "marca-agua-logo-fondo-ultima-pagina-paleta",
+      "title": "Logo Baby Radio al fondo de la última página de la paleta",
+      "description": "La ultima pagina de la paleta (pocos items) estiraba 2 filas hasta el borde inferior. UniformGridPanel suma MaxItems (0 = sin tope, comportamiento identico para tira de acciones y riel operador): con tope, la fila adopta la altura de pagina completa y el panel devuelve solo el alto usado, dejando una banda libre al fondo que su Background no pinta. PaletaPanel pone el logo marca de agua (mismo asset que la cola, ms-appx:///Assets/Baby-Radio-Watermark.png) DETRAS de los carts, anclado abajo centrado y sin hit-test, sobre la raiz Grid con fondo unico BackgroundCard (un solo bloque, sin corte). El code-behind fija MaxItems = TamanoPagina y ajusta MaxHeight = banda - 24 para que la parrilla nunca lo recorte; en pagina completa la marca queda oculta tras la parrilla opaca.",
+      "acceptance": [
+        "Paginas completas identicas al antes (logo oculto tras la parrilla)",
+        "Ultima pagina: carts al alto normal + logo grande centrado abajo, sin carts gigantes",
+        "Fondo continuo (un solo bloque) entre parrilla y banda del logo",
+        "Tira de acciones y riel operador sin cambios (MaxItems = 0)",
+        "dotnet build sin warnings ni errores"
+      ],
+      "status": "done"
     }
   ]
 }

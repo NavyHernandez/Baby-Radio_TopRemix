@@ -1,7 +1,9 @@
 using System.ComponentModel;
+using BebeRadio.Support;
 using BebeRadio.ViewModels.Console;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace BebeRadio.Controls.Console;
 
@@ -15,6 +17,7 @@ public sealed partial class AccionesConsolaStrip : UserControl
 {
     private TitileoArmado? _titileoMix;
     private TitileoArmado? _titileoGanancia;
+    private AdaptiveTriggerHelper? _layoutHelper;
 
     /// <summary>Propiedad de dependencia del ViewModel inyectado.</summary>
     public static readonly DependencyProperty ViewModelProperty =
@@ -53,6 +56,45 @@ public sealed partial class AccionesConsolaStrip : UserControl
             _titileoMix.Sincronizar(ViewModel.IsMixArmed);
             _titileoGanancia.Sincronizar(ViewModel.IsGananciaArmada);
         }
+        ConectarLayoutAdaptativo();
+    }
+
+    /// <summary>Conecta los AdaptiveTriggers con el helper de la ventana.</summary>
+    private void ConectarLayoutAdaptativo()
+    {
+        if ((Application.Current as App)?.VentanaPrincipal is not MainWindow ventana)
+        {
+            return;
+        }
+
+        _layoutHelper = new AdaptiveTriggerHelper(ventana);
+
+        var triggers = FindVisualChildren<LayoutStateTrigger>(this);
+        foreach (var trigger in triggers)
+        {
+            trigger.Connect(_layoutHelper);
+        }
+    }
+
+    /// <summary>Busca todos los elementos visuales de un tipo en el árbol.</summary>
+    /// <typeparam name="T">Tipo a buscar.</typeparam>
+    /// <param name="parent">Elemento padre.</param>
+    /// <returns>Elementos encontrados.</returns>
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T typed)
+            {
+                yield return typed;
+            }
+
+            foreach (var descendant in FindVisualChildren<T>(child))
+            {
+                yield return descendant;
+            }
+        }
     }
 
     /// <summary>Desuscribe y apaga los titileos al descargar.</summary>
@@ -67,6 +109,8 @@ public sealed partial class AccionesConsolaStrip : UserControl
 
         _titileoMix?.Apagar();
         _titileoGanancia?.Apagar();
+        _layoutHelper?.Dispose();
+        _layoutHelper = null;
     }
 
     private bool _configAbierta;

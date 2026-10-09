@@ -31,6 +31,10 @@ public sealed class MezcladorEfectos
     /// <summary>Paso de la rampa del fundido (ms).</summary>
     private const int PasoFundidoMs = 10;
 
+    /// <summary>Latencia de cada disparo de voz (buffer del WasapiOut, ms).</summary>
+    /// <remarks>30 ms: disparo casi inmediato con CPU modesta; subir a 40-50 si se oyen tirones.</remarks>
+    private const int LatenciaVozMs = 30;
+
     /// <summary>Mínimo entre avisos de niveles (20 Hz para el VU).</summary>
     private static readonly TimeSpan IntervaloNiveles = TimeSpan.FromMilliseconds(50);
 
@@ -462,8 +466,8 @@ public sealed class MezcladorEfectos
                     Volume = Math.Clamp(maestroLineal, 0f, 1f),
                 };
 
-                // Latencia baja para disparo inmediato (80 ms: equilibrio con CPU).
-                _salida = CrearSalida(dispositivoId, 80);
+                // Latencia mínima para disparo inmediato (LatenciaVozMs).
+                _salida = CrearSalida(dispositivoId, LatenciaVozMs);
                 _salida.PlaybackStopped += (_, _) => AvisarTermino();
                 var medidor = new MedidorPicos(_maestro);
                 medidor.Niveles += (izq, der) => alNivel(izq, der);

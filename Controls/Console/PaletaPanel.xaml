@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
-    PaletaPanel — parrilla de 50 slots por categoría (25+25, centro).
+    PaletaPanel — parrilla de 60 slots por categoría (30+30, centro).
     Sin mocks: el slot vacío es un fantasma elegante (tenue + guía) listo
     para llenar por arrastre o editor. Clic reproduce por el mezclador y el
     cart titila mientras suena (segundo clic lo detiene; sin audio pulso).
     Click derecho abre Editar/Limpiar. Exportar/importar vive en el riel
     (junto a Acerca de). Tiempos en Cascadia Mono.
+    Marca de agua: el logo Baby Radio (mismo asset que la cola) vive DETRÁS
+    de los carts, anclado al fondo; solo se ve en el hueco de la última
+    página parcial (MaxItems del panel fija la fila a alto de página completa
+    y el fondo opaco no pinta el sobrante). Fondo único BackgroundCard.
 -->
 <UserControl
     x:Class="BebeRadio.Controls.Console.PaletaPanel"
@@ -13,7 +17,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:BebeRadio.Controls"
     xmlns:fluent="using:FluentIcons.WinUI"
-    xmlns:models="using:BebeRadio.Models">
+    xmlns:models="using:BebeRadio.Models"
+    xmlns:local="using:BebeRadio.Support">
 
     <UserControl.Resources>
         <controls:CategoryBrushConverter x:Key="CategoryBrush" />
@@ -23,8 +28,52 @@
         <controls:BoolToOpacityConverter x:Key="LlenoOpaco" DimOpacity="0.85" />
     </UserControl.Resources>
 
-    <!-- Paleta: grilla uniforme 5 col (reparte alto) -->
-    <Grid>
+    <!-- Paleta: grilla uniforme 5 col (reparte alto) sobre fondo único -->
+    <Grid x:Name="RaizPaleta" Background="{StaticResource BackgroundCard}">
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="LayoutStates">
+                <VisualState x:Name="Compact">
+                    <VisualState.StateTriggers>
+                        <local:LayoutStateTrigger State="Compact" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="PaletteList.(ItemsControl.ItemTemplate).(DataTemplate).(Button.MinHeight)" Value="72" />
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Medium">
+                    <VisualState.StateTriggers>
+                        <local:LayoutStateTrigger State="Medium" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="PaletteList.(ItemsControl.ItemTemplate).(DataTemplate).(Button.MinHeight)" Value="82" />
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Expanded">
+                    <VisualState.StateTriggers>
+                        <local:LayoutStateTrigger State="Expanded" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="PaletteList.(ItemsControl.ItemTemplate).(DataTemplate).(Button.MinHeight)" Value="96" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+        <!-- Marca de agua al fondo (detrás de los carts): logo grande con los
+             bordes ya difuminados del asset, mismo estilo que la cola. Anclada
+             abajo y sin hit-test; el code-behind ajusta MaxHeight al hueco de
+             la última página para que nunca lo recorte la parrilla. -->
+        <Image
+            x:Name="MarcaAgua"
+            MaxWidth="520"
+            Margin="0,0,0,16"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom"
+            AutomationProperties.AccessibilityView="Raw"
+            IsHitTestVisible="False"
+            Opacity="0.55"
+            Source="ms-appx:///Assets/Baby-Radio-Watermark.png"
+            Stretch="Uniform"
+            ToolTipService.ToolTip="Baby Radio" />
         <ItemsControl x:Name="PaletteList" ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>

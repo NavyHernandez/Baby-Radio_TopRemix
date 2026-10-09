@@ -35,6 +35,9 @@ public sealed partial class MainWindow : Window
         AppTitleBar.Title = "Baby Radio";
         ValidadorRecursos.ValidarEsenciales();
 
+        // Tamaño inicial de ventana (1366x768) para layout adaptativo
+        AppWindow.Resize(new Windows.Graphics.SizeInt32(1366, 768));
+
         // Obtener handle de la ventana para hotkeys globales
         var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
 

@@ -1,3 +1,12 @@
+Baby Radio v0.1.13 — disparo más ágil, logo al fondo de la paleta y Config más clara.
+
+- FIX: el borde de color de las flechas Arriba/Abajo ya no se queda encendido tras cambiar de página.
+- FIX: la última página de la paleta ya no estira los carts hasta el fondo; se ven al tamaño normal y debajo aparece el logo Baby Radio como marca de agua.
+- NUEVO: disparo de efectos más rápido (latencia 30 ms) y el retrigger ya no congela la interfaz al pulsar varias veces seguidas.
+- NUEVO: el archivo de errores se limpia en cada arranque (solo conserva la sesión actual, más fácil para diagnosticar).
+- MEJORA: el popup de Configuración ahora es una rejilla de 4 tarjetas (Transición, Modo operador, Salida de audio y Personalización) más claro y compacto.
+- Resto de la consola sin cambios.
+
 Baby Radio v0.1.12 — fader maestro en el operador + banco único con riel derecho.
 
 - NUEVO fader maestro en la barra superior del modo operador (mismo volumen total, mute y porcentaje que la consola; sin logo para darle ancho).

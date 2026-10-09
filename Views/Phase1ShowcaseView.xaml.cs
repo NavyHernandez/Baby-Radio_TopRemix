@@ -4,6 +4,7 @@ using BebeRadio.Support;
 using BebeRadio.ViewModels.Console;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace BebeRadio.Views;
 
@@ -18,6 +19,7 @@ public sealed partial class Phase1ShowcaseView : Page
     public ConsolaViewModel ViewModel { get; } = new();
 
     private OperadorConsolaPanel? _operador;
+    private AdaptiveTriggerHelper? _layoutHelper;
 
     /// <summary>Inicializa la shell, anexa sombras y observa el modo operador.</summary>
     public Phase1ShowcaseView()
@@ -31,8 +33,49 @@ public sealed partial class Phase1ShowcaseView : Page
     /// <summary>Anexa sombras GPU a todos los botones de la consola.</summary>
     /// <param name="sender">Esta página.</param>
     /// <param name="e">Args de enrutado.</param>
-    private void OnLoaded(object sender, RoutedEventArgs e) =>
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
         ConsolaSombraHelper.AttachAllShadows(this);
+        ConectarLayoutAdaptativo();
+    }
+
+    /// <summary>Conecta los AdaptiveTriggers con el helper de la ventana.</summary>
+    private void ConectarLayoutAdaptativo()
+    {
+        if ((Application.Current as App)?.VentanaPrincipal is not MainWindow ventana)
+        {
+            return;
+        }
+
+        _layoutHelper = new AdaptiveTriggerHelper(ventana);
+
+        var triggers = FindVisualChildren<LayoutStateTrigger>(Raiz);
+        foreach (var trigger in triggers)
+        {
+            trigger.Connect(_layoutHelper);
+        }
+    }
+
+    /// <summary>Busca todos los elementos visuales de un tipo en el árbol.</summary>
+    /// <typeparam name="T">Tipo a buscar.</typeparam>
+    /// <param name="parent">Elemento padre.</param>
+    /// <returns>Elementos encontrados.</returns>
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T typed)
+            {
+                yield return typed;
+            }
+
+            foreach (var descendant in FindVisualChildren<T>(child))
+            {
+                yield return descendant;
+            }
+        }
+    }
 
     /// <summary>Desuscribe el modo operador al descargar.</summary>
     /// <param name="sender">Esta página.</param>

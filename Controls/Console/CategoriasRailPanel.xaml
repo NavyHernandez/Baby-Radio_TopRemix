@@ -43,6 +43,7 @@
         Padding="8">
         <StackPanel Spacing="8">
             <TextBlock
+                HorizontalAlignment="Center"
                 FontSize="13"
                 FontWeight="SemiBold"
                 Foreground="{StaticResource TextPrimary}"

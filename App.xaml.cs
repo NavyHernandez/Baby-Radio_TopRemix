@@ -64,6 +64,9 @@ public partial class App : Application
     /// <remarks>Aplica actualizaciones Velopack pendientes antes de abrir.</remarks>
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
+        // El log de diagnóstico solo conserva la sesión actual (best-effort).
+        Support.RegistroErrores.IniciarSesion();
+
         try
         {
             Velopack.VelopackApp.Build()

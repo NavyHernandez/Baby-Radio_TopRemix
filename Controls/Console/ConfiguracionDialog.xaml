@@ -1,12 +1,19 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
     ConfiguracionDialog — ajustes de la app (popup moderno).
-    Toggle de transición + duración 3/5/7 s con persistencia inmediata.
+    Rejilla horizontal 2×2 de tarjetas (menos alto que la pila vertical):
+      · Transición suave  → toggle a la derecha + duración 3/5/7 s en fila
+      · Modo operador     → 2 opciones en fila
+      · Salida de audio   → combo de dispositivos
+      · Personalización   → píldora PRO (badge con acento CategoryPromo)
+    Cada tarjeta: encabezado (icono Fluent coloreado + título) + control + nota.
+    Persistencia inmediata en el ViewModel (sin lógica en la vista).
 -->
 <ContentDialog
     x:Class="BebeRadio.Controls.Console.ConfiguracionDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:fluent="using:FluentIcons.WinUI"
     xmlns:support="using:BebeRadio.Support"
     Title="Configuración"
     CloseButtonText="Cerrar"
@@ -17,86 +24,239 @@
         <CornerRadius x:Key="ControlCornerRadius">10,10,10,10</CornerRadius>
     </ContentDialog.Resources>
 
-    <!-- Ajustes: transición suave al pasar a Siguiente -->
-    <StackPanel Spacing="10" MinWidth="280" HorizontalAlignment="Stretch">
-        <ToggleSwitch
-            Header="Transición suave al pasar a Siguiente"
-            FontSize="12"
-            AutomationProperties.Name="Transición suave al pasar a Siguiente"
-            IsOn="{x:Bind ViewModel.TransicionActivada, Mode=TwoWay}"
-            OnContent="Activado"
-            OffContent="Desactivado" />
-        <RadioButtons
-            Header="Duración de la transición"
-            FontSize="12"
-            AutomationProperties.Name="Duración de la transición en segundos"
-            IsEnabled="{x:Bind ViewModel.TransicionActivada, Mode=OneWay}"
-            SelectedIndex="{x:Bind ViewModel.TransicionIndice, Mode=TwoWay}">
-            <RadioButton
-                FontSize="12"
-                AutomationProperties.Name="Transición de 3 segundos"
-                Content="3 segundos" />
-            <RadioButton
-                FontSize="12"
-                AutomationProperties.Name="Transición de 5 segundos"
-                Content="5 segundos" />
-            <RadioButton
-                FontSize="12"
-                AutomationProperties.Name="Transición de 7 segundos"
-                Content="7 segundos" />
-        </RadioButtons>
-        <TextBlock
-            FontSize="10"
-            Foreground="{StaticResource TextSecondary}"
-            Text="Al pulsar Siguiente, el audio baja suavemente antes de avanzar. Los cambios se guardan solos."
-            TextWrapping="Wrap" />
-        <RadioButtons
-            Header="Modo operador"
-            FontSize="12"
-            AutomationProperties.Name="Modo operador: pantalla completa con 2 paletas o ventana con 1 paleta"
-            SelectedIndex="{x:Bind ViewModel.OperadorIndice, Mode=TwoWay}">
-            <RadioButton
-                FontSize="12"
-                AutomationProperties.Name="Operador en pantalla completa con 2 paletas"
-                Content="Pantalla completa · 2 paletas" />
-            <RadioButton
-                FontSize="12"
-                AutomationProperties.Name="Operador en ventana redimensionable con 1 paleta"
-                Content="Ventana redimensionable · 1 paleta" />
-        </RadioButtons>
-        <TextBlock
-            FontSize="10"
-            Foreground="{StaticResource TextSecondary}"
-            Text="Se aplica al entrar al modo operador. En ventana solo se ven las categorías, la paleta y la tira (convive con otras apps)."
-            TextWrapping="Wrap" />
-        <ComboBox
-            Header="Salida de audio"
-            FontSize="12"
-            MinWidth="220"
-            HorizontalAlignment="Stretch"
-            AutomationProperties.Name="Seleccionar salida de audio"
-            ItemsSource="{x:Bind ViewModel.Dispositivos, Mode=OneWay}"
-            SelectedIndex="{x:Bind ViewModel.DispositivoIndice, Mode=TwoWay}">
-            <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="support:DispositivoAudio">
-                    <TextBlock FontSize="12" Text="{x:Bind Nombre}" />
-                </DataTemplate>
-            </ComboBox.ItemTemplate>
-        </ComboBox>
-        <TextBlock
-            FontSize="10"
-            Foreground="{StaticResource TextSecondary}"
-            Text="El cambio se aplica al instante. Si un dispositivo desaparece, se vuelve al predeterminado."
-            TextWrapping="Wrap" />
-        <TextBlock
-            HorizontalAlignment="Center"
-            FontSize="10"
-            Foreground="{StaticResource TextSecondary}"
+    <!-- Rejilla 2 columnas: los ajustes se leen en horizontal y la ventana baja de alto -->
+    <Grid MinWidth="560" ColumnSpacing="12" RowSpacing="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Tarjeta 1 · Transición suave: toggle (derecha) + duración en fila -->
+        <Border
+            Grid.Row="0"
+            Grid.Column="0"
+            Padding="14,12"
+            AutomationProperties.Name="Ajustes de transición suave"
+            Background="{StaticResource BackgroundCard}"
+            BorderBrush="{StaticResource BorderSubtle}"
+            BorderThickness="1"
+            CornerRadius="12">
+            <StackPanel Spacing="8">
+                <!-- Encabezado: icono + título | toggle -->
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <fluent:SymbolIcon
+                            VerticalAlignment="Center"
+                            FontSize="15"
+                            Foreground="{StaticResource CategoryMusic}"
+                            Symbol="ArrowSync" />
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontSize="12"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource TextPrimary}"
+                            Text="Transición suave" />
+                    </StackPanel>
+                    <ToggleSwitch
+                        Grid.Column="1"
+                        MinWidth="0"
+                        VerticalAlignment="Center"
+                        AutomationProperties.Name="Transición suave al pasar a Siguiente"
+                        FontSize="11"
+                        IsOn="{x:Bind ViewModel.TransicionActivada, Mode=TwoWay}"
+                        OffContent="Desactivado"
+                        OnContent="Activado" />
+                </Grid>
+
+                <!-- Duración 3/5/7 s en una sola fila -->
+                <RadioButtons
+                    FontSize="11"
+                    Header="Duración de la transición"
+                    IsEnabled="{x:Bind ViewModel.TransicionActivada, Mode=OneWay}"
+                    MaxColumns="3"
+                    AutomationProperties.Name="Duración de la transición en segundos"
+                    SelectedIndex="{x:Bind ViewModel.TransicionIndice, Mode=TwoWay}">
+                    <RadioButton
+                        FontSize="12"
+                        AutomationProperties.Name="Transición de 3 segundos"
+                        Content="3 s" />
+                    <RadioButton
+                        FontSize="12"
+                        AutomationProperties.Name="Transición de 5 segundos"
+                        Content="5 s" />
+                    <RadioButton
+                        FontSize="12"
+                        AutomationProperties.Name="Transición de 7 segundos"
+                        Content="7 s" />
+                </RadioButtons>
+
+                <TextBlock
+                    FontSize="10"
+                    Foreground="{StaticResource TextSecondary}"
+                    Text="Al pulsar Siguiente, el audio baja suavemente antes de avanzar. Los cambios se guardan solos."
+                    TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <!-- Tarjeta 2 · Modo operador: 2 opciones en fila -->
+        <Border
+            Grid.Row="0"
+            Grid.Column="1"
+            Padding="14,12"
+            AutomationProperties.Name="Ajustes del modo operador"
+            Background="{StaticResource BackgroundCard}"
+            BorderBrush="{StaticResource BorderSubtle}"
+            BorderThickness="1"
+            CornerRadius="12">
+            <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <fluent:SymbolIcon
+                        VerticalAlignment="Center"
+                        FontSize="15"
+                        Foreground="{StaticResource CategoryProgram}"
+                        Symbol="DualScreen" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource TextPrimary}"
+                        Text="Modo operador" />
+                </StackPanel>
+
+                <RadioButtons
+                    FontSize="11"
+                    Header="Distribución"
+                    MaxColumns="2"
+                    AutomationProperties.Name="Modo operador: pantalla completa con 2 paletas o ventana con 1 paleta"
+                    SelectedIndex="{x:Bind ViewModel.OperadorIndice, Mode=TwoWay}">
+                    <RadioButton
+                        FontSize="12"
+                        AutomationProperties.Name="Operador en pantalla completa con 2 paletas"
+                        Content="Pantalla completa" />
+                    <RadioButton
+                        FontSize="12"
+                        AutomationProperties.Name="Operador en ventana redimensionable con 1 paleta"
+                        Content="Ventana" />
+                </RadioButtons>
+
+                <TextBlock
+                    FontSize="10"
+                    Foreground="{StaticResource TextSecondary}"
+                    Text="Completa: 2 paletas a pantalla completa. Ventana: 1 paleta (convive con otras apps). Se aplica al entrar."
+                    TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <!-- Tarjeta 3 · Salida de audio: combo de dispositivos -->
+        <Border
+            Grid.Row="1"
+            Grid.Column="0"
+            Padding="14,12"
+            AutomationProperties.Name="Ajustes de salida de audio"
+            Background="{StaticResource BackgroundCard}"
+            BorderBrush="{StaticResource BorderSubtle}"
+            BorderThickness="1"
+            CornerRadius="12">
+            <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <fluent:SymbolIcon
+                        VerticalAlignment="Center"
+                        FontSize="15"
+                        Foreground="{StaticResource CategoryId}"
+                        Symbol="Speaker2" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource TextPrimary}"
+                        Text="Salida de audio" />
+                </StackPanel>
+
+                <ComboBox
+                    MinWidth="0"
+                    HorizontalAlignment="Stretch"
+                    FontSize="11"
+                    Header="Dispositivo"
+                    AutomationProperties.Name="Seleccionar salida de audio"
+                    ItemsSource="{x:Bind ViewModel.Dispositivos, Mode=OneWay}"
+                    SelectedIndex="{x:Bind ViewModel.DispositivoIndice, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="support:DispositivoAudio">
+                            <TextBlock FontSize="12" Text="{x:Bind Nombre}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <TextBlock
+                    FontSize="10"
+                    Foreground="{StaticResource TextSecondary}"
+                    Text="Se aplica al instante. Si un dispositivo desaparece, se vuelve al predeterminado."
+                    TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <!-- Tarjeta 4 · Personalización: píldora PRO -->
+        <Border
+            Grid.Row="1"
+            Grid.Column="1"
+            Padding="14,12"
             AutomationProperties.Name="Personalización solo en versión PRO"
-            TextAlignment="Center"
-            TextWrapping="Wrap"><Run Text="La personalización es solo en la " /><Run
-                FontWeight="SemiBold"
-                Foreground="{StaticResource CategoryPromo}"
-                Text="versión PRO" /></TextBlock>
-    </StackPanel>
+            Background="{StaticResource BackgroundCard}"
+            BorderBrush="{StaticResource BorderSubtle}"
+            BorderThickness="1"
+            CornerRadius="12">
+            <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <fluent:SymbolIcon
+                        VerticalAlignment="Center"
+                        FontSize="15"
+                        Foreground="{StaticResource CategoryPromo}"
+                        Symbol="Sparkle" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource TextPrimary}"
+                        Text="Personalización" />
+                </StackPanel>
+
+                <Border
+                    Padding="10,8"
+                    Background="{StaticResource CategoryPromoWash}"
+                    BorderBrush="{StaticResource CategoryPromo}"
+                    BorderThickness="1"
+                    CornerRadius="10">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <fluent:SymbolIcon
+                            VerticalAlignment="Center"
+                            FontSize="14"
+                            Foreground="{StaticResource CategoryPromo}"
+                            Symbol="LockClosed" />
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            Foreground="{StaticResource TextSecondary}"
+                            TextWrapping="Wrap"><Run Text="La personalización es solo en la " /><Run
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource CategoryPromo}"
+                                Text="versión PRO" /></TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock
+                    FontSize="10"
+                    Foreground="{StaticResource TextSecondary}"
+                    Text="Colores, tipografías y fondo de la consola llegan en una versión futura."
+                    TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+    </Grid>
 </ContentDialog>

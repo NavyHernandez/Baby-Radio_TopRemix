@@ -12,17 +12,69 @@ namespace BebeRadio.Controls.Console;
 /// </summary>
 public static class ConsolaSombraHelper
 {
+    /// <summary>Pulsos de glow vivos (botón → timer del pulso).</summary>
+    /// <remarks>
+    /// El timer se ancla aquí: si viviera solo en la pila, el GC podría
+    /// colectarlo antes del Tick y el glow quedaría encendido para siempre.
+    /// Se vacía solo en cada Tick (≤300 ms), así que no retiene botones.
+    /// </remarks>
+    private static readonly Dictionary<Button, DispatcherQueueTimer> _pulsos = new();
+
+    /// <summary>Protege <see cref="_pulsos"/> (clics y Ticks llegan al hilo UI).</summary>
+    private static readonly object _pulsosCandado = new();
+
     /// <summary>Enciende el glow de actividad 300 ms (feedback de disparo).</summary>
     /// <param name="button">Botón a iluminar.</param>
     /// <param name="queue">Cola del dispatcher para el apagado.</param>
+    /// <remarks>
+    /// Un pulso nuevo cancela el pendiente del mismo botón (re-pulsar reinicia
+    /// los 300 ms en vez de apagarse a mitad). El apagado solo ocurre si el
+    /// Tick pertenece al pulso vigente.
+    /// </remarks>
     public static void FlashActive(Button button, DispatcherQueue queue)
     {
+        DispatcherQueueTimer? nuevo;
+        lock (_pulsosCandado)
+        {
+            if (_pulsos.TryGetValue(button, out var anterior))
+            {
+                anterior.Stop();
+                _pulsos.Remove(button);
+            }
+
+            nuevo = queue.CreateTimer();
+            nuevo.Interval = TimeSpan.FromMilliseconds(300);
+            nuevo.IsRepeating = false;
+            nuevo.Tick += (_, _) => ApagarPulso(button, nuevo);
+            _pulsos[button] = nuevo;
+        }
+
         BebeButtonHelper.SetIsActive(button, true);
-        var timer = queue.CreateTimer();
-        timer.Interval = TimeSpan.FromMilliseconds(300);
-        timer.IsRepeating = false;
-        timer.Tick += (_, _) => BebeButtonHelper.SetIsActive(button, false);
-        timer.Start();
+        nuevo.Start();
+    }
+
+    /// <summary>Apaga el pulso vigente de un botón cuando vence su timer.</summary>
+    /// <param name="button">Botón pulsado.</param>
+    /// <param name="timer">Timer que venció.</param>
+    /// <remarks>Si el pulso ya fue reemplazado por uno nuevo, no toca el glow.</remarks>
+    private static void ApagarPulso(Button button, DispatcherQueueTimer timer)
+    {
+        bool esVigente;
+        lock (_pulsosCandado)
+        {
+            timer.Stop();
+            esVigente = _pulsos.TryGetValue(button, out var vigente)
+                && ReferenceEquals(vigente, timer);
+            if (esVigente)
+            {
+                _pulsos.Remove(button);
+            }
+        }
+
+        if (esVigente)
+        {
+            BebeButtonHelper.SetIsActive(button, false);
+        }
     }
 
     /// <summary>Anexa (o reanexa si el template cambió) la sombra de cada botón bajo una raíz.</summary>

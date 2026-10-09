@@ -593,3 +593,54 @@ www.top-remix.com movido de la columna del VU a encima de los botones del reprod
 
 - Commit `751e968` + push a `origin/main` (9 archivos; `.opencode/*` excluido: bump de plugin del entorno, ajeno al cambio).
 - Sin upload a GitHub Releases (solo `-SkipUpload`, sin orden del owner).
+
+## 2026-10-08 - Popup de Configuración en rejilla horizontal 2×2 (feature 55)
+
+1. **UI**: `ConfiguracionDialog.xaml` pasa de `StackPanel` vertical plano a `Grid` 2×2 (`ColumnSpacing/RowSpacing` 12, `MinWidth` 560) con 4 tarjetas (`BackgroundCard` + `BorderSubtle` + `CornerRadius` 12, `Padding` 14,12): encabezado con `fluent:SymbolIcon` coloreado (`ArrowSync` música / `DualScreen` programas / `Speaker2` IDs / `Sparkle` promo) + título SemiBold.
+2. **Horizontal**: duración 3/5/7 s con `RadioButtons MaxColumns="3"` (una fila, textos `3 s`/`5 s`/`7 s`); modo operador con `MaxColumns="2"` (`Pantalla completa` / `Ventana`, recuento de paletas pasa a la nota); toggle de transición a la derecha del título; combo de salida de audio en su tarjeta; nota PRO como píldora `CategoryPromoWash` + `LockClosed`.
+3. **Sin lógica**: mismos `x:Bind` (`TransicionActivada`, `TransicionIndice`, `OperadorIndice`, `Dispositivos`, `DispositivoIndice`); `ConfiguracionViewModel` intacto.
+4. **Docs**: feature 55 en done + apéndice en `progress/history.md` (este).
+
+### Verificacion
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+
+## 2026-10-09 – Latencia de disparo (30 ms + Retrigger async) y log por sesión (feature 56)
+
+1. **Latencia**: `MezcladorEfectos` suma `LatenciaVozMs = 30` (antes 80 ms) como buffer de cada `WasapiOut` de voz; constante única y ajustable si se oyen tirones.
+2. **Retrigger sin bloqueo**: `PaletaViewModel.DispararRetrigger` pasa a `Task.Run` (titileo al instante; lector+WASAPI abren en background) con `_pendientesRetrigger` (contador por slot) para que Stop o edición descarte la voz tardía; `DetenerVozDe` corta todas las capas del slot y `MarcarFinVoz` apaga el titileo solo al terminar la última.
+3. **Log por sesión**: `RegistroErrores.IniciarSesion()` vacía `baby-radio-error.log` al arrancar (idempotente, best-effort); lo llaman `App.OnLaunched` y la primera escritura.
+4. **Nota**: el primer disparo de la sesión sigue tardando ~1 s (frío de Media Foundation/endpoint WASAPI); el precalentamiento quedó fuera por decisión del owner.
+5. **Docs**: feature 56 en done + apéndice en `progress/history.md` (este).
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+
+## 2026-10-09 – Pulso de glow con timer anclado (feature 57)
+
+1. **Síntoma**: al pulsar Arriba/Abajo quedaba encendido el borde del color de la categoría (GlowBorder/GlowWash del `BebeLightButtonStyle`) y no se borraba nunca.
+2. **Causa**: `ConsolaSombraHelper.FlashActive` creaba el `DispatcherQueueTimer` del pulso de 300 ms en una variable local (el único timer de la app sin campo): si el GC lo colectaba antes del Tick, el DP `IsActive` quedaba en `true`. Cambiar de página crea 25 carts y dispara la recolección justo dentro de esa ventana de 300 ms.
+3. **Fix**: timer anclado en `Dictionary<Button, DispatcherQueueTimer>` con candado (se vacía en cada Tick, <=300 ms, no retiene botones); un pulso nuevo cancela el pendiente del mismo botón y el apagado solo ocurre si el Tick pertenece al pulso vigente. Mismo pulso visual de 300 ms; cubre Flechas, Stop, Config y carts.
+4. **Docs**: feature 57 en done + apéndice en `progress/history.md` (este).
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+
+## 2026-10-09 – Logo marca de agua al fondo de la última página de la paleta (feature 58)
+
+1. **Síntoma**: la última página de la paleta (p. ej. slots 50-59) estiraba sus 2 filas hasta el borde inferior → carts gigantes feos.
+2. **Panel**: `UniformGridPanel` suma DP `MaxItems` (0 = sin tope = actual; tira de acciones y riel operador quedan intactos). Con tope, `filasLayout = max(filasHijos, ceil(MaxItems/columns))`: la fila adopta la altura de página completa (5 filas normal / 6 operador) y `Measure`/`Arrange` devuelven solo el alto usado, dejando una banda libre al fondo que el `Background` del panel no pinta.
+3. **Marca**: `PaletaPanel` pone el logo (`ms-appx:///Assets/Baby-Radio-Watermark.png`, el mismo de la cola, Opacity 0.55, bordes difuminados del asset) **detrás de los carts**, anclado abajo centrado sin hit-test, sobre la raíz Grid con fondo único `BackgroundCard` (un solo bloque, sin corte de color).
+4. **Code-behind**: `SincronizarMarcaDeAgua` fija `MaxItems = ViewModel.TamanoPagina` y ajusta `MarcaAgua.MaxHeight = max(80, banda - 24)` según el hueco real (`RaizPaleta.ActualHeight × filasLibres/filasPagina`); se llama en `Loaded`, cambio de VM, paginar y `SizeChanged`. En página completa la marca queda oculta tras la parrilla opaca.
+5. **Docs**: feature 58 en done + apéndice en `progress/history.md` (este).
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+
+## 2026-10-09 – Preparación de v0.1.13 y pendientes conocidos
+
+1. **Pendientes (no bloqueantes)**:
+   - El primer disparo de la sesión aún tarda ~1 s (frío de Media Foundation/endpoint WASAPI); el precalentamiento quedó fuera por decisión del owner (ver feature 56).
+   - Tamaño/opacidad del logo marca de agua de la paleta: ajustable a gusto del owner (feature 58).
+   - Subida a GitHub Releases de v0.1.13: pendiente de token `GH_TOKEN` (no disponible en el entorno al preparar el paquete).
+   - No quedan features `pending`/`in_progress` en `progress/feature_list.json` (58/58 done).
+2. **Versionado**: `<Version>` pasa a 0.1.13 + entrada en `Assets/release_notes.txt`.

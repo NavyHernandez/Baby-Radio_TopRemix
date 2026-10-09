@@ -7,12 +7,13 @@ using BebeRadio.Support;
 using BebeRadio.ViewModels.Console;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Windows.Storage.Pickers;
 
 namespace BebeRadio.Controls.Console;
 
 /// <summary>
-/// Parrilla de paleta (50 slots, 25+25). El code-behind dispara
+/// Parrilla de paleta (60 slots, 30+30). El code-behind dispara
 /// el efecto por el mezclador, titila los carts que suenan (opacidad
 /// 1 ↔ 0.35 cada 350 ms con un solo timer, como el Stop programado del
 /// PlayerBar), abre el editor, enruta el arrastre por cart y exporta/
@@ -30,6 +31,7 @@ public sealed partial class PaletaPanel : UserControl
     private PaletaViewModel? _suscrito;
     private Stopwatch? _medicionCambio;
     private int _pasadasSombras;
+    private AdaptiveTriggerHelper? _layoutHelper;
 
     /// <summary>Propiedad de dependencia del ViewModel inyectado.</summary>
     public static readonly DependencyProperty ViewModelProperty =
@@ -54,6 +56,7 @@ public sealed partial class PaletaPanel : UserControl
     {
         InitializeComponent();
         PaletteList.LayoutUpdated += OnPanelReacomodado;
+        RaizPaleta.SizeChanged += (_, _) => SincronizarMarcaDeAgua();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
@@ -78,6 +81,8 @@ public sealed partial class PaletaPanel : UserControl
     {
         ConsolaSombraHelper.AttachAllShadows(this);
         SuscribirReproduccion(null, ViewModel);
+        ConectarLayoutAdaptativo();
+        SincronizarMarcaDeAgua();
     }
 
     /// <summary>Desuscribe eventos y apaga el titileo al descargar.</summary>
@@ -87,6 +92,46 @@ public sealed partial class PaletaPanel : UserControl
     {
         SuscribirReproduccion(ViewModel, null);
         ApagarTitileo();
+        _layoutHelper?.Dispose();
+        _layoutHelper = null;
+    }
+
+    /// <summary>Conecta los AdaptiveTriggers con el helper de la ventana.</summary>
+    private void ConectarLayoutAdaptativo()
+    {
+        if ((Application.Current as App)?.VentanaPrincipal is not MainWindow ventana)
+        {
+            return;
+        }
+
+        _layoutHelper = new AdaptiveTriggerHelper(ventana);
+
+        var triggers = FindVisualChildren<LayoutStateTrigger>(this);
+        foreach (var trigger in triggers)
+        {
+            trigger.Connect(_layoutHelper);
+        }
+    }
+
+    /// <summary>Busca todos los elementos visuales de un tipo en el árbol.</summary>
+    /// <typeparam name="T">Tipo a buscar.</typeparam>
+    /// <param name="parent">Elemento padre.</param>
+    /// <returns>Elementos encontrados.</returns>
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T typed)
+            {
+                yield return typed;
+            }
+
+            foreach (var descendant in FindVisualChildren<T>(child))
+            {
+                yield return descendant;
+            }
+        }
     }
 
     /// <summary>Suscribe la colección de slots que suenan y la página visible.</summary>
@@ -117,6 +162,8 @@ public sealed partial class PaletaPanel : UserControl
         {
             ApagarTitileo();
         }
+
+        SincronizarMarcaDeAgua();
     }
 
     /// <summary>Mide el cambio de categoría desde que se selecciona hasta el layout.</summary>
@@ -148,6 +195,42 @@ public sealed partial class PaletaPanel : UserControl
         {
             SincronizarTitileo();
         }
+
+        SincronizarMarcaDeAgua();
+    }
+
+    /// <summary>Fija el tope de página del panel y el tamaño de la marca de agua.</summary>
+    /// <remarks>
+    /// El <see cref="UniformGridPanel"/> reparte las filas con la altura de una
+    /// página completa (<c>MaxItems</c> = <c>TamanoPagina</c>); en la última
+    /// página parcial queda una banda libre al fondo y ahí el logo se ajusta
+    /// para llenarla sin que la parrilla lo recorte. En página completa la
+    /// parrilla opaca la marca y no se ve.
+    /// </remarks>
+    private void SincronizarMarcaDeAgua()
+    {
+        var panel = ConsolaSombraHelper.FindDescendants<UniformGridPanel>(PaletteList).FirstOrDefault();
+        var vm = ViewModel;
+        if (panel is not null)
+        {
+            panel.MaxItems = vm?.TamanoPagina ?? 0;
+        }
+
+        if (vm is null || RaizPaleta.ActualHeight <= 0)
+        {
+            return;
+        }
+
+        var columnas = panel?.Columns > 0 ? panel.Columns : 5;
+        var filasPagina = Math.Max(1, (vm.TamanoPagina + columnas - 1) / columnas);
+        var filasUsadas = Math.Max(1, (vm.Items.Count + columnas - 1) / columnas);
+        if (filasUsadas >= filasPagina)
+        {
+            return;
+        }
+
+        var banda = RaizPaleta.ActualHeight * (filasPagina - filasUsadas) / filasPagina;
+        MarcaAgua.MaxHeight = Math.Max(80, banda - 24);
     }
 
     /// <summary>Muestra aviso al pulsar hotkey en slot sin audio.</summary>
