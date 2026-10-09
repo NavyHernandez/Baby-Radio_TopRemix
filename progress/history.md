@@ -644,3 +644,9 @@ www.top-remix.com movido de la columna del VU a encima de los botones del reprod
    - Subida a GitHub Releases de v0.1.13: pendiente de token `GH_TOKEN` (no disponible en el entorno al preparar el paquete).
    - No quedan features `pending`/`in_progress` en `progress/feature_list.json` (58/58 done).
 2. **Versionado**: `<Version>` pasa a 0.1.13 + entrada en `Assets/release_notes.txt`.
+
+## 2026-10-09 - Push v0.1.13 al repositorio
+
+- Commit `5cfcc5a` + push a `origin/main` (23 archivos; `.opencode/*` excluido: bump de plugin del entorno, ajeno al cambio).
+- Paquete Velopack 0.1.13 generado (`releases/` solo con la versión vigente: full + delta + Setup + Portable + RELEASES).
+- Upload a GitHub Releases pendiente de token `GH_TOKEN` (no disponible en el entorno).
