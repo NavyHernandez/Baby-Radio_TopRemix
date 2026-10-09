@@ -662,3 +662,8 @@ www.top-remix.com movido de la columna del VU a encima de los botones del reprod
 ### Verificación
 - Guard local: `.\publish.ps1` con v0.1.13 publicada → "Nada que subir", exit 0.
 - `dotnet build -c Debug` no aplica (solo PS1/YAML/docs); release v0.1.13 intacta en GitHub.
+
+## 2026-10-09 – Pendiente: paths del workflow publish (requiere PAT con scope workflow)
+
+- Opcional y no bloqueante: acotar `on.push.paths` del `publish.yml` a `BebeRadio.csproj`, `publish.ps1` y el propio workflow (+ `permissions: contents: write`) para que los pushes de docs/código no gasten ~8 min de CI publicando.
+- No se aplicó porque el PAT de git local no tiene scope `workflow` (rechaza tocar `.github/workflows/*`); el owner decidió dejarlo así. El guard de `publish.ps1` (feature 59) ya hace que esas corridas terminen en success sin re-subir.
