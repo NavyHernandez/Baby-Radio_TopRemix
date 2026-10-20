@@ -814,3 +814,9 @@ www.top-remix.com movido de la columna del VU a encima de los botones del reprod
 ### Verificación
 - `dotnet build -c Debug`: 0 advertencias, 0 errores.
 - Pendiente funcional del owner: con música cargada, clic en la barra salta; arrastrar previsualiza y al soltar salta; en recorte no pasa del fin y avanza sola; cancelar el arrastre no mueve nada.
+
+## 2026-10-20 – Push v0.1.14 al repositorio
+
+- Commit `68bcb75` + push a `origin/main` (38 archivos; `.opencode/*` excluido: bump de plugin del entorno, ajeno al cambio).
+- Release local 0.1.14 **regenerada**: `releases/` vaciado antes del `vpk pack` (vpk rechaza igual-o-mayor, el dueño pidió sobrescribir manteniendo 0.1.14) → solo queda la versión vigente (full + Portable + Setup + RELEASES; sin delta por no haber 0.1.13 local).
+- CI `Publish release` del run `68bcb75` → `success`: Release **v0.1.14 publicada** en GitHub (5 assets: `BabyRadio-0.1.14-full.nupkg`, `BabyRadio-win-Portable.zip`, `BabyRadio-win-Setup.exe`, `RELEASES`, `releases.win.json`; 2026-10-20T19:45Z). El guard idempotente (feature 59) evita que los pushes de docs posteriores la re-suban.
