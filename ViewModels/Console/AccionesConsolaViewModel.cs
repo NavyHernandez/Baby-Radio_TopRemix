@@ -1,3 +1,4 @@
+using BebeRadio.Support;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -8,9 +9,13 @@ namespace BebeRadio.ViewModels.Console;
 /// (Config · Operador · Mix · Ganancia · Stop · Arriba · Abajo).
 /// Los toggles viven aquí (la tira abre Config directo); detener y páginas
 /// se inyectan como ganchos desde <see cref="ConsolaViewModel"/>.
+/// El armado de Ganancia se persiste en el JSON de la consola.
 /// </summary>
 public sealed partial class AccionesConsolaViewModel : ObservableObject
 {
+    /// <summary>True mientras se hidrata desde el JSON (evita reescribirlo).</summary>
+    private bool _hidratando;
+
     /// <summary>Modo Operador armado (glow persistente, Fase 2 lo usará).</summary>
     [ObservableProperty]
     public partial bool IsOperatorMode { get; set; }
@@ -31,6 +36,45 @@ public sealed partial class AccionesConsolaViewModel : ObservableObject
 
     /// <summary>Gancho: página siguiente de la paleta (25+15).</summary>
     public Action? AlPedirBajar { get; set; }
+
+    /// <summary>Inicializa los toggles con lo guardado en el JSON de la consola.</summary>
+    public AccionesConsolaViewModel()
+    {
+        try
+        {
+            _hidratando = true;
+            IsGananciaArmada = ConsolaStore.Cargar().GananciaArmada;
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "Acciones.HidratarGanancia");
+        }
+        finally
+        {
+            _hidratando = false;
+        }
+    }
+
+    /// <summary>Persiste el armado de la ganancia (best-effort).</summary>
+    /// <param name="value">Nuevo estado del toggle.</param>
+    partial void OnIsGananciaArmadaChanged(bool value)
+    {
+        if (_hidratando)
+        {
+            return;
+        }
+
+        try
+        {
+            var config = ConsolaStore.Cargar();
+            config.GananciaArmada = value;
+            ConsolaStore.Guardar(config);
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "Acciones.GuardarGanancia");
+        }
+    }
 
     /// <summary>Alterna el Modo Operador (toggle con glow).</summary>
     [RelayCommand]

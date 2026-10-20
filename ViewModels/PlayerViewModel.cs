@@ -68,6 +68,10 @@ public sealed partial class PlayerViewModel : ObservableObject
     [ObservableProperty]
     public partial double Progress { get; set; }
 
+    /// <summary>True mientras el operador arrastra la barra de posición (el ticker no la pisa).</summary>
+    [ObservableProperty]
+    public partial bool BarraArrastrando { get; set; }
+
     [ObservableProperty]
     public partial string ElapsedText { get; set; } = "0:00";
 
@@ -499,6 +503,11 @@ public sealed partial class PlayerViewModel : ObservableObject
         IsPaused = _motor.EnPausa;
         PublicarCombinado();
 
+        if (BarraArrastrando)
+        {
+            return;
+        }
+
         RefreshTimeTexts(_motor.Posicion, DuracionActual());
     }
 
@@ -737,5 +746,35 @@ public sealed partial class PlayerViewModel : ObservableObject
         Progress = duracion.TotalSeconds <= 0
             ? 0
             : Math.Clamp(posicion.TotalSeconds / duracion.TotalSeconds, 0, 1);
+    }
+
+    /// <summary>Previsualiza un seek durante el arrastre de la barra (sin tocar el motor).</summary>
+    /// <param name="fraccion">Destino 0…1 de la duración efectiva.</param>
+    public void PrevisualizarSeek(double fraccion)
+    {
+        var duracion = DuracionActual();
+        if (duracion <= TimeSpan.Zero)
+        {
+            return;
+        }
+
+        var destino = TimeSpan.FromSeconds(Math.Clamp(fraccion, 0, 1) * duracion.TotalSeconds);
+        RefreshTimeTexts(destino, duracion);
+    }
+
+    /// <summary>Aplica el seek al soltar la barra de posición.</summary>
+    /// <param name="fraccion">Destino 0…1 de la duración efectiva.</param>
+    /// <remarks>No-op sin pista cargada; el motor clampea y rearma la parada programada.</remarks>
+    public void SolicitarSeek(double fraccion)
+    {
+        var duracion = DuracionActual();
+        if (duracion <= TimeSpan.Zero || Current() is null)
+        {
+            return;
+        }
+
+        var destino = TimeSpan.FromSeconds(Math.Clamp(fraccion, 0, 1) * duracion.TotalSeconds);
+        _motor.IrA(destino);
+        RefreshTimeTexts(destino, duracion);
     }
 }

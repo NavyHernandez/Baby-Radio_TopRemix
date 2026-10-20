@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
     CategoriasRailPanel — riel derecho de 7 categorías fijas (176px).
+    Llena TODO el alto de la columna: header (Auto) + categorías (*, reparto
+    1fr con UniformGridPanel, crecen con la ventana) + iconos de ayuda (Auto,
+    anclados abajo). Sin vacío debajo en pantallas grandes.
     Vacía = esqueleto al tono del tema (solo bordes, sin color);
     con audio = botón 3D macizo (fondo del color, logo blanco, letras
     adaptativas si el color es claro). Click despliega; click derecho abre
@@ -34,33 +37,50 @@
         </Storyboard>
     </UserControl.Resources>
 
-    <!-- Riel lateral: header + categorías con scroll + nueva -->
+    <!-- Riel lateral: header (Auto) + categorías (* = llenan el alto) + ayuda (Auto) -->
     <Border
         Background="{StaticResource BackgroundPanel}"
         BorderBrush="{StaticResource BorderSubtle}"
         BorderThickness="1"
         CornerRadius="12"
         Padding="8">
-        <StackPanel Spacing="8">
+        <Grid RowSpacing="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
             <TextBlock
+                Grid.Row="0"
                 HorizontalAlignment="Center"
                 FontSize="13"
                 FontWeight="SemiBold"
                 Foreground="{StaticResource TextPrimary}"
                 Text="Categorías" />
-            <ItemsControl x:Name="SideList" ItemsSource="{x:Bind ViewModel.SideCategories, Mode=OneWay}">
+            <ItemsControl
+                x:Name="SideList"
+                Grid.Row="1"
+                VerticalAlignment="Stretch"
+                ItemsSource="{x:Bind ViewModel.SideCategories, Mode=OneWay}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <ItemsStackPanel Orientation="Vertical" />
+                            <!-- 1 columna: las filas se reparten el alto en partes iguales
+                                 (1fr) con bordes enteros compartidos, sin costuras. -->
+                            <controls:UniformGridPanel Columns="1" UseLayoutRounding="True" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:SelectableCategory">
+                            <!-- Llena su fila (Stretch H/V). Margin 0,1 = 2 px parejos entre
+                                 botones. MinHeight 52 es solo piso: 7×52 cabe en ~480 px. -->
                             <Button
-                                Margin="0,0,0,2"
-                                MinHeight="68"
+                                Margin="0,1"
+                                MinHeight="52"
                                 Padding="8,4"
                                 HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
                                 AutomationProperties.Name="{Binding Swatch.Label}"
                                 Command="{Binding SelectCommand}"
                                 Opacity="{Binding IsSelected, Converter={StaticResource DimOpacity}}"
@@ -92,7 +112,10 @@
                                         BorderThickness="1"
                                         CornerRadius="6"
                                         Visibility="{Binding TieneAudio, Converter={StaticResource VacioVisible}}" />
-                                    <StackPanel Spacing="2" Padding="0,4,0,4">
+                                    <StackPanel
+                                        Padding="0,4,0,4"
+                                        VerticalAlignment="Center"
+                                        Spacing="2">
                                         <!-- Logo blanco sobre color -->
                                         <fluent:SymbolIcon
                                             HorizontalAlignment="Center"
@@ -136,6 +159,7 @@
                 </ItemsControl>
             <!-- Ayuda: usuario · soporte · acerca · portable (fijo, sin desborde) -->
             <StackPanel
+                Grid.Row="2"
                 Orientation="Horizontal"
                 Spacing="16"
                 HorizontalAlignment="Center">
@@ -210,6 +234,6 @@
                     </fluent:SymbolIcon.ContextFlyout>
                 </fluent:SymbolIcon>
             </StackPanel>
-        </StackPanel>
+        </Grid>
     </Border>
 </UserControl>

@@ -2,7 +2,21 @@
 <!--
     AccionesConsolaStrip — franja inferior de 7 botones aluminio
     (Config·Operador·Mix·Ganancia·Stop·Arriba·Abajo), 1/7 del ancho c/u.
-    Botones altos (72) sin separadores: ocupan todo el ancho disponible.
+    Tiles a hueso: sin margen entre botones (la barra llena el 100 % del
+    ancho de la columna en cualquier pantalla) con geometría por posición
+    declarada en BebeButtonHelper: extremos con radio 6 + aro 2; costuras
+    con esquinas a 0 y UN solo filete de 1px (SurfaceBorderThickness
+    1,2,0,2 en el intermedio, 1,2,2,2 en el último). GlowOnSurface pinta el
+    glow DENTRO de cada tile (el halo exterior lo taparía el vecino).
+    Iconos/texto escalan por estado: Compact 26/12 · Medium 30/13 · Expanded 36/15.
+    Responsive: cada botón usa AccionesStripButtonStyle (Stretch H/V) y llena
+    su celda 1/7 en ANCHO y la altura de su fila en ALTO, sin huecos.
+    El alto ya NO sale de escalones por estado: lo dicta el ProporcionPanel
+    que envuelve esta tira en Phase1ShowcaseView (alto = ancho de celda ×
+    1.25 → botones rectangulares verticales, con mínimo y máximo);
+    aquí solo queda un piso (MinHeight 90 / MinWidth 72: 7×72=504px, cabe
+    en ventanas Compact). Los estados Compact/Medium/Expanded escalan
+    únicamente icono y texto.
     Mix y Ganancia titilan continuo armados (sin glow ni bordes:
     parpadeo = armado); Ganancia prioriza efectos sobre la cola (ducking).
     Stop corta solo los efectos; Arriba/Abajo cambian de página (25+15).
@@ -17,22 +31,66 @@
     xmlns:fluent="using:FluentIcons.WinUI"
     xmlns:local="using:BebeRadio.Support">
 
-    <!-- Tira de acciones: grilla uniforme 7 col (sin ScrollViewer: estira al ancho) -->
-    <controls:UniformGridPanel Columns="7">
+    <!-- Recursos locales: estilo derivado del aluminio que fuerza a cada botón
+         a LLENAR su celda de la grilla (HorizontalAlignment/VerticalAlignment
+         Stretch). Sin esto, WinUI deja el Button en su ancho natural y sobran
+         huecos en pantallas anchas. Las attached props (SurfaceCorners, etc.)
+         siguen declaradas por botón; este estilo solo agrega el estirado. -->
+    <UserControl.Resources>
+        <Style
+            x:Key="AccionesStripButtonStyle"
+            BasedOn="{StaticResource BebeLightButtonStyle}"
+            TargetType="Button">
+            <!-- Llenar la celda en ambos ejes (el Button es Left/Center por defecto) -->
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <!-- Piso de tamaño: el alto real lo da la fila del contenedor -->
+            <Setter Property="MinHeight" Value="90" />
+            <Setter Property="MinWidth" Value="72" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+    </UserControl.Resources>
+
+    <!-- Tira de acciones: grilla uniforme 7 col (sin ScrollViewer: estira al
+         ancho); UseLayoutRounding + fondo de página por si queda algún
+         hairline sub-píxel entre los tiles pegados. -->
+    <controls:UniformGridPanel
+        HorizontalAlignment="Stretch"
+        VerticalAlignment="Stretch"
+        Background="{StaticResource BackgroundBase}"
+        Columns="7"
+        UseLayoutRounding="True">
         <VisualStateManager.VisualStateGroups>
+            <!-- Estados por ANCHO de ventana (AdaptiveTriggerHelper): solo escalan
+                 icono + texto de los 7 botones. El alto NO se toca aquí. -->
             <VisualStateGroup x:Name="LayoutStates">
                 <VisualState x:Name="Compact">
                     <VisualState.StateTriggers>
                         <local:LayoutStateTrigger State="Compact" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <Setter Target="ConfigButton.(Button.MinHeight)" Value="90" />
-                        <Setter Target="OperadorButton.(Button.MinHeight)" Value="90" />
-                        <Setter Target="MixButton.(Button.MinHeight)" Value="90" />
-                        <Setter Target="GananciaButton.(Button.MinHeight)" Value="90" />
-                        <Setter Target="StopButton.(Button.MinHeight)" Value="90" />
-                        <Setter Target="ArribaButton.(Button.MinHeight)" Value="90" />
-                        <Setter Target="AbajoButton.(Button.MinHeight)" Value="90" />
+                        <Setter Target="ConfigIcono.FontSize" Value="26" />
+                        <Setter Target="ConfigIconoSombra.FontSize" Value="26" />
+                        <Setter Target="ConfigTexto.FontSize" Value="12" />
+                        <Setter Target="OperadorIcono.FontSize" Value="26" />
+                        <Setter Target="OperadorIconoSombra.FontSize" Value="26" />
+                        <Setter Target="OperadorTexto.FontSize" Value="12" />
+                        <Setter Target="MixIcono.FontSize" Value="26" />
+                        <Setter Target="MixIconoSombra.FontSize" Value="26" />
+                        <Setter Target="MixTexto.FontSize" Value="12" />
+                        <Setter Target="GananciaIcono.FontSize" Value="26" />
+                        <Setter Target="GananciaIconoSombra.FontSize" Value="26" />
+                        <Setter Target="GananciaTexto.FontSize" Value="12" />
+                        <Setter Target="StopIcono.FontSize" Value="26" />
+                        <Setter Target="StopIconoSombra.FontSize" Value="26" />
+                        <Setter Target="StopTexto.FontSize" Value="12" />
+                        <Setter Target="ArribaIcono.FontSize" Value="26" />
+                        <Setter Target="ArribaIconoSombra.FontSize" Value="26" />
+                        <Setter Target="ArribaTexto.FontSize" Value="12" />
+                        <Setter Target="AbajoIcono.FontSize" Value="26" />
+                        <Setter Target="AbajoIconoSombra.FontSize" Value="26" />
+                        <Setter Target="AbajoTexto.FontSize" Value="12" />
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="Medium">
@@ -40,13 +98,27 @@
                         <local:LayoutStateTrigger State="Medium" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <Setter Target="ConfigButton.(Button.MinHeight)" Value="112" />
-                        <Setter Target="OperadorButton.(Button.MinHeight)" Value="112" />
-                        <Setter Target="MixButton.(Button.MinHeight)" Value="112" />
-                        <Setter Target="GananciaButton.(Button.MinHeight)" Value="112" />
-                        <Setter Target="StopButton.(Button.MinHeight)" Value="112" />
-                        <Setter Target="ArribaButton.(Button.MinHeight)" Value="112" />
-                        <Setter Target="AbajoButton.(Button.MinHeight)" Value="112" />
+                        <Setter Target="ConfigIcono.FontSize" Value="30" />
+                        <Setter Target="ConfigIconoSombra.FontSize" Value="30" />
+                        <Setter Target="ConfigTexto.FontSize" Value="13" />
+                        <Setter Target="OperadorIcono.FontSize" Value="30" />
+                        <Setter Target="OperadorIconoSombra.FontSize" Value="30" />
+                        <Setter Target="OperadorTexto.FontSize" Value="13" />
+                        <Setter Target="MixIcono.FontSize" Value="30" />
+                        <Setter Target="MixIconoSombra.FontSize" Value="30" />
+                        <Setter Target="MixTexto.FontSize" Value="13" />
+                        <Setter Target="GananciaIcono.FontSize" Value="30" />
+                        <Setter Target="GananciaIconoSombra.FontSize" Value="30" />
+                        <Setter Target="GananciaTexto.FontSize" Value="13" />
+                        <Setter Target="StopIcono.FontSize" Value="30" />
+                        <Setter Target="StopIconoSombra.FontSize" Value="30" />
+                        <Setter Target="StopTexto.FontSize" Value="13" />
+                        <Setter Target="ArribaIcono.FontSize" Value="30" />
+                        <Setter Target="ArribaIconoSombra.FontSize" Value="30" />
+                        <Setter Target="ArribaTexto.FontSize" Value="13" />
+                        <Setter Target="AbajoIcono.FontSize" Value="30" />
+                        <Setter Target="AbajoIconoSombra.FontSize" Value="30" />
+                        <Setter Target="AbajoTexto.FontSize" Value="13" />
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="Expanded">
@@ -54,13 +126,27 @@
                         <local:LayoutStateTrigger State="Expanded" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <Setter Target="ConfigButton.(Button.MinHeight)" Value="130" />
-                        <Setter Target="OperadorButton.(Button.MinHeight)" Value="130" />
-                        <Setter Target="MixButton.(Button.MinHeight)" Value="130" />
-                        <Setter Target="GananciaButton.(Button.MinHeight)" Value="130" />
-                        <Setter Target="StopButton.(Button.MinHeight)" Value="130" />
-                        <Setter Target="ArribaButton.(Button.MinHeight)" Value="130" />
-                        <Setter Target="AbajoButton.(Button.MinHeight)" Value="130" />
+                        <Setter Target="ConfigIcono.FontSize" Value="36" />
+                        <Setter Target="ConfigIconoSombra.FontSize" Value="36" />
+                        <Setter Target="ConfigTexto.FontSize" Value="15" />
+                        <Setter Target="OperadorIcono.FontSize" Value="36" />
+                        <Setter Target="OperadorIconoSombra.FontSize" Value="36" />
+                        <Setter Target="OperadorTexto.FontSize" Value="15" />
+                        <Setter Target="MixIcono.FontSize" Value="36" />
+                        <Setter Target="MixIconoSombra.FontSize" Value="36" />
+                        <Setter Target="MixTexto.FontSize" Value="15" />
+                        <Setter Target="GananciaIcono.FontSize" Value="36" />
+                        <Setter Target="GananciaIconoSombra.FontSize" Value="36" />
+                        <Setter Target="GananciaTexto.FontSize" Value="15" />
+                        <Setter Target="StopIcono.FontSize" Value="36" />
+                        <Setter Target="StopIconoSombra.FontSize" Value="36" />
+                        <Setter Target="StopTexto.FontSize" Value="15" />
+                        <Setter Target="ArribaIcono.FontSize" Value="36" />
+                        <Setter Target="ArribaIconoSombra.FontSize" Value="36" />
+                        <Setter Target="ArribaTexto.FontSize" Value="15" />
+                        <Setter Target="AbajoIcono.FontSize" Value="36" />
+                        <Setter Target="AbajoIconoSombra.FontSize" Value="36" />
+                        <Setter Target="AbajoTexto.FontSize" Value="15" />
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>
@@ -68,28 +154,31 @@
         <!-- Config: abre la ventana de ajustes -->
         <Button
             x:Name="ConfigButton"
-            MinHeight="112"
-            MinWidth="103"
-            Margin="0,0,2,0"
             AutomationProperties.Name="Configuración"
             Click="OnConfigClick"
             controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryFiller}"
-            Style="{StaticResource BebeLightButtonStyle}">
+            controls:BebeButtonHelper.GlowOnSurface="True"
+            controls:BebeButtonHelper.SurfaceBorderThickness="2,2,0,2"
+            controls:BebeButtonHelper.SurfaceCorners="6,0,0,6"
+            Style="{StaticResource AccionesStripButtonStyle}">
             <StackPanel Spacing="2">
                 <Grid HorizontalAlignment="Center">
                     <fluent:SymbolIcon
+                        x:Name="ConfigIconoSombra"
                         HorizontalAlignment="Center"
                         FontSize="26"
                         Foreground="{StaticResource PressedOverlay}"
                         Margin="0,1,0,-1"
                         Symbol="Settings" />
                     <fluent:SymbolIcon
+                        x:Name="ConfigIcono"
                         HorizontalAlignment="Center"
                         FontSize="26"
                         Foreground="{StaticResource CategoryFiller}"
                         Symbol="Settings" />
                 </Grid>
                 <TextBlock
+                    x:Name="ConfigTexto"
                     HorizontalAlignment="Center"
                     FontSize="12"
                     FontWeight="SemiBold"
@@ -100,29 +189,32 @@
         <!-- Operador: toggle con glow (mezcla futura con motor) -->
         <Button
             x:Name="OperadorButton"
-            MinHeight="112"
-            MinWidth="103"
-            Margin="0,0,2,0"
             AutomationProperties.Name="Modo operador"
             Command="{x:Bind ViewModel.ToggleOperatorModeCommand, Mode=OneWay}"
             controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryCommercial}"
+            controls:BebeButtonHelper.GlowOnSurface="True"
+            controls:BebeButtonHelper.SurfaceBorderThickness="1,2,0,2"
+            controls:BebeButtonHelper.SurfaceCorners="0,0,0,0"
             controls:BebeButtonHelper.IsActive="{x:Bind ViewModel.IsOperatorMode, Mode=OneWay}"
-            Style="{StaticResource BebeLightButtonStyle}">
+            Style="{StaticResource AccionesStripButtonStyle}">
             <StackPanel Spacing="2">
                 <Grid HorizontalAlignment="Center">
                     <fluent:SymbolIcon
+                        x:Name="OperadorIconoSombra"
                         HorizontalAlignment="Center"
                         FontSize="26"
                         Foreground="{StaticResource PressedOverlay}"
                         Margin="0,1,0,-1"
                         Symbol="Headset" />
                     <fluent:SymbolIcon
+                        x:Name="OperadorIcono"
                         HorizontalAlignment="Center"
                         FontSize="26"
                         Foreground="{StaticResource CategoryCommercial}"
                         Symbol="Headset" />
                 </Grid>
                 <TextBlock
+                    x:Name="OperadorTexto"
                     HorizontalAlignment="Center"
                     FontSize="12"
                     FontWeight="SemiBold"
@@ -133,29 +225,32 @@
             <!-- Mix: titila continuo armado (sin glow: armado = parpadeo) -->
             <Button
                 x:Name="MixButton"
-                MinHeight="112"
-                MinWidth="103"
-                Margin="0,0,2,0"
                 AutomationProperties.Name="Mezcla"
                 Command="{x:Bind ViewModel.ToggleMixCommand, Mode=OneWay}"
                 controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryCommercial}"
-                Style="{StaticResource BebeLightButtonStyle}"
+                controls:BebeButtonHelper.GlowOnSurface="True"
+                controls:BebeButtonHelper.SurfaceBorderThickness="1,2,0,2"
+                controls:BebeButtonHelper.SurfaceCorners="0,0,0,0"
+                Style="{StaticResource AccionesStripButtonStyle}"
                 ToolTipService.ToolTip="Mezcla de efectos (titila armado)">
             <StackPanel Spacing="2">
                 <Grid HorizontalAlignment="Center">
                     <fluent:SymbolIcon
+                        x:Name="MixIconoSombra"
                         HorizontalAlignment="Center"
                         FontSize="26"
                         Foreground="{StaticResource PressedOverlay}"
                         Margin="0,1,0,-1"
                         Symbol="Options" />
                     <fluent:SymbolIcon
+                        x:Name="MixIcono"
                         HorizontalAlignment="Center"
                         FontSize="26"
                         Foreground="{StaticResource CategoryCommercial}"
                         Symbol="Options" />
                 </Grid>
                 <TextBlock
+                    x:Name="MixTexto"
                     HorizontalAlignment="Center"
                     FontSize="12"
                     FontWeight="SemiBold"
@@ -166,29 +261,32 @@
         <!-- Ganancia: titila continuo armada (prioriza efectos sobre la cola) -->
         <Button
             x:Name="GananciaButton"
-            MinHeight="112"
-            MinWidth="103"
-            Margin="0,0,2,0"
             AutomationProperties.Name="Ganancia"
             Command="{x:Bind ViewModel.ToggleGananciaCommand, Mode=OneWay}"
             controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryMusic}"
-            Style="{StaticResource BebeLightButtonStyle}"
+            controls:BebeButtonHelper.GlowOnSurface="True"
+            controls:BebeButtonHelper.SurfaceBorderThickness="1,2,0,2"
+            controls:BebeButtonHelper.SurfaceCorners="0,0,0,0"
+            Style="{StaticResource AccionesStripButtonStyle}"
             ToolTipService.ToolTip="Ganancia: prioriza efectos (titila armada)">
             <StackPanel Spacing="2">
                 <Grid HorizontalAlignment="Center">
                     <fluent:SymbolIcon
+                        x:Name="GananciaIconoSombra"
                         HorizontalAlignment="Center"
                         FontSize="26"
                         Foreground="{StaticResource PressedOverlay}"
                         Margin="0,1,0,-1"
                         Symbol="Gauge" />
                     <fluent:SymbolIcon
+                        x:Name="GananciaIcono"
                         HorizontalAlignment="Center"
                         FontSize="26"
                         Foreground="{StaticResource CategoryMusic}"
                         Symbol="Gauge" />
                 </Grid>
                 <TextBlock
+                    x:Name="GananciaTexto"
                     HorizontalAlignment="Center"
                     FontSize="12"
                     FontWeight="SemiBold"
@@ -199,30 +297,33 @@
         <!-- Stop: corta solo los efectos que suenan -->
         <Button
             x:Name="StopButton"
-            MinHeight="112"
-            MinWidth="103"
-            Margin="0,0,2,0"
             AutomationProperties.Name="Detener efectos"
             Command="{x:Bind ViewModel.DetenerCommand, Mode=OneWay}"
             Click="OnConsolaFlashClick"
             controls:BebeButtonHelper.CategoryColor="{StaticResource StateOnAir}"
-            Style="{StaticResource BebeLightButtonStyle}"
+            controls:BebeButtonHelper.GlowOnSurface="True"
+            controls:BebeButtonHelper.SurfaceBorderThickness="1,2,0,2"
+            controls:BebeButtonHelper.SurfaceCorners="0,0,0,0"
+            Style="{StaticResource AccionesStripButtonStyle}"
             ToolTipService.ToolTip="Detener efectos">
             <StackPanel Spacing="2">
                 <Grid HorizontalAlignment="Center">
                     <fluent:SymbolIcon
+                        x:Name="StopIconoSombra"
                         HorizontalAlignment="Center"
                         FontSize="26"
                         Foreground="{StaticResource PressedOverlay}"
                         Margin="0,1,0,-1"
                         Symbol="Stop" />
                     <fluent:SymbolIcon
+                        x:Name="StopIcono"
                         HorizontalAlignment="Center"
                         FontSize="26"
                         Foreground="{StaticResource StateOnAir}"
                         Symbol="Stop" />
                 </Grid>
                 <TextBlock
+                    x:Name="StopTexto"
                     HorizontalAlignment="Center"
                     FontSize="12"
                     FontWeight="SemiBold"
@@ -233,30 +334,33 @@
         <!-- Página anterior de la paleta (25+15) -->
         <Button
             x:Name="ArribaButton"
-            MinHeight="112"
-            MinWidth="103"
-            Margin="0,0,2,0"
             AutomationProperties.Name="Página anterior"
             Command="{x:Bind ViewModel.SubirCommand, Mode=OneWay}"
             Click="OnConsolaFlashClick"
             controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryProgram}"
-            Style="{StaticResource BebeLightButtonStyle}"
+            controls:BebeButtonHelper.GlowOnSurface="True"
+            controls:BebeButtonHelper.SurfaceBorderThickness="1,2,0,2"
+            controls:BebeButtonHelper.SurfaceCorners="0,0,0,0"
+            Style="{StaticResource AccionesStripButtonStyle}"
             ToolTipService.ToolTip="Página anterior">
             <StackPanel Spacing="2">
                 <Grid HorizontalAlignment="Center">
                     <fluent:SymbolIcon
+                        x:Name="ArribaIconoSombra"
                         HorizontalAlignment="Center"
                         FontSize="26"
                         Foreground="{StaticResource PressedOverlay}"
                         Margin="0,1,0,-1"
                         Symbol="ArrowUp" />
                     <fluent:SymbolIcon
+                        x:Name="ArribaIcono"
                         HorizontalAlignment="Center"
                         FontSize="26"
                         Foreground="{StaticResource CategoryProgram}"
                         Symbol="ArrowUp" />
                 </Grid>
                 <TextBlock
+                    x:Name="ArribaTexto"
                     HorizontalAlignment="Center"
                     FontSize="12"
                     FontWeight="SemiBold"
@@ -267,30 +371,33 @@
         <!-- Página siguiente de la paleta (25+15) -->
         <Button
             x:Name="AbajoButton"
-            MinHeight="112"
-            MinWidth="103"
-            Margin="0,0,2,0"
             AutomationProperties.Name="Página siguiente"
             Command="{x:Bind ViewModel.BajarCommand, Mode=OneWay}"
             Click="OnConsolaFlashClick"
             controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryProgram}"
-            Style="{StaticResource BebeLightButtonStyle}"
+            controls:BebeButtonHelper.GlowOnSurface="True"
+            controls:BebeButtonHelper.SurfaceBorderThickness="1,2,2,2"
+            controls:BebeButtonHelper.SurfaceCorners="0,6,6,0"
+            Style="{StaticResource AccionesStripButtonStyle}"
             ToolTipService.ToolTip="Página siguiente">
             <StackPanel Spacing="2">
                 <Grid HorizontalAlignment="Center">
                     <fluent:SymbolIcon
+                        x:Name="AbajoIconoSombra"
                         HorizontalAlignment="Center"
                         FontSize="26"
                         Foreground="{StaticResource PressedOverlay}"
                         Margin="0,1,0,-1"
                         Symbol="ArrowDown" />
                     <fluent:SymbolIcon
+                        x:Name="AbajoIcono"
                         HorizontalAlignment="Center"
                         FontSize="26"
                         Foreground="{StaticResource CategoryProgram}"
                         Symbol="ArrowDown" />
                 </Grid>
                 <TextBlock
+                    x:Name="AbajoTexto"
                     HorizontalAlignment="Center"
                     FontSize="12"
                     FontWeight="SemiBold"

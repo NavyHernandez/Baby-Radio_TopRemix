@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
-    PaletaPanel — parrilla de 60 slots por categoría (30+30, centro).
+    PaletaPanel — parrilla de 60 slots por categoría (centro).
+    ADAPTATIVA: 5 columnas × 5 filas (25 por página) en pantallas normales y
+    5 × 6 (30) en pantallas grandes; lo decide PaginadoAdaptativo según el alto
+    real. Los carts llenan SU FILA (VerticalAlignment Stretch, sin alto mínimo
+    fijo), así el alto crece solo con la ventana y el espacio entre filas es
+    el mismo para carts llenos y vacíos.
     Sin mocks: el slot vacío es un fantasma elegante (tenue + guía) listo
     para llenar por arrastre o editor. Clic reproduce por el mezclador y el
     cart titila mientras suena (segundo clic lo detiene; sin audio pulso).
@@ -28,36 +33,17 @@
         <controls:BoolToOpacityConverter x:Key="LlenoOpaco" DimOpacity="0.85" />
     </UserControl.Resources>
 
-    <!-- Paleta: grilla uniforme 5 col (reparte alto) sobre fondo único -->
-    <Grid x:Name="RaizPaleta" Background="{StaticResource BackgroundCard}">
-        <VisualStateManager.VisualStateGroups>
-            <VisualStateGroup x:Name="LayoutStates">
-                <VisualState x:Name="Compact">
-                    <VisualState.StateTriggers>
-                        <local:LayoutStateTrigger State="Compact" />
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter Target="PaletteList.(ItemsControl.ItemTemplate).(DataTemplate).(Button.MinHeight)" Value="72" />
-                    </VisualState.Setters>
-                </VisualState>
-                <VisualState x:Name="Medium">
-                    <VisualState.StateTriggers>
-                        <local:LayoutStateTrigger State="Medium" />
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter Target="PaletteList.(ItemsControl.ItemTemplate).(DataTemplate).(Button.MinHeight)" Value="82" />
-                    </VisualState.Setters>
-                </VisualState>
-                <VisualState x:Name="Expanded">
-                    <VisualState.StateTriggers>
-                        <local:LayoutStateTrigger State="Expanded" />
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter Target="PaletteList.(ItemsControl.ItemTemplate).(DataTemplate).(Button.MinHeight)" Value="96" />
-                    </VisualState.Setters>
-                </VisualState>
-            </VisualStateGroup>
-        </VisualStateManager.VisualStateGroups>
+    <!-- Paleta: grilla uniforme 5 col (reparte alto) sobre fondo único.
+         PaginadoAdaptativo.ViewModel activa 5 ↔ 6 filas según el alto real. -->
+    <Grid
+        x:Name="RaizPaleta"
+        Background="{StaticResource BackgroundCard}"
+        local:PaginadoAdaptativo.ViewModel="{x:Bind ViewModel, Mode=OneWay}">
+        <!-- Sin VisualStates de alto: antes fijaban MinHeight 72/82/96 en los carts
+             (y con un Target que no apunta a un elemento real). Un alto mínimo
+             fijo mayor que la fila hacía que los carts se montaran unos sobre
+             otros en pantallas bajas y no crecieran en las altas. Ahora el alto
+             lo dicta la fila de UniformGridPanel (1fr). -->
         <!-- Marca de agua al fondo (detrás de los carts): logo grande con los
              bordes ya difuminados del asset, mismo estilo que la cola. Anclada
              abajo y sin hit-test; el code-behind ajusta MaxHeight al hueco de
@@ -85,9 +71,13 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:PaletteItem">
+                    <!-- Cart: llena toda su celda (Stretch H y V). MinHeight 44 es solo un
+                         piso de seguridad (título + tiempo); el alto real lo da la fila. -->
                     <Button
-                        MinHeight="82"
+                        MinHeight="44"
                         HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        VerticalContentAlignment="Center"
                         AllowDrop="True"
                         AutomationProperties.Name="{Binding Title}"
                         Click="OnPaletteFlashClick"

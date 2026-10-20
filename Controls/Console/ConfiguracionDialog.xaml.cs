@@ -17,7 +17,18 @@ public sealed partial class ConfiguracionDialog : ContentDialog
     public ConfiguracionDialog()
     {
         ViewModel = new ConfiguracionViewModel();
+        ViewModel.FijarDispatcher(DispatcherQueue);
         InitializeComponent();
+        Closed += OnClosed;
         TemaConsola.AplicarADialogo(this);
+    }
+
+    /// <summary>Libera el ViewModel al cerrar (desuscribe el evento de dispositivos).</summary>
+    /// <param name="sender">Diálogo cerrado.</param>
+    /// <param name="args">Argumentos del cierre.</param>
+    private void OnClosed(ContentDialog sender, ContentDialogClosedEventArgs args)
+    {
+        Closed -= OnClosed;
+        ViewModel.Dispose();
     }
 }

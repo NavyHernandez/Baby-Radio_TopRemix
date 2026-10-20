@@ -667,3 +667,150 @@ www.top-remix.com movido de la columna del VU a encima de los botones del reprod
 
 - Opcional y no bloqueante: acotar `on.push.paths` del `publish.yml` a `BebeRadio.csproj`, `publish.ps1` y el propio workflow (+ `permissions: contents: write`) para que los pushes de docs/código no gasten ~8 min de CI publicando.
 - No se aplicó porque el PAT de git local no tiene scope `workflow` (rechaza tocar `.github/workflows/*`); el owner decidió dejarlo así. El guard de `publish.ps1` (feature 59) ya hace que esas corridas terminen en success sin re-subir.
+
+## 2026-10-10 – Ganancia por slot: clamp, herencia y persistencia (fix)
+
+1. **Ganancia positiva no sonaba en efectos**: `MezcladorEfectos.Voz.Arrancar` limitaba el volumen lineal a `1.0` (0 dB) mientras `MotorAudio` lo limita a `8` (+18 dB). El editor permite hasta +6 dB: se oía en la pre-escucha del editor pero al disparar el cart quedaba igual. Clamp unificado a 8 (+ doc del parámetro).
+2. **Ganancia fantasma al cambiar de audio**: `PaletaViewModel.SoltarAudio` y `PaletaEditorDialog.CargarArchivo` reseteaban cues pero no `GananciaDb` ⇒ al soltar un audio nuevo sobre un slot ocupado se heredaba el ajuste del anterior. Ahora, si el archivo cambia, la ganancia vuelve a 0; re-soltar el mismo archivo la conserva.
+3. **Slider sin número**: `PaletaEditorDialog` muestra el valor en vivo (`TextoGanancia`, formato `+5.5 dB` / `-1.5 dB` / `0.0 dB`, Cascadia Mono) suscrito al `PropertyChanged` del borrador — `x:Bind` no soporta `StringFormat`, por eso va por propiedad calculada.
+4. **Armado de Ganancia no persistía**: `ConsolaConfiguracion.GananciaArmada` (default false) + hidratación y guardado en `AccionesConsolaViewModel` con flag `_hidratando` (evita reescribir el JSON durante el ctor). JSONs viejos siguen válidos (campo ausente = false).
+5. **Verificado en disco**: `%APPDATA%\BabyRadio\baby-radio-consola.json` guarda `paletas[*].gananciaDb` por slot (8 slots con ganancia ≠ 0: Music 6, Jingle 2) y `volumenMaestro`; no existe ganancia por paleta, solo por slot.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+
+## 2026-10-10 – Fin natural de efecto con caída suave de 120 ms (fix)
+
+1. **Síntoma**: al terminar un efecto el corte era seco (bajón/clic): el fundido de salida solo existía en Stop y en reemplazo, nunca en el fin natural.
+2. **Causa**: `Voz._parada` cortaba exactamente en el cue (`PararAlFin` → `Stop()`); sin cue no había temporizador y el fin de archivo llegaba seco por `AvisarTermino`.
+3. **Fix**: `Arrancar` programa el temporizador `FundidoSalidaMs` (120 ms) **antes** del fin efectivo (`hasta ?? lector.TotalTime`, clampado al fin real del archivo; `restante/2` en clips de <240 ms) y dispara el nuevo `IniciarFinConFundido`: rampa lineal de 120 ms en pasos de 10 ms sobre la etapa maestra de la voz, **sin** marcar `_cierreManual`, de modo que al llegar a 0 el `Stop` avisa el fin natural igual que antes (`MarcarFinVoz` → `Liberar` → apaga cart + restaura maestro).
+4. **Blindaje de carreras**: temporizador propio `_faderFin` liberado por `Silenciar`, `FundirYSoltar` y `Soltar`; si un Stop/retrigger entra durante la caída, el fade natural se retira sin cortar (sin timers huérfanos ni doble aviso de fin).
+5. **Docs**: cabecera de `MezcladorEfectos`, `FundidoSalidaMs` y `PararAlFin`.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- Pendiente funcional del owner: efecto **con cue** y **sin cue** deben bajar suave al final; Stop pulsado justo durante la caída no deja el cart encendido ni voz colgada.
+
+## 2026-10-10 – Modo operador fullscreen anclado a UNA pantalla (fix)
+
+1. **Síntomas**: a veces el modo operador quedaba en ventana (sin reintentar) y a veces el fullscreen abría en el monitor equivocado.
+2. **Causas**: `EntrarOperador` marcaba `_enOperador = true` **antes** del `try` con el `catch` vacío ⇒ si `SetPresenter(FullScreen)` no tomaba, la siguiente entrada salía por `if (_enOperador) return;` y la consola se quedaba en ventana sin registro en el log; y no había anclaje de monitor (el `FullScreenPresenter` elige pantalla por la posición de la ventana; cero usos de `DisplayArea` en el repo).
+3. **Anclaje a un display**: `AreaDeVentana()` resuelve el monitor con mayor solape (`DisplayArea.GetFromRect(rect, DisplayAreaFallback.Nearest)`) y `AnclarEnUnaPantalla()` centra la ventana dentro de sus `OuterBounds` si no cabe entero (p. ej. a caballo entre dos monitores), **antes** de aplicar el fullscreen.
+4. **Estado honesto + reintento**: `IntentarFullscreenOperador()` solo marca `_enOperador` si `Presenter.Kind == FullScreen` y registra la excepción (`RegistroErrores.Registrar`, antes `catch` mudo); si no tomó, `ProgramarReintentoOperador()` reintenta un frame más tarde (un solo intento, se desactiva al ejecutarse ⇒ sin bucle) y, si vuelve a fallar, queda en ventana con `Traza` en el log.
+5. **Salida restauradora**: `SalirOperador` vuelve a `Default`, mueve a `_posicionPrevia` (monitor de origen), reescala a `_tamanoPrevio` y muestra la titlebar en su **propio** bloque (un fallo del presentador no la deja oculta). El estado previo se captura una sola vez (`_estadoPrevioGuardado`) para que un reintento no lo pise con la geometría ya anclada.
+6. **Docs**: XML de todos los métodos implicados, cabecera de `MainWindow.xaml`, resumen del tipo y mapa + inventario de `AGENTS.md`.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- Pendiente funcional del owner: abrir operador fullscreen con la ventana en cada monitor y a caballo entre los dos ⇒ siempre ocupa UNA pantalla; Esc ⇒ posición/tamaño previos; 5 entradas seguidas sin quedarse en ventana.
+
+## 2026-10-12 – Preparación de v0.1.14
+
+1. **Alcance** (todo lo acumulado sin release desde v0.1.13):
+   - Feature 60: tira de acciones inferior sin espacios (7 botones a hueso, geometría por posición, `SurfaceCorners`/`SurfaceBorderThickness`/`GlowOnSurface` en `BebeButtonHelper`, sombra en parcial `BebeButtonHelper.Sombra.cs`, MinWidth 72 para Compact); misma geometría en la tira del modo operador.
+   - Ganancia por slot: clamp unificado a +18 dB (`MezcladorEfectos` ya no limita a 0 dB), herencia al cambiar de audio reseteada a 0, slider con valor en vivo en el editor y `GananciaArmada` persistente en el JSON.
+   - Fin natural de efecto con fundido de salida de 120 ms (sin corte seco al llegar al cue o al final del archivo).
+   - Fullscreen del modo operador anclado a UNA pantalla (`AnclarEnUnaPantalla` + reintento único + estado honesto + restauración de posición/tamaño).
+   - Config: refresco de la lista de dispositivos de audio en hilo COM encolado al UI, selección preservada y vuelta al predeterminado si el elegido desaparece.
+2. **Docs**: feature 60 en done + este apéndice + entrada en `Assets/release_notes.txt`.
+3. **Versionado**: `<Version>` 0.1.13 → 0.1.14 en `BebeRadio.csproj`.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- `.\publish.ps1 -SkipUpload`: paquete Velopack 0.1.14 en `releases/` (sin subir a GitHub, por orden del owner).
+
+## 2026-10-16 – Botones de ventana estilo macOS (feature 61)
+
+1. **Problema**: los botones nativos del sistema se fundían con el Mica de la titlebar (mismo tono oscuro) y el owner quería botones redondos estilo macOS, siempre visibles, con hover rojo en Cerrar.
+2. **Ocultar el sistema**: `Support/ChromeVentana.cs` nuevo. `OcultarBotonesDelSistema` llama a `OverlappedPresenter.SetBorderAndTitleBar(hasBorder: true, hasTitleBar: false)` (patrón de microsoft-ui-xaml discussion #8800): se pierde la titlebar del sistema y sus botones, se conserva el borde. Limitación asumida: sin Snap Layouts de Win11.
+3. **Fila propia**: `MainWindow.xaml` añade `FilaBotonesVentana` (StackPanel derecho, 3 botones 26px circulares) + estilos `BebeVentanaBotonStyle` / `BebeVentanaBotonCerrarStyle` y plantilla `BotonVentanaTemplate` en `ButtonStyles.xaml`: cuerpo `BackgroundCard` + aro `BorderSubtle` (siempre visibles, no se funden), resalte de hover sirviéndose de `Tag` como pincel (`HighlightTop` blanco8 % en Min/Max, `StateOnAir` rojo en Cerrar tipo macOS) animado por VSM `PointerOver`, `PressedOverlay` en Pressed, opacidad 0.4 en Disabled. Glifos FluentIcons `Subtract`/`Maximize`/`Dismiss`.
+4. **Detalle crítico (hover)**: con los botones DENTRO de `AppTitleBar` (zona `SetTitleBar`) el clic llegaba vía región Passthrough pero el `PointerOver` del VSM **no se dispara** (la zona de arrastre se queda con el hover; limitación WinAppSDK). Solución: los botones son **hermanos posteriores** de `AppTitleBar` en el Grid raíz — al superponerse por encima reciben el puntero normal (hover + clic) sin tocar el arrastre del resto de la barra.
+5. **Passthrough**: `ChromeVentana.PermitirClics` marca los rects de la fila como `NonClientRegionKind.Passthrough` (bounds DIU × `XamlRoot.RasterizationScale`) en `Loaded`/`SizeChanged` de la titlebar, para que el clic atraviese el área de arrastre.
+6. **Handlers**: `MainWindow.BotonesVentana.cs` (parcial) con los 3 handlers clic y `ActualizarGlifoMaximizar` (alterna `Maximize`/`Copy` = Restaurar según `AppWindow.Changed` + `DidPresenterChange`, con nombre UIA y tooltip en español).
+7. **Docs**: feature 61 en done + este apéndice + mapa e inventario de `AGENTS.md` (`MainWindow.BotonesVentana.cs`, `Support/ChromeVentana.cs`, estilos en `ButtonStyles.xaml`).
+
+### Verificación
+- `dotnet build -c Debug -p:Platform=x64`: 0 advertencias, 0 errores.
+- Clics probados con input real: Minimizar → `IsIconic=true`; Maximizar → ventana a pantalla completa + botón pasa a 'Restaurar'; Restaurar → vuelve a ventana.
+- Hover capturado con píxeles: el círculo de Cerrar se tiñe de rojo `StateOnAir` al entrar el puntero (diff before/after confirmado).
+- Nota de captura: con PowerShell DPI-unaware `CopyFromScreen`/`PrintWindow` escalan1,5× y "pierden" la derecha de la ventana; usar `SetProcessDPIAware()` en los scripts de captura.
+
+## 2026-10-20 – Salida de audio robusta al cambiar de dispositivo (feature 62)
+
+1. **Problema**: al cambiar la salida de audio en Config, la app dejaba de sonar del todo (canciones y paletas), sobre todo con controladores DJ tipo Pioneer — aunque hubiera lista cargada o se pulsara una paleta. La app no debía detenerse: el cambio de salida es un switch, no una parada.
+2. **Causas raíz verificadas**:
+   - El fallback al predeterminado solo existía en la reapertura de `MotorAudio.EstablecerDispositivo`; la ruta normal (`Abrir`/`ReproducirCola`/`Disparar`) no reintenta → un dispositivo con `Init` fallido mataba **todas** las reproducciones posteriores.
+   - `MezcladorEfectos` no tenía **ningún** fallback (asimetría con MotorAudio).
+   - `Dispose` de WasapiOut/lector sin try/catch en `MotorAudio.Cerrar` y `Voz.Soltar`: un COMException del driver escapaba al binding TwoWay del ComboBox → cambio a medias y `Guardar()` saltado.
+   - El cambio corría en el hilo UI (hasta 6 `Stop`/`Init` event-sync secuenciales podían congelarlo).
+   - `ActualizarLista` reentraba a APIs de audio **dentro** del callback COM de `IMMNotificationClient` (bloqueo documentado por Microsoft; los drivers DJ notifican al abrir streams).
+   - El `DispositivoSalidaId` guardado nunca se aplicaba al arranque (solo al abrir el diálogo Config).
+3. **Solución**:
+   - `AdaptadorSalidaAudio.CrearInicializadaConFallback(dispositivoId, ...)`: intenta el pedido y, si el `Init` falla, reintenta con el predeterminado (log + sin reintento si el pedido ya era el default). Centraliza el fallback de MotorAudio y de `Voz.CrearSalida`.
+   - `MotorAudio.Cerrar` y `Voz.Soltar`: todos los `Dispose` en try/catch best-effort; el estado se limpia igualmente (sin zombis ni `_cierreManual` trabado).
+   - `Voz.ReabrirEnDispositivo`: `Soltar()` protegido + `_cierreManual = false` en `finally`; segundo `Soltar` del catch también protegido. `MezcladorEfectos.EstablecerDispositivo`: try/catch **por voz** (un fallo no aborta la migración de las demás) y `_dispositivoId` fijado **bajo candado antes** del snapshot.
+   - `ConfiguracionViewModel.AplicarDispositivo`: persiste al instante y aplica a los motores en `Task.Run` con serie `Interlocked` (solo el último cambio gana; la UI no se congela).
+   - `EnumeradorDispositivosAudio.OnDispositivoCambiado`: encola `ActualizarLista` + evento a threadpool con debounce de 200 ms (coalesce del thrash de renegociación; cero reentrancia en el callback COM).
+   - `App.OnLaunched`: aplica el `DispositivoSalidaId` guardado fire-and-forget tras abrir la ventana.
+   - `Disparar`/`Detener`/`DetenerTodos`: `Soltar`/`Silenciar` **fuera** del candado (patrón ya usado en `Liberar`); `CancelarFundidoBloqueado`/`CancelarFundidosBloqueado` → `QuitarFundidosBloqueado` que solo retira y devuelve las voces para cortarlas fuera del candado (evita deadlock con `OnNivelVoz` del hilo de render a ~40 Hz).
+4. **Docs**: feature 62 en `done` + este apéndice; XML actualizado en los métodos tocados.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- Pendiente funcional del owner: cambiar la salida a/un controlador DJ con la app sonando ⇒ la consola no se congela, la cola sigue (o retoma) por el default si el elegido falla, y las paletas siguen disparando; revisar `baby-radio-error.log` si algo queda mudo (etiquetas `[A event-sync]`/`[B polling]`/`[C resample]`/`Fallback`).
+
+## 2026-10-20 – Salida DDJ-FLX4 sin reiniciar (feature 63)
+
+1. **Problema en vivo**: al cambiar la salida a `Línea (2- DDJ-FLX4)` (mix 48000 Hz/4ch), los 3 intentos del adaptador fallaban en `WasapiOut.Init` con `ArgumentException: Value does not fall within the expected range` y la app quedaba muda hasta reiniciar Baby Radio (tras reinicio el mismo código funcionaba ⇒ estado transitorio del driver + formato rechazado). El fallback al default no servía: el default de Windows **era** el propio FLX4.
+2. **Causa raíz**: el multiplex fabricaba `WaveFormat.CreateIeeeFloatWaveFormat(48000, 4)` — WAVEFORMATEX pelado sin channel mask — y `IAudioClient.Initialize` lo rechazaba con E_INVALIDARG (el MixFormat del FLX4 es `WaveFormatExtensible` con la mask del driver; WASAPI exige mask en canales >2).
+3. **Solución (solo `Support/AdaptadorSalidaAudio.cs`)**:
+   - `FormatoMultiplex`: si el MixFormat es float32 con los mismos canales/tasa, **se usa tal cual** (conserva rate + mask; NAudio 2.2.1 no expone `ChannelMask` ni ctor con mask, por eso se reutiliza en vez de clonar). Fallback a `CreateIeeeFloatWaveFormat` solo si no coincide.
+   - Intentos **D/E estéreo directo** (sin multiplex, event-sync y polling) tras fallar A/B/C: el motor shared (`AutoConvertPcm`) upmixea 2ch a los canales front = master en la mayoría de controladores DJ.
+   - `CrearInicializadaConFallback` + `CrearEnAlternativas`: si el pedido falla, prueba el default **si difiere** y después **los demás endpoints de render activos** (p. ej. Altavoces Realtek) hasta encontrar uno que initialise; log con el fallback efectivo. Si el default ES el fallido, ya no se reintenta contra él en bucle.
+4. **Docs**: cabecera/XML del adaptador + inventario de `AGENTS.md` + feature 63 en `done` + este apéndice.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- Pendiente funcional del owner: cambiar la salida al FLX4 con la app corriendo (cola o paleta) ⇒ suena sin reinicio; si el FLX4 fallara, log muestra `[D/E estereo]` o `[fallback <otro endpoint>]` y la app no queda muda.
+
+## 2026-10-20 – Salida ocupada por Serato: fail-fast + aviso + vuelta sola (feature 64)
+
+1. **Problema en vivo**: con Serato DJ Pro corriendo (PID 9248) y `Línea (2- DDJ-FLX4)` como salida, el Init falla con `0x8889000A` (`AUDCLNT_E_DEVICE_IN_USE`): Serato retiene el endpoint WASAPI en **modo exclusivo** (el FLX4 es USB class-compliant y solo usa WASAPI — Pioneer lo documenta; no hay ASIO nativo, así que Serato tampoco "comparte"). El fallback de la feature 63 funcionaba (app no quedaba muda), pero probaba los 5 formatos de más, no dejaba rastro legible y, al cerrar Serato, Baby Radio seguía en el respaldo hasta que el usuario re-seleccionaba o reiniciaba.
+2. **Investigación de compartición** (docs Serato/Microsoft): mientras una app tenga el endpoint en exclusivo, **ninguna otra** puede abrirlo (shared o exclusive). Vías de convivencia reales (configuración del usuario): (a) Serato *Setup > Audio > "Use Laptop Speakers"* → el master de Serato sale por el default y el FLX4 queda libre para Baby Radio (el cue sigue por el controlador); (b) `mmsys.cpl` → Propiedades del FLX4 → Avanzado → desmarcar *"Allow applications to take exclusive control of this device"* y *"Give exclusive mode applications priority"* **antes** de abrir Serato → ambos apps pueden convivir en el mezclador shared (riesgo: latencia de Serato); (c) el VAD de Serato (*"Make Audio Available to Other Applications"*) NO sirve: solo deja que otras apps monitoreen el audio de Serato, no al revés.
+3. **Solución**:
+   - `AdaptadorSalidaAudio`: `EsDispositivoOcupado(ex)` recorre la cadena de inner exceptions buscando `HResult == 0x8889000A`; en `CrearInicializada`, `AbortarSiOcupado` cancela al instante los intentos B–E (fallarían igual) con mensaje *"ocupado por otra aplicación en modo exclusivo (¿Serato DJ/ASIO?)"*; `CrearInicializadaConFallback` lo detecta, loguea con `Traza` y dispara el evento `RespaldoPorOcupacion(id, nombre)`.
+   - `AdaptadorSalidaAudio.EstaLibre(id)`: sonda con una `WasapiOut` descartable (Init **sin Play** con `FuenteSilencio`: no suena) — si Serato aún retiene el endpoint, el Init falla barato y no interrumpe el audio del respaldo.
+   - **Nuevo** `Support/RecuperacionSalidaAudio.cs` (singleton; suscrito en `App.OnLaunched` **antes** de aplicar el dispositivo guardado): cada 5 s sondea el preferido y, si está libre y sigue siendo el `DispositivoSalidaId` guardado, reaplica a `MotorAudio` + `MezcladorEfectos` (si el usuario cambió de destino, abandona). Eventos `SalidaOcupada`/`SalidaRecuperada` + `OcupadoActual` para la UI.
+   - `ConfiguracionViewModel.AvisoDispositivo` (+ suscripción en `FijarDispatcher`, limpieza al cambiar manualmente de dispositivo y en `Dispose`): el diálogo Config muestra el aviso en la tarjeta *Salida de audio* (`TextoAVisibilidadConverter`, tinta `StateOnAir`) y desaparece solo al recuperar.
+4. **Docs**: feature 64 en `done` (con la receta de convivencia en la descripción) + este apéndice + inventario/`§1` de `AGENTS.md`.
+5. **Fuera de alcance**: código de Serato (imposible compartir un endpoint en exclusivo desde la app) y cambios en la receta de Windows (documentada, no automatizada).
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- Pendiente funcional del owner: con Serato corriendo y el FLX4 como salida → reproducir (cae a respaldo con log legible + aviso en Config); cerrar Serato → en ≤ ~10 s Baby Radio vuelve sola al FLX4 sin reiniciar; cambiar a otro dispositivo a mitad → no debe volver al FLX4 viejo.
+
+## 2026-10-20 – Calidad en multicanal: resample antes del multiplex (feature 65)
+
+1. **Problema en vivo**: el owner reporta que la salida suena "muy baja calidad" cuando el sonido sale por los auriculares del controlador. Investigación de la cadena: `AudioFileReader` entrega la tasa del archivo (mp3 ≈ 44.1 kHz float); en endpoints multicanal (FLX4 48 kHz/4ch) el adaptador envuelve la fuente con `MultiplexMasterEstereo`, que declara el MixFormat (48 kHz) pero **reléa las tramas 1:1 sin resamplear** → el motor WASAPI consume48k tramas/s de una fuente real de 44.1k ⇒ audio ~8,8 % rápido y con aliasado (pitch + distorsión de alta frecuencia = "mala calidad"). El intento C ("resample") era un no-op: resampleaba DESPUÉS del multiplex, cuando la cadena ya mentía como 48 kHz (Wdl veía 48k→48k y se saltaba). La ruta estéreo (2 canales, p. ej. auriculares Realtek del PC) no tenía el bug: `formatoMultiplex = null`, la fuente conserva su tasa y el flag `AutoConvertPcm | SrcDefaultQuality` de NAudio/WASAPI resamplea el motor con buena calidad. La normalización por picos de `LoudnessCache` (techo con margen 0.5 dB) ya evita el clipping: descartada como causa.
+2. **Solución (solo `Support/AdaptadorSalidaAudio.TryIntento`)**: resamplear la fuente a la tasa del mix con `WdlResamplingSampleProvider` **siempre que haya multiplex**, ANTES de envolver con `MultiplexMasterEstereo` (y en el intento C estéreo como antes). Documentado en la cabecera de la clase y en el XML de `resamplear`.
+3. **Docs**: feature 65 en `done` + este apéndice + bullet FIX en `release_notes.txt` (v0.1.14).
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- Pendiente funcional del owner: reproducir un mp3 44.1 kHz por el FLX4 (o endpoint multicanal) ⇒ tono/velocidad correctos (sin sonar "apurado" ni raspado); la salida estéreo y los efectos no cambian.
+
+## 2026-10-20 – Barra de posición con seek (feature 66)
+
+1. **Petición**: el "ubicador" del reproductor mostraba el avance pero no se podía arrastrar para saltar dentro de la canción.
+2. **Solución**:
+   - `Services/MotorAudio.cs`: nuevo `IrA(TimeSpan)` — clampea a `[0, TotalTime]`; si el destino alcanza/supera el fin efectivo (recorte) hace `_salida.Stop()` para que el fin natural (`PlaybackStopped → AvisarTermino`) avance la cola igual que al terminar; si no, `_lector.CurrentTime = destino` y `RearmarParada` rearma el timer `_parada` con los ms restantes (antes un seek dejaba el timer viejo y cortaba en el momento equivocado). No-op sin pista cargada o si el motor está disposed; try/catch + log.
+   - `ViewModels/PlayerViewModel.cs`: `[ObservableProperty] BarraArrastrando` (el ticker de 50 ms omite `RefreshTimeTexts` mientras se arrastra), `PrevisualizarSeek(fracción)` (actualiza `Progress`/textos sin tocar el motor) y `SolicitarSeek(fracción)` (llama `_motor.IrA` con la duración efectiva y refresca al instante).
+   - `Controls/PlayerBar.xaml`: el `ProgressBar` (Height 4 intacta) queda dentro de un Grid columna 1 con un overlay `ZonaCursorHand` de 18 px de alto (`Background=Transparent`, `AutomationProperties.Name` en español).
+   - **Nuevo** `Controls/ZonaCursorHand.cs`: Grid de una línea con `ProtectedCursor = Hand` (WinUI 3 solo permite asignar `ProtectedCursor` desde un tipo derivado).
+   - `Controls/PlayerBar.xaml.cs`: `OnSeekPointerPressed` (capture + previsualiza), `Moved` (scrub), `Released` (aplica `SolicitarSeek`), `Canceled` (solo baja la bandera; el ticker restaura la posición real). `CapturePointer`/`ReleasePointerCapture` reciben `e.Pointer` (firma WinUI 3).
+3. **Casos borde**: no-op sin pista/duración 0; recorte de cola clampeado + rearma; Repeat/Stop armados intactos (el seek no toca el fin natural); modo Tramo (pre-escucha) no se ve afectado; en pausa puede soltar ≤~150 ms del buffer viejo al reanudar (aceptable).
+4. **Docs**: feature 66 en `done` + este apéndice + bullet NUEVO en `release_notes.txt` (v0.1.14) + inventario/`§1` de `AGENTS.md`.
+
+### Verificación
+- `dotnet build -c Debug`: 0 advertencias, 0 errores.
+- Pendiente funcional del owner: con música cargada, clic en la barra salta; arrastrar previsualiza y al soltar salta; en recorte no pasa del fin y avanza sola; cancelar el arrastre no mueve nada.

@@ -2,13 +2,19 @@
 <!--
     MainWindow — ventana principal: titlebar personalizada + Frame de navegación.
     El Frame carga Views/Phase1ShowcaseView (única pantalla de Fase 1).
-    Backdrop Mica oscuro (ver AppWindow + ExtendsContentIntoTitleBar en .xaml.cs).
+    Backdrop Mica oscuro (ver AppWindow + ExtendsContentIntoTitleBar en el .xaml.cs).
+    Modo operador: el code-behind entra en fullscreen ANCLADO a UNA sola pantalla
+    (AnclarEnUnaPantalla + SetPresenter, con reintento) y al salir restaura la
+    posición y el tamaño previos.
+    Botones de ventana: los del sistema se ocultan (ChromeVentana) y la fila
+    derecha dibuja los redondos estilo macOS (siempre visibles sobre el Mica).
 -->
 <Window
     x:Class="BebeRadio.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:fluent="using:FluentIcons.WinUI"
     xmlns:local="using:BebeRadio"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Title="Baby Radio"
@@ -25,12 +31,59 @@
 
         <!-- Barra de título personalizada (contenido extendido debajo).
              Icono PNG con transparencia; el icono de ventana/taskbar lo fija
-             IconoVentana en el code-behind. -->
-        <TitleBar x:Name="AppTitleBar" Title="Baby Radio">
-            <TitleBar.IconSource>
-                <ImageIconSource ImageSource="Assets/bbradioLogo-removebg-preview.png" />
-            </TitleBar.IconSource>
-        </TitleBar>
+             IconoVentana en el code-behind. El arrastre lo define SetTitleBar
+             sobre este Grid; la fila de botones marca sus rects como
+             Passthrough (ChromeVentana.PermitirClics) para recibir los clics. -->
+        <Grid x:Name="AppTitleBar">
+            <TitleBar x:Name="BarraTitulo" Title="Baby Radio">
+                <TitleBar.IconSource>
+                    <ImageIconSource ImageSource="Assets/bbradioLogo-removebg-preview.png" />
+                </TitleBar.IconSource>
+            </TitleBar>
+        </Grid>
+
+        <!-- Botones estilo macOS: circulares, fondo BackgroundCard siempre
+             visible (no se funde con el Mica de la barra); Cerrar se tiñe
+             de rojo StateOnAir al pasar el mouse. Fuera de AppTitleBar a
+             propósito: dentro de la zona SetTitleBar el PointerOver no se
+             dispara (limitación de WinAppSDK); como hermanos posteriores del
+             Grid reciben el puntero por encima del área de arrastre. -->
+        <StackPanel
+            x:Name="FilaBotonesVentana"
+            Grid.Row="0"
+            Margin="0,3,6,0"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Orientation="Horizontal"
+            Spacing="6">
+            <Button
+                x:Name="BotonMinimizar"
+                AutomationProperties.Name="Minimizar"
+                Click="BotonMinimizar_Click"
+                Style="{StaticResource BebeVentanaBotonStyle}"
+                ToolTipService.ToolTip="Minimizar">
+                <fluent:SymbolIcon FontSize="14" Symbol="Subtract" />
+            </Button>
+            <Button
+                x:Name="BotonMaximizar"
+                AutomationProperties.Name="Maximizar"
+                Click="BotonMaximizar_Click"
+                Style="{StaticResource BebeVentanaBotonStyle}"
+                ToolTipService.ToolTip="Maximizar">
+                <fluent:SymbolIcon
+                    x:Name="GlifoMaximizar"
+                    FontSize="14"
+                    Symbol="Maximize" />
+            </Button>
+            <Button
+                x:Name="BotonCerrar"
+                AutomationProperties.Name="Cerrar"
+                Click="BotonCerrar_Click"
+                Style="{StaticResource BebeVentanaBotonCerrarStyle}"
+                ToolTipService.ToolTip="Cerrar">
+                <fluent:SymbolIcon FontSize="14" Symbol="Dismiss" />
+            </Button>
+        </StackPanel>
 
         <!-- Anfitrión de páginas: el code-behind navega al showcase al arrancar -->
         <Frame x:Name="RootFrame" Grid.Row="1" />

@@ -32,6 +32,11 @@
         <GradientStop Offset="1" Color="#FFFFFF" />
     </LinearGradientBrush>
 
+    <!-- Glow en modo tile (tira de acciones): halo exterior solo si NO está
+         encima; glow de encima solo si GlowOnSurface está activo -->
+    <controls:BoolAVisibilidadConverter x:Key="GlowHaloVisible" Invertir="True" />
+    <controls:BoolAVisibilidadConverter x:Key="GlowEncimaVisible" />
+
     <!-- Transporte circular: play / pausa / stop / siguiente -->
     <Style x:Key="BebeTransportButtonStyle" TargetType="Button">
         <Setter Property="Width" Value="52" />
@@ -630,13 +635,17 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Grid x:Name="Root" Background="Transparent">
+                        <!-- Halo exterior (modo por defecto): detrás de la cara y
+                             derramando fuera. Oculto en modo tile (GlowOnSurface)
+                             porque el tile vecino taparía su derrame derecho. -->
                         <Border
                             x:Name="GlowWash"
                             IsHitTestVisible="False"
                             Margin="-2"
                             Background="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
                             CornerRadius="8"
-                            Opacity="0" />
+                            Opacity="0"
+                            Visibility="{Binding Path=(controls:BebeButtonHelper.GlowOnSurface), RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource GlowHaloVisible}}" />
                         <Border
                             x:Name="GlowBorder"
                             IsHitTestVisible="False"
@@ -644,13 +653,14 @@
                             BorderBrush="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
                             BorderThickness="2"
                             CornerRadius="12"
-                            Opacity="0" />
+                            Opacity="0"
+                            Visibility="{Binding Path=(controls:BebeButtonHelper.GlowOnSurface), RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource GlowHaloVisible}}" />
                         <Border
                             x:Name="SurfaceBorder"
                             Background="{StaticResource LightDishBrush}"
                             BorderBrush="{StaticResource LightRim}"
-                            BorderThickness="2"
-                            CornerRadius="6">
+                            BorderThickness="{Binding Path=(controls:BebeButtonHelper.SurfaceBorderThickness), RelativeSource={RelativeSource TemplatedParent}}"
+                            CornerRadius="{Binding Path=(controls:BebeButtonHelper.SurfaceCorners), RelativeSource={RelativeSource TemplatedParent}}">
                             <Grid>
                                 <Rectangle
                                     x:Name="TopEdge"
@@ -683,6 +693,23 @@
                                 </ContentPresenter>
                             </Grid>
                         </Border>
+                        <!-- Glow en modo tile: se pinta ENCIMA de la cara y usa
+                             sus esquinas, así queda confinado y simétrico -->
+                        <Border
+                            x:Name="GlowWashTop"
+                            IsHitTestVisible="False"
+                            Background="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                            CornerRadius="{Binding Path=(controls:BebeButtonHelper.SurfaceCorners), RelativeSource={RelativeSource TemplatedParent}}"
+                            Opacity="0"
+                            Visibility="{Binding Path=(controls:BebeButtonHelper.GlowOnSurface), RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource GlowEncimaVisible}}" />
+                        <Border
+                            x:Name="GlowBorderTop"
+                            IsHitTestVisible="False"
+                            BorderBrush="{Binding Path=(controls:BebeButtonHelper.CategoryColor), RelativeSource={RelativeSource TemplatedParent}}"
+                            BorderThickness="2"
+                            CornerRadius="{Binding Path=(controls:BebeButtonHelper.SurfaceCorners), RelativeSource={RelativeSource TemplatedParent}}"
+                            Opacity="0"
+                            Visibility="{Binding Path=(controls:BebeButtonHelper.GlowOnSurface), RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource GlowEncimaVisible}}" />
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="CommonStates">
                                 <VisualStateGroup.Transitions>
@@ -747,6 +774,16 @@
                                             Storyboard.TargetProperty="Opacity"
                                             To="0.14"
                                             Duration="0:0:0.1" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="GlowBorderTop"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.55"
+                                            Duration="0:0:0.1" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="GlowWashTop"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0.14"
+                                            Duration="0:0:0.1" />
                                     </Storyboard>
                                 </VisualState>
                             </VisualStateGroup>
@@ -755,5 +792,100 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!-- ===== Botones de ventana estilo macOS (redondos, siempre visibles) =====
+         Circuito: fondo BackgroundCard (se distingue del Mica de la barra de
+         título), aro BorderSubtle y glifo TextPrimary. El resalte de hover se
+         sirve de Tag como pincel: HighlightTop en los botones normales y
+         StateOnAir en Cerrar (rojo tipo macOS). Pressed oscurece con
+         PressedOverlay. Reemplazan a los botones del sistema, que oculta
+         ChromeVentana.OcultarBotonesDelSistema. -->
+    <ControlTemplate x:Key="BotonVentanaTemplate" TargetType="Button">
+        <Grid x:Name="Root" Background="Transparent">
+            <Border
+                x:Name="Cuerpo"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="13" />
+            <Border
+                x:Name="ResalteHover"
+                Background="{TemplateBinding Tag}"
+                CornerRadius="13"
+                Opacity="0" />
+            <Border
+                x:Name="SombraPressed"
+                Background="{StaticResource PressedOverlay}"
+                CornerRadius="13"
+                Opacity="0" />
+            <ContentPresenter
+                x:Name="Presenter"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Foreground="{TemplateBinding Foreground}" />
+            <VisualStateManager.VisualStateGroups>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualStateGroup.Transitions>
+                        <VisualTransition To="PointerOver" GeneratedDuration="0:0:0.1" />
+                        <VisualTransition To="Pressed" GeneratedDuration="0:0:0.08" />
+                    </VisualStateGroup.Transitions>
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="PointerOver">
+                        <Storyboard>
+                            <DoubleAnimation
+                                Storyboard.TargetName="ResalteHover"
+                                Storyboard.TargetProperty="Opacity"
+                                Duration="0:0:0.1"
+                                To="1" />
+                        </Storyboard>
+                    </VisualState>
+                    <VisualState x:Name="Pressed">
+                        <Storyboard>
+                            <DoubleAnimation
+                                Storyboard.TargetName="ResalteHover"
+                                Storyboard.TargetProperty="Opacity"
+                                Duration="0:0:0.08"
+                                To="1" />
+                            <DoubleAnimation
+                                Storyboard.TargetName="SombraPressed"
+                                Storyboard.TargetProperty="Opacity"
+                                Duration="0:0:0.08"
+                                To="0.4" />
+                        </Storyboard>
+                    </VisualState>
+                    <VisualState x:Name="Disabled">
+                        <Storyboard>
+                            <DoubleAnimation
+                                Storyboard.TargetName="Root"
+                                Storyboard.TargetProperty="Opacity"
+                                Duration="0"
+                                To="0.4" />
+                        </Storyboard>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+        </Grid>
+    </ControlTemplate>
+
+    <!-- Minimizar / Maximizar: resalte sutil de luz en hover -->
+    <Style x:Key="BebeVentanaBotonStyle" TargetType="Button">
+        <Setter Property="Width" Value="26" />
+        <Setter Property="Height" Value="26" />
+        <Setter Property="Background" Value="{StaticResource BackgroundCard}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSubtle}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Tag" Value="{StaticResource HighlightTop}" />
+        <Setter Property="Template" Value="{StaticResource BotonVentanaTemplate}" />
+    </Style>
+
+    <!-- Cerrar: mismo circuito pero el hover se tiñe de rojo StateOnAir -->
+    <Style
+        x:Key="BebeVentanaBotonCerrarStyle"
+        BasedOn="{StaticResource BebeVentanaBotonStyle}"
+        TargetType="Button">
+        <Setter Property="Tag" Value="{StaticResource StateOnAir}" />
     </Style>
 </ResourceDictionary>

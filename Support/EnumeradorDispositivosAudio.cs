@@ -80,6 +80,9 @@ public sealed class EnumeradorDispositivosAudio : IDisposable
     private List<DispositivoAudio> _dispositivos = [];
     private bool _disposed;
 
+    /// <summary>1 si ya hay una actualización encola (coalesce de notificaciones).</summary>
+    private int _actualizacionEncolada;
+
     /// <summary>Se dispara cuando cambia la lista de dispositivos (conexión/desconexión/estado).</summary>
     public event Action? DispositivosCambiaron;
 
@@ -168,10 +171,35 @@ public sealed class EnumeradorDispositivosAudio : IDisposable
     }
 
     /// <summary>Callback cuando un dispositivo cambia (conexión/desconexión/estado).</summary>
+    /// <remarks>
+    /// NO reentrar a las APIs de audio dentro del callback COM del sistema
+    /// (GetDefaultAudioEndpoint/EnumerateAudioEndPoints pueden bloquear el
+    /// servicio, sobre todo con drivers DJ que notifican al abrir streams):
+    /// se encola a threadpool con debounce para coalescer el thrash de
+    /// renegociación.
+    /// </remarks>
     private void OnDispositivoCambiado()
     {
-        ActualizarLista();
-        DispositivosCambiaron?.Invoke();
+        if (System.Threading.Interlocked.Exchange(ref _actualizacionEncolada, 1) == 1)
+        {
+            // Ya hay una pasada en cola: la siguiente refresca todo igualmente.
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(200).ConfigureAwait(false);
+            System.Threading.Interlocked.Exchange(ref _actualizacionEncolada, 0);
+            try
+            {
+                ActualizarLista();
+                DispositivosCambiaron?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                RegistroErrores.Registrar(ex, "EnumeradorDispositivosAudio.OnDispositivoCambiado");
+            }
+        });
     }
 
     /// <summary>Libera el enumerador y el cliente de notificación.</summary>

@@ -35,8 +35,28 @@ public sealed partial class PaletaEditorDialog : ContentDialog, System.Component
         get => _borrador;
         set
         {
+            if (_borrador is not null)
+            {
+                _borrador.PropertyChanged -= OnBorradorCambiado;
+            }
+
             _borrador = value;
-            Notificar(nameof(Borrador), nameof(FundidoEntradaSegundos), nameof(FundidoSalidaSegundos));
+            _borrador.PropertyChanged += OnBorradorCambiado;
+            Notificar(nameof(Borrador), nameof(FundidoEntradaSegundos), nameof(FundidoSalidaSegundos), nameof(TextoGanancia));
+        }
+    }
+
+    /// <summary>Ganancia en dB con signo y unidad (display junto al slider).</summary>
+    public string TextoGanancia => $"{Borrador.GananciaDb:+0.0;-0.0;0.0} dB";
+
+    /// <summary>Reenvía los cambios del borrador que tienen display propio.</summary>
+    /// <param name="sender">Borrador.</param>
+    /// <param name="e">Propiedad cambiada.</param>
+    private void OnBorradorCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PaletteItem.GananciaDb))
+        {
+            Notificar(nameof(TextoGanancia));
         }
     }
 
@@ -276,7 +296,7 @@ public sealed partial class PaletaEditorDialog : ContentDialog, System.Component
 
     /// <summary>Carga un audio en el borrador y refresca la onda.</summary>
     /// <param name="path">Ruta del archivo.</param>
-    /// <remarks>Archivo distinto actualiza el título (mismo archivo lo respeta).</remarks>
+    /// <remarks>Archivo distinto actualiza título y pone la ganancia a 0 (mismo archivo lo respeta).</remarks>
     private void CargarArchivo(string path)
     {
         var entrada = AudioFileInspector.TryInspect(path);
@@ -291,6 +311,7 @@ public sealed partial class PaletaEditorDialog : ContentDialog, System.Component
         if (cambioArchivo)
         {
             Borrador.Title = entrada.Title;
+            Borrador.GananciaDb = 0;
         }
 
         Borrador.Duration = entrada.Duration;

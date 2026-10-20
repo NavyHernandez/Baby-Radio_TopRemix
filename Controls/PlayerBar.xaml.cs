@@ -3,6 +3,7 @@ using BebeRadio.Support;
 using BebeRadio.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 
 namespace BebeRadio.Controls;
@@ -406,4 +407,72 @@ public sealed partial class PlayerBar : UserControl
         StopAtEndButton.Opacity = 1;
     }
 
+    /// <summary>Fracción 0…1 del puntero dentro de la barra de posición.</summary>
+    /// <param name="zona">Zona de hit del overlay.</param>
+    /// <param name="e">Args del puntero.</param>
+    /// <returns>Fracción clampeada 0…1.</returns>
+    private static double FraccionSeek(Grid zona, PointerRoutedEventArgs e)
+    {
+        var x = e.GetCurrentPoint(zona).Position.X;
+        return zona.ActualWidth <= 0 ? 0 : Math.Clamp(x / zona.ActualWidth, 0, 1);
+    }
+
+    /// <summary>Inicia el seek: captura el puntero y previsualiza la posición.</summary>
+    /// <param name="sender">Overlay de la barra.</param>
+    /// <param name="e">Args del puntero.</param>
+    private void OnSeekPointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is not Grid zona)
+        {
+            return;
+        }
+
+        zona.CapturePointer(e.Pointer);
+        ViewModel.BarraArrastrando = true;
+        ViewModel.PrevisualizarSeek(FraccionSeek(zona, e));
+        e.Handled = true;
+    }
+
+    /// <summary>Scrub continuo mientras el puntero se mueve con botón presionado.</summary>
+    /// <param name="sender">Overlay de la barra.</param>
+    /// <param name="e">Args del puntero.</param>
+    private void OnSeekPointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is not Grid zona || !ViewModel.BarraArrastrando)
+        {
+            return;
+        }
+
+        ViewModel.PrevisualizarSeek(FraccionSeek(zona, e));
+        e.Handled = true;
+    }
+
+    /// <summary>Aplica el seek al soltar el puntero.</summary>
+    /// <param name="sender">Overlay de la barra.</param>
+    /// <param name="e">Args del puntero.</param>
+    private void OnSeekPointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is not Grid zona)
+        {
+            return;
+        }
+
+        zona.ReleasePointerCapture(e.Pointer);
+        if (ViewModel.BarraArrastrando)
+        {
+            ViewModel.BarraArrastrando = false;
+            ViewModel.SolicitarSeek(FraccionSeek(zona, e));
+        }
+
+        e.Handled = true;
+    }
+
+    /// <summary>Cancela el arrastre sin aplicar (el ticker restaura la posición real).</summary>
+    /// <param name="sender">Overlay de la barra.</param>
+    /// <param name="e">Args del puntero.</param>
+    private void OnSeekPointerCanceled(object sender, PointerRoutedEventArgs e)
+    {
+        ViewModel.BarraArrastrando = false;
+        e.Handled = true;
+    }
 }

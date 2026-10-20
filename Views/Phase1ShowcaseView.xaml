@@ -11,7 +11,8 @@
         Consola Baby Radio Fase 1 (shell delgada, 3 columnas, sin scroll general):
         - Izq (320): ListaReproduccionPanel (cola + EN VIVO + drag&drop).
         - Centro (*): Grid Auto/*/Auto (PlayerBar + PaletaPanel 30 carts 5×6 que
-          rellena + AccionesConsolaStrip 7 anclada al fondo, alto fijo).
+          rellena + AccionesConsolaStrip 7 anclada al fondo en rectángulos verticales: alto
+          proporcional al ancho vía ProporcionPanel, ver abajo).
         - Der (176): CategoriasRailPanel (7 fijas, sincronizada con paleta).
         La mezcla vive en ConsolaViewModel (ver ViewModels/Console/):
         categoría→paleta, acciones→lista. Esta vista no contiene lógica.
@@ -64,9 +65,16 @@
             ViewModel="{x:Bind ViewModel.Lista, Mode=OneWay}"
             Reproductor="{x:Bind ViewModel.Reproductor, Mode=OneWay}" />
 
-        <!-- Parte central: reproductor (Auto) + paleta que rellena (*) + tira
-             de acciones anclada al fondo (Auto); así no queda hueco abajo. -->
+        <!-- Parte central: reproductor (Auto) + paleta (*) + tira de acciones
+             (Auto, alto proporcional al ancho vía ProporcionPanel) anclada al fondo;
+             así no queda hueco abajo. -->
         <Grid Grid.Column="1" RowSpacing="6">
+            <!-- Reparto vertical RESPONSIVE:
+                 · Fila 0 (PlayerBar): Auto, alto propio.
+                 · Fila 1 (paleta): * (rellena lo que sobre).
+                 · Fila 2 (tira de acciones): Auto; su alto lo dicta el
+                   ProporcionPanel (abajo) a partir del ANCHO, así los botones
+                   mantienen siempre forma de rectángulo vertical. -->
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -81,10 +89,26 @@
                 Grid.Row="1"
                 PideNuevaCategoria="OnPideNuevaCategoria"
                 ViewModel="{x:Bind ViewModel.Paleta, Mode=OneWay}" />
-            <console:AccionesConsolaStrip
+            <!-- Tira de 7 botones en rectángulos VERTICALES en cualquier pantalla:
+                 alto de cada botón = (ancho de la columna / 7) × 1.25.
+                 · AltoMinimo 96: piso para no recortar en ventanas bajas.
+                 · FraccionAltoVentana 0.28: la tira nunca pasa del 28 % del alto
+                   de la ventana (monitores ultra anchos).
+                 · AltoMaximo 360: tope absoluto (4K / pantallas gigantes).
+                 Para botones más/menos altos, ajustar solo RelacionAlto. -->
+            <controls:ProporcionPanel
                 Grid.Row="2"
                 Margin="0,-4,0,0"
-                ViewModel="{x:Bind ViewModel.Acciones, Mode=OneWay}" />
+                AltoMaximo="360"
+                AltoMinimo="96"
+                Columnas="7"
+                FraccionAltoVentana="0.28"
+                RelacionAlto="1.25">
+                <console:AccionesConsolaStrip
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    ViewModel="{x:Bind ViewModel.Acciones, Mode=OneWay}" />
+            </controls:ProporcionPanel>
         </Grid>
 
         <!-- Parte 4: riel de categorías -->

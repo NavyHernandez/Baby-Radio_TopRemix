@@ -156,14 +156,26 @@
                         FontSize="10"
                         Foreground="{StaticResource TextPrimary}"
                         Text="{x:Bind ViewModel.ElapsedText, Mode=OneWay}" />
-                    <ProgressBar
-                        Grid.Column="1"
-                        Height="4"
-                        VerticalAlignment="Center"
-                        Background="{StaticResource BorderSubtle}"
-                        Foreground="{StaticResource CategoryMusic}"
-                        Maximum="1"
-                        Value="{x:Bind ViewModel.Progress, Mode=OneWay}" />
+                    <!-- Progreso + overlay de seek (clic/arrastre saltan en la pista) -->
+                    <Grid Grid.Column="1">
+                        <ProgressBar
+                            Height="4"
+                            VerticalAlignment="Center"
+                            Background="{StaticResource BorderSubtle}"
+                            Foreground="{StaticResource CategoryMusic}"
+                            Maximum="1"
+                            Value="{x:Bind ViewModel.Progress, Mode=OneWay}" />
+                        <controls:ZonaCursorHand
+                            x:Name="BarraSeek"
+                            Height="18"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            AutomationProperties.Name="Barra de posición; haz clic o arrastra para saltar en la canción"
+                            PointerCanceled="OnSeekPointerCanceled"
+                            PointerMoved="OnSeekPointerMoved"
+                            PointerPressed="OnSeekPointerPressed"
+                            PointerReleased="OnSeekPointerReleased" />
+                    </Grid>
                     <TextBlock
                         Grid.Column="2"
                         FontFamily="Cascadia Mono, Consolas"

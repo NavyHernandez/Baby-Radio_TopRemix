@@ -20,7 +20,8 @@
 BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 ├── AGENTS.md                 ← este archivo (leer antes de codificar)
 ├── App.xaml(.cs)              ← fusiona Themes/*, backdrop Mica
-├── MainWindow.xaml(.cs)       ← Title fijo "Baby Radio" + fullscreen operador configurable + confirma cierre con música + RootFrame → showcase
+├── MainWindow.xaml(.cs)       ← Title fijo "Baby Radio" + fullscreen operador anclado a UNA pantalla (AnclarEnUnaPantalla + reintento) + confirma cierre con música + RootFrame → showcase
+├── MainWindow.BotonesVentana.cs ← parcial: handlers clic min/max/close + glifo Maximize/Restaurar
 ├── Themes/
 │   ├── ColorPalette.xaml      ← tokens de color (Paleta A-Studio Console)
 │   └── ButtonStyles.xaml      ← BebeButtonBase físico 3D + variantes
@@ -30,7 +31,7 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 ├── Models/CategoryPalette.cs    ← registro central (parrilla + futura librería)
 ├── Models/PaletteItem.cs        ← item de paleta + Vaciar (pool estable)
 ├── Models/QueueEntry.cs         ← entrada de cola (badge EN VIVO, FilePath real)
-├── ViewModels/PlayerViewModel.cs ← cola real + Repeat + VU + ganancia normalizada cacheada
+├── ViewModels/PlayerViewModel.cs ← cola real + Repeat + VU + ganancia normalizada cacheada + seek (BarraArrastrando/Previsualizar/Solicitar)
 ├── ViewModels/PlayerViewModel.Cue.cs ← parcial: cue/preview sin sonar + SolicitarReproduccion
 ├── ViewModels/ShowcaseViewModel.cs ← LEGADO (ver Console/ConsolaViewModel)
 ├── ViewModels/SelectableCategory.cs ← wrapper IsSelected + TieneAudio + comando Select
@@ -39,7 +40,7 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 │   ├── PaletaViewModel.cs             ← pool estable 50 + TamanoPagina (25/30) + mezcla + voces + Sonando
 │   ├── CategoriasRailViewModel.cs     ← categorías + 7 fijas + conteos + riel vacío→null
 │   ├── AccionesConsolaViewModel.cs    ← toggles (Operador/Mix/Ganancia) + ganchos (Stop→efectos, ▲▼→páginas)
-│   ├── ConfiguracionViewModel.cs      ← ajustes Config (transición 3/5/7 + modo operador, guardado inmediato)
+│   ├── ConfiguracionViewModel.cs      ← ajustes Config (transición 3/5/7 + modo operador, guardado inmediato; aplica dispositivo en background (serie anti-reentrancia) + aviso de salida ocupada)
 │   ├── OpcionCategoria.cs             ← opción de categoría por banco (operador)
 │   ├── SelectorCategoriaViewModel.cs  ← selección independiente por banco (operador)
 │   └── ConsolaViewModel.cs            ← orquestador + bancos operador (PaletaA/B, SelectorA/B) + salir + modo operador
@@ -53,17 +54,22 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 │   ├── MockQueueBuilder.cs      ← cola inicial de 12 entradas
 │   ├── FormatosArrastre.cs      ← formato privado Lista→Paleta (FilePath)
 │   ├── RegistroErrores.cs       ← log baby-radio-error.log (blindaje diálogos)
+│   ├── ChromeVentana.cs         ← oculta botones del sistema + Passthrough para los redondos
+│   ├── AdaptadorSalidaAudio.cs  ← WasapiOut adaptado a controladores DJ (resample a la tasa del mix ANTES del multiplex + estéreo + reintentos + fallback endpoints + fail-fast DEVICE_IN_USE + sonda EstaLibre)
+│   ├── RecuperacionSalidaAudio.cs ← si el preferido quedó ocupado (Serato/ASIO), sondea cada 5 s y vuelve sola al liberarse (aviso a la UI)
 │   ├── RutaPortable.cs          ← rutas relativas/absolutas del JSON portable (puras, sin I/O)
 │   └── Telemetria/              ← Firebase sin SDK (HttpClient + REST)
 │       ├── DatosInstalacion.cs  ← DTO + JSON Firestore (updateMask)
 │       └── TelemetriaFirebase.cs ← ID único + IP/país + PATCH por arranque
 ├── Controls/
-│   ├── BebeButtonHelper.cs    ← attached props (CategoryColor, IsCircular) + sombra GPU + EnsureShadow
+│   ├── BebeButtonHelper.cs    ← attached props (CategoryColor, IsActive, IsCircular + SurfaceCorners/SurfaceBorderThickness/GlowOnSurface para tiles)
+│   ├── BebeButtonHelper.Sombra.cs ← parcial: sombra GPU (AttachShadow/EnsureShadow + clip por esquina mayor)
+│   ├── ZonaCursorHand.cs      ← Grid con cursor de mano (overlay del seek en PlayerBar; ProtectedCursor solo desde tipo derivado)
 │   ├── UniformGridPanel.cs    ← grilla uniforme 5 col + filas 1fr con alto finito + bordes enteros compartidos (sin costuras)
 │   ├── CategoryBrushConverter.cs ← clave de token → brush (para {Binding})
 │   ├── BoolToOpacityConverter.cs ← bool → opacidad (selección, EN VIVO)
 │   ├── VuMeterControl.xaml(.cs) ← Win2D estéreo, inercia + peak-hold
-│   ├── PlayerBar.xaml(.cs)    ← transporte×6 + progreso + fader maestro/VU der (display en MiniPantalla)
+│   ├── PlayerBar.xaml(.cs)    ← transporte×6 + progreso (seek clic/arrastre) + fader maestro/VU der (display en MiniPantalla)
 │   ├── MasterFaderControl.xaml(.cs) ← fader horizontal total + mute + % (knob aluminio, riel VuTrack)
 │   ├── MiniPantallaControl.xaml(.cs) ← display 3×2 alto (título+reloj / artista o restante + alias firma) + marquee + reloj
 │   ├── ColorALetraConverter.cs ← color → tinta adaptativa (claro/oscuro)
@@ -73,8 +79,8 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 │       ├── ListaReproduccionPanel.xaml(.cs) ← izq: mini-pantalla + cola + drag&drop (inyecta VM + Reproductor)
 │       ├── PaletaPanel.xaml(.cs)            ← centro: 50 carts 81px + guía + titileo (sin header)
 │       ├── CategoriasRailPanel.xaml(.cs)    ← der: 7 esqueleto/color 3D + ayuda (cuenta/soporte/acerca/portable) + aviso update
-│       └── AccionesConsolaStrip.xaml(.cs)   ← abajo: 7 aluminio + Mix/Ganancia titilan (abre Config)
-│       ├── ConfiguracionDialog.xaml(.cs)    ← ajustes: toggle transición + 3/5/7 s (inyecta su VM)
+│       └── AccionesConsolaStrip.xaml(.cs)   ← abajo: 7 aluminio A HUESO (sin espacios, costura 1px) + Mix/Ganancia titilan (abre Config)
+│       ├── ConfiguracionDialog.xaml(.cs)    ← ajustes: toggle transición + 3/5/7 s (inyecta su VM) + aviso salida ocupada
 │       ├── TitileoArmado.cs                 ← titileo de armado reutilizable
 │   ├── BancoOperadorPanel.xaml(.cs)     ← banco 5×N + selector + páginas propias + Stop propio (riel der sin Stop en 1 banco)
 │       └── OperadorConsolaPanel.xaml(.cs)   ← modo operador: 1-2 bancos + fader maestro amplio arriba + tira + salir + Esc
@@ -233,17 +239,20 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 
 | Archivo | Hace |
 |---|---|
-| `App.xaml(.cs)` | Recursos globales + apertura de `MainWindow` |
-| `MainWindow.xaml(.cs)` | Title fijo + fullscreen operador configurable + confirma cierre con música + `RootFrame` → showcase |
+| `App.xaml(.cs)` | Recursos globales + apertura de `MainWindow` + aplica `DispositivoSalidaId` guardado (fire-and-forget) |
+| `MainWindow.xaml(.cs)` | Title fijo + fullscreen operador anclado a UNA pantalla (`AnclarEnUnaPantalla` + `SetPresenter` con reintento y restauración de posición/tamaño) + confirma cierre con música + `RootFrame` → showcase |
+| `MainWindow.BotonesVentana.cs` | Handlers clic min/max/close + glifo `Maximize`/`Copy` (Restaurar) |
 | `Themes/ColorPalette.xaml` | Todos los colores/tokens + brush `AluminumTop` (único hex) |
-| `Themes/ButtonStyles.xaml` | Templates 3D: transporte×6, carts, aluminio, categoría maciza, cart claro |
+| `Themes/ButtonStyles.xaml` | Templates 3D: transporte×6, carts, aluminio, categoría maciza, cart claro, botones de ventana redondos (macOS) |
 | `Controls/BebeButtonHelper.cs` | Attached props + sombra GPU + `IsActive` + `EnsureShadow` |
+| `Controls/BebeButtonHelper.Sombra.cs` | Parcial: sombra GPU (attach/ensure, física de pressed, clip por la esquina mayor) |
 | `Controls/UniformGridPanel.cs` | Grilla uniforme (5 paleta / 7 acciones / 4 operador) + filas 1fr + bordes enteros compartidos (sin costuras 1px) |
 | `Controls/CategoryBrushConverter.cs` | Clave de token → brush |
 | `Controls/BoolToOpacityConverter.cs` | Bool → opacidad (selección, EN VIVO) |
 | `Controls/BoolAVisibilidadConverter.cs` | Bool → visibilidad (+Invertir: fantasmas) |
 | `Controls/VuMeterControl.xaml(.cs)` | VU consola 60 fps, dB, picos + reposo (pausa canvas) |
-| `Controls/PlayerBar.xaml(.cs)` | Transporte×6 repartido (pads 52/play 60) + progreso 60 % + fader maestro/VU 40 % |
+| `Controls/PlayerBar.xaml(.cs)` | Transporte×6 repartido (pads 52/play 60) + progreso 60 % con seek (overlay 18 px, handlers de puntero) + fader maestro/VU 40 % |
+| `Controls/ZonaCursorHand.cs` | Grid con `ProtectedCursor = Hand` (zona de hit del seek; asignable solo desde tipo derivado) |
 | `Controls/MasterFaderControl.xaml(.cs)` | Fader horizontal total + mute + % (knob aluminio, riel VuTrack) |
 | `Controls/MiniPantallaControl.xaml(.cs)` | Display 3×2 alto (título+reloj / artista o restante + alias) + marquee + reloj |
 | `Controls/ColorALetraConverter.cs` | Color → tinta adaptativa (+EsColorClaro) |
@@ -252,7 +261,7 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `Models/CategorySwatch.cs` + `CategoryPalette.cs` | Ficha + registro central |
 | `Models/PaletteItem.cs` | Item de paleta (ColorFantasma, TintaCart, sin subtítulo) + `Vaciar` |
 | `Models/QueueEntry.cs` | Entrada de lista (EN VIVO, `FilePath`) |
-| `ViewModels/PlayerViewModel.cs` | Cola real + Repeat + VU combinado + pausa + ganancia normalizada |
+| `ViewModels/PlayerViewModel.cs` | Cola real + Repeat + VU combinado + pausa + ganancia normalizada + seek (`IrA` vía barra) |
 | `ViewModels/PlayerViewModel.Cue.cs` | Parcial: cue/preview sin sonar + SolicitarReproduccion |
 | `ViewModels/ShowcaseViewModel.cs` | LEGADO (ver Console/ConsolaViewModel) |
 | `ViewModels/SelectableCategory.cs` | Wrapper IsSelected + TieneAudio + Icono enum + ColorFantasma |
@@ -260,7 +269,7 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `ViewModels/Console/PaletaViewModel.cs` | 50 slots + páginas (25/30 por `TamanoPagina`) + mezcla + voces + Sonando |
 | `ViewModels/Console/CategoriasRailViewModel.cs` | Categorías + 7 fijas + conteos + vacío |
 | `ViewModels/Console/AccionesConsolaViewModel.cs` | Toggles + ganchos paleta |
-| `ViewModels/Console/ConfiguracionViewModel.cs` | Ajustes Config (transición 3/5/7 + modo operador) + guardado inmediato |
+| `ViewModels/Console/ConfiguracionViewModel.cs` | Ajustes Config (transición 3/5/7 + modo operador) + guardado inmediato; aplica dispositivo en background (serie anti-reentrancia); aviso de salida ocupada (eventos de `RecuperacionSalidaAudio`) |
 | `ViewModels/Console/ConsolaViewModel.cs` | Orquestador + bancos operador (PaletaA/B, SelectorA/B) + salir + modo operador |
 | `ViewModels/Console/OpcionCategoria.cs` | Opción de categoría por banco (operador) |
 | `ViewModels/Console/SelectorCategoriaViewModel.cs` | Selección independiente por banco (operador) |
@@ -268,12 +277,15 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `Support/VuDynamics.cs` | Escala dB + balística + picos (puro) |
 | `Support/MockLevelsProvider.cs` | Niveles mock (seno + ruido) |
 | `Services/MezcladorEfectos.cs` | Singleton 6 voces (Mix), niveles 20 Hz, latencia 80 ms |
-| `Services/MotorAudio.cs` | Salida única cola/tramo + normalización + maestro en vivo + transición + anti-tardíos |
+| `Services/MotorAudio.cs` | Salida única cola/tramo + normalización + maestro en vivo + transición + anti-tardíos + seek (`IrA` con rearma de parada) |
 | `Support/MockQueueBuilder.cs` | Lista inicial de 12 |
 | `Support/FormatosArrastre.cs` | Formato privado Lista→Paleta (FilePath) |
 | `Support/Telemetria/DatosInstalacion.cs` | DTO + JSON Firestore (updateMask) |
 | `Support/Telemetria/TelemetriaFirebase.cs` | ID único + IP/país + PATCH por arranque |
 | `Support/RegistroErrores.cs` | Log + trazas (blindaje diálogos y motor) |
+| `Support/ChromeVentana.cs` | Oculta botones del sistema + regiones Passthrough para los redondos |
+| `Support/AdaptadorSalidaAudio.cs` | WasapiOut adaptado a controladores DJ (resample a la tasa del mix ANTES del multiplex + mix con MixFormat del dispositivo + estéreo directo + reintentos + fallback a otros endpoints + logging con mix format y HRESULT) + fail-fast `DEVICE_IN_USE` (ocupado por otra app) con evento `RespaldoPorOcupacion` + sonda `EstaLibre` |
+| `Support/RecuperacionSalidaAudio.cs` | Vigila la liberación del dispositivo preferido ocupado (Serato/ASIO): sondeo cada 5 s + reaplicado a los motores + eventos de aviso/recuperación para la UI |
 | `Support/AudioFileInspector.cs` | Metadatos de arrastrados (TagLibSharp) |
 | `Support/IconoVentana.cs` | Icono ventana/taskbar vía HICON (PNG transparente 16/32 + fallback ico) |
 | `Support/AnalizadorLoudness.cs` | LUFS BS.1770 (48k, filtros-K, gating) |
@@ -288,8 +300,8 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `Controls/Console/PaletaPanel.xaml(.cs)` | Centro: 50 carts 81px + guía + titileo + medición layout (sin header) |
 | `Controls/Console/OndaEfectoControl.xaml(.cs)` | Onda blindada + cues + pre-escucha (no pausa cola) |
 | `Controls/Console/CategoriasRailPanel.xaml(.cs)` | Der: 7 esqueleto/color 3D + crear + ayuda/portable + aviso update |
-| `Controls/Console/AccionesConsolaStrip.xaml(.cs)` | Abajo: 7 aluminio + Mix/Ganancia titilan (abre Config) |
-| `Controls/Console/ConfiguracionDialog.xaml(.cs)` | Ajustes: toggle transición + 3/5/7 s (inyecta su VM) |
+| `Controls/Console/AccionesConsolaStrip.xaml(.cs)` | Abajo: 7 aluminio a hueso (sin espacios, costura 1px) + Mix/Ganancia titilan (abre Config) |
+| `Controls/Console/ConfiguracionDialog.xaml(.cs)` | Ajustes: toggle transición + 3/5/7 s (inyecta su VM) + aviso de salida ocupada (tarjeta Salida de audio) |
 | `Controls/Console/TitileoArmado.cs` | Titileo de armado reutilizable |
 | `Controls/Console/BancoOperadorPanel.xaml(.cs)` | Banco 5×N + selector + páginas propias + Stop propio (riel der sin Stop en 1 banco) |
 | `Controls/Console/OperadorConsolaPanel.xaml(.cs)` | Modo operador: 1-2 bancos + fader maestro amplio arriba (mismo Reproductor) + tira + salir + Esc |

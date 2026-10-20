@@ -82,6 +82,30 @@ public partial class App : Application
         _window.Activate();
         _window.Closed += (_, _) => KeyMappingService.Instancia.Dispose();
 
+        // Recuperación de salida ocupada: debe estar suscrita ANTES de aplicar
+        // el dispositivo guardado (si Serato retiene el controlador en exclusivo,
+        // el primer fallback dispara su vigilancia).
+        _ = Support.RecuperacionSalidaAudio.Instancia;
+
+        // Aplicar el dispositivo de salida guardado (fire-and-forget: sin audio
+        // cargado solo fija el id; nunca bloquea el arranque).
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var id = Support.ConsolaStore.Cargar().DispositivoSalidaId;
+                if (!string.IsNullOrEmpty(id))
+                {
+                    Services.MotorAudio.Instancia.EstablecerDispositivo(id);
+                    Services.MezcladorEfectos.Instancia.EstablecerDispositivo(id);
+                }
+            }
+            catch (Exception ex)
+            {
+                Support.RegistroErrores.Registrar(ex, "App.DispositivoSalida");
+            }
+        });
+
         // Telemetría fire-and-forget (nunca bloquea el arranque).
         _ = Support.Telemetria.TelemetriaFirebase.ReportarAsync();
     }

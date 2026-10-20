@@ -63,13 +63,36 @@
                         Drop="OnArchivoDrop">
                         <console:OndaEfectoControl x:Name="Onda" />
                     </Border>
-                    <Slider
-                        Header="Ganancia (dB)"
-                        FontSize="12"
-                        Minimum="-20"
-                        Maximum="6"
-                        StepFrequency="0.5"
-                        Value="{x:Bind Borrador.GananciaDb, Mode=TwoWay}" />
+                    <!-- Ganancia: etiqueta + valor en vivo (dB con signo) + slider -->
+                    <Grid RowSpacing="4">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0" ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                FontSize="12"
+                                Foreground="{StaticResource TextSecondary}"
+                                Text="Ganancia (dB)" />
+                            <TextBlock
+                                Grid.Column="1"
+                                FontFamily="Cascadia Mono"
+                                FontSize="12"
+                                Foreground="{StaticResource TextPrimary}"
+                                Text="{x:Bind TextoGanancia, Mode=OneWay}" />
+                        </Grid>
+                        <Slider
+                            Grid.Row="1"
+                            AutomationProperties.Name="Ganancia en decibelios"
+                            Maximum="6"
+                            Minimum="-20"
+                            StepFrequency="0.5"
+                            Value="{x:Bind Borrador.GananciaDb, Mode=TwoWay}" />
+                    </Grid>
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />

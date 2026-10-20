@@ -4,7 +4,9 @@
     lado a lado (cada uno con su categoría y páginas propias, 5x5) + fader
     maestro amplio en la barra superior (mismo Reproductor que la consola
     normal: cola + efectos) + tira compacta de acciones
-    (Config·Categorías·Stop·Mix) + botón para salir.
+    (Config·Categorías·Stop·Mix) a hueso con la misma geometría por
+    posición de la tira normal (extremos con radio 6, costuras con un
+    filete de 1px y glow confinado al tile) + botón para salir.
     Sin cola: solo categorías y paletas (estilo cartwall).
     La lógica vive en ConsolaViewModel; aquí solo composición y diálogos.
 -->
@@ -92,8 +94,9 @@
                 Selector="{x:Bind Consola.SelectorB, Mode=OneWay}" />
         </Grid>
 
-        <!-- Tira ancha: Config · Categorías · Stop · Mix (4 columnas * iguales) -->
-        <Grid Grid.Row="2">
+        <!-- Tira ancha: Config · Categorías · Stop · Mix (4 columnas * iguales,
+             tiles a hueso con la misma geometría que la tira normal) -->
+        <Grid Grid.Row="2" Background="{StaticResource BackgroundBase}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
@@ -108,6 +111,9 @@
                 AutomationProperties.Name="Configuración"
                 Click="OnConfigClick"
                 controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryFiller}"
+                controls:BebeButtonHelper.GlowOnSurface="True"
+                controls:BebeButtonHelper.SurfaceBorderThickness="2,2,0,2"
+                controls:BebeButtonHelper.SurfaceCorners="6,0,0,6"
                 Style="{StaticResource BebeLightButtonStyle}">
                 <StackPanel Spacing="3">
                     <Grid HorizontalAlignment="Center">
@@ -128,6 +134,9 @@
                 AutomationProperties.Name="Gestionar categorías"
                 Click="OnGestionarClick"
                 controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryProgram}"
+                controls:BebeButtonHelper.GlowOnSurface="True"
+                controls:BebeButtonHelper.SurfaceBorderThickness="1,2,0,2"
+                controls:BebeButtonHelper.SurfaceCorners="0,0,0,0"
                 Style="{StaticResource BebeLightButtonStyle}">
                 <StackPanel Spacing="3">
                     <Grid HorizontalAlignment="Center">
@@ -149,6 +158,9 @@
                 Command="{x:Bind Consola.Acciones.DetenerCommand, Mode=OneWay}"
                 Click="OnConsolaFlashClick"
                 controls:BebeButtonHelper.CategoryColor="{StaticResource StateOnAir}"
+                controls:BebeButtonHelper.GlowOnSurface="True"
+                controls:BebeButtonHelper.SurfaceBorderThickness="1,2,0,2"
+                controls:BebeButtonHelper.SurfaceCorners="0,0,0,0"
                 Style="{StaticResource BebeLightButtonStyle}"
                 ToolTipService.ToolTip="Detener efectos de ambos bancos">
                 <StackPanel Spacing="3">
@@ -171,6 +183,9 @@
                 AutomationProperties.Name="Mezcla"
                 Command="{x:Bind Consola.Acciones.ToggleMixCommand, Mode=OneWay}"
                 controls:BebeButtonHelper.CategoryColor="{StaticResource CategoryCommercial}"
+                controls:BebeButtonHelper.GlowOnSurface="True"
+                controls:BebeButtonHelper.SurfaceBorderThickness="1,2,2,2"
+                controls:BebeButtonHelper.SurfaceCorners="0,6,6,0"
                 Style="{StaticResource BebeLightButtonStyle}"
                 ToolTipService.ToolTip="Mezcla de efectos">
                 <StackPanel Spacing="3">

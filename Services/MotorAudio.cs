@@ -31,6 +31,7 @@ public sealed class MotorAudio : IDisposable
     private string _dispositivoId = string.Empty;
     private string _pathActual = string.Empty;
     private TimeSpan? _finEfectivoActual;
+    private double _gananciaDbActual;
 
     /// <summary>Modo actual de reproducción.</summary>
     public ModoMotor Modo { get; private set; } = ModoMotor.Detenido;
@@ -133,9 +134,13 @@ public sealed class MotorAudio : IDisposable
     /// </summary>
     /// <param name="deviceId">ID del dispositivo (vacío = predeterminado).</param>
     /// <remarks>
-    /// Si hay audio reproduciéndose, se detiene, se recrea la salida con el
-    /// nuevo dispositivo y se reanuda desde la posición actual. Si no hay audio,
-    /// solo se actualiza el dispositivo para la próxima reproducción.
+    /// Si hay audio cargado (sonando o en pausa), se captura el estado ANTES de
+    /// cerrar (path, fin efectivo, posición, modo, ganancia y pausa), se cierra,
+    /// se reabre con el nuevo dispositivo y se restaura la pausa si estaba.
+    /// El reintento con el predeterminado vive en
+    /// <see cref="AdaptadorSalidaAudio.CrearInicializadaConFallback"/>: también
+    /// cubre reproducciones futuras (no solo la reapertura). Nunca lanza: un
+    /// driver que falle no debe romper el binding de la UI.
     /// </remarks>
     public void EstablecerDispositivo(string deviceId)
     {
@@ -144,38 +149,112 @@ public sealed class MotorAudio : IDisposable
             return;
         }
 
-        var reproducciendo = Reproduciendo;
-        var posicion = Posicion;
-        var modo = Modo;
-
-        if (reproducciendo && !string.IsNullOrEmpty(_pathActual))
+        try
         {
+            // Capturar el estado ANTES de cerrar: Cerrar() limpia los campos.
+            var path = _pathActual;
+            var fin = _finEfectivoActual;
+            var posicion = Posicion;
+            var modo = Modo;
+            var ganancia = _gananciaDbActual;
+            var enPausa = EnPausa;
+
+            _dispositivoId = deviceId;
+
+            if (string.IsNullOrEmpty(path))
+            {
+                // No hay audio cargado: el dispositivo se aplica en la próxima apertura.
+                return;
+            }
+
             _cierreManual = true;
             Cerrar();
-            _dispositivoId = deviceId;
-            Abrir(_pathActual, posicion, _finEfectivoActual, 0, modo);
+            if (Abrir(path, posicion, fin, ganancia, modo) && enPausa)
+            {
+                Pausar();
+            }
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "MotorAudio.EstablecerDispositivo");
+        }
+    }
+
+    /// <summary>Salta a una posición de la pista cargada (seek).</summary>
+    /// <param name="posicion">Destino (se clampea a [0, duración]).</param>
+    /// <remarks>
+    /// Funciona reproduciendo o en pausa (al reanudar puede soltar ≤~150 ms del
+    /// buffer ya leído). Si el destino alcanza o supera el fin efectivo
+    /// (recorte), detiene la salida para que dispare el fin natural igual que
+    /// al terminar; si no, rearma el timer de parada programada con los ms
+    /// restantes. No-op si no hay pista cargada.
+    /// </remarks>
+    public void IrA(TimeSpan posicion)
+    {
+        if (_disposed)
+        {
             return;
         }
 
-        _dispositivoId = deviceId;
+        try
+        {
+            var lector = _lector;
+            var salida = _salida;
+            if (lector is null || salida is null)
+            {
+                return;
+            }
+
+            var duracion = lector.TotalTime;
+            var destino = posicion < TimeSpan.Zero ? TimeSpan.Zero : posicion;
+            if (duracion > TimeSpan.Zero && destino >= duracion)
+            {
+                destino = duracion;
+            }
+
+            var fin = _finEfectivoActual;
+            if (fin.HasValue && fin.Value > TimeSpan.Zero && destino >= fin.Value)
+            {
+                // Alcanza el fin del recorte: cortar deja que el fin natural
+                // (PlaybackStopped → AvisarTermino) avance la cola.
+                _parada?.Dispose();
+                _parada = null;
+                salida.Stop();
+                return;
+            }
+
+            lector.CurrentTime = destino;
+            RearmarParada(destino);
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "MotorAudio.IrA");
+        }
     }
 
-    /// <summary>Crea la salida WasapiOut con el dispositivo seleccionado.</summary>
-    /// <param name="latenciaMs">Latencia en milisegundos.</param>
-    /// <returns>La salida de audio lista para Init.</returns>
-    private IWavePlayer CrearSalida(int latenciaMs)
+    /// <summary>Rearma el timer de parada programada tras un seek (solo si hay fin efectivo).</summary>
+    /// <param name="desde">Nueva posición de la pista.</param>
+    private void RearmarParada(TimeSpan desde)
     {
-        var dispositivo = string.IsNullOrEmpty(_dispositivoId)
-            ? EnumeradorDispositivosAudio.Instancia.ObtenerDispositivoPorDefecto()
-            : EnumeradorDispositivosAudio.Instancia.ObtenerMMDevice(_dispositivoId);
-
-        if (dispositivo is null)
+        var fin = _finEfectivoActual;
+        if (!fin.HasValue || fin.Value <= desde)
         {
-            dispositivo = EnumeradorDispositivosAudio.Instancia.ObtenerDispositivoPorDefecto();
+            return;
         }
 
-        return new WasapiOut(dispositivo, AudioClientShareMode.Shared, true, latenciaMs);
+        var ms = (long)(fin.Value - desde).TotalMilliseconds;
+        _parada?.Dispose();
+        _parada = new System.Threading.Timer(_ => PararAlFin(), null, ms, Timeout.Infinite);
     }
+
+    /// <summary>Crea e inicializa la salida WasapiOut con el dispositivo seleccionado.</summary>
+    /// <param name="fuente">Cadena de audio estéreo a reproducir (ya con medidor).</param>
+    /// <param name="latenciaMs">Latencia en milisegundos.</param>
+    /// <returns>La salida de audio inicializada (lista para Play).</returns>
+    /// <remarks>Si el dispositivo elegido falla, el adaptador reintenta con el predeterminado.</remarks>
+    private IWavePlayer CrearSalida(ISampleProvider fuente, int latenciaMs) =>
+        AdaptadorSalidaAudio.CrearInicializadaConFallback(
+            _dispositivoId, fuente, latenciaMs, "MotorAudio.CrearSalida");
 
     /// <summary>Reproduce una entrada desde cero (corta en su fin efectivo).</summary>
     /// <param name="entry">Entrada con FilePath existente.</param>
@@ -290,7 +369,7 @@ public sealed class MotorAudio : IDisposable
 
             var medidor = new MedidorPicos(maestro);
             medidor.Niveles += (izq, der) => Niveles?.Invoke(izq, der);
-            _salida = CrearSalida(150);
+            _salida = CrearSalida(medidor, 150);
             _generacion++;
             var generacion = _generacion;
             _salida.PlaybackStopped += (_, _) =>
@@ -300,10 +379,10 @@ public sealed class MotorAudio : IDisposable
                     AvisarTermino();
                 }
             };
-            _salida.Init(medidor.ToWaveProvider());
             _lector = lector;
             _pathActual = path;
             _finEfectivoActual = hasta;
+            _gananciaDbActual = gananciaDb;
             Modo = modo;
             _salida.Play();
             _cierreManual = false;
@@ -316,9 +395,11 @@ public sealed class MotorAudio : IDisposable
 
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            RegistroErrores.Registrar(ex, $"MotorAudio.Abrir({modo})");
             Cerrar();
+            _cierreManual = false;
             return false;
         }
     }
@@ -367,7 +448,12 @@ public sealed class MotorAudio : IDisposable
         }
     }
 
-    /// <summary>Corta y libera (idempotente, seguro en callbacks).</summary>
+    /// <summary>Corta y libera (idempotente, seguro en callbacks y drivers rotos).</summary>
+    /// <remarks>
+    /// Los <c>Dispose</c> van en try/catch: un COMException del driver (endpoint
+    /// desconectado o controlador DJ en renegociación) no debe escapar ni dejar
+    /// estado a medias — los campos se limpian igualmente.
+    /// </remarks>
     private void Cerrar()
     {
         Modo = ModoMotor.Detenido;
@@ -382,11 +468,25 @@ public sealed class MotorAudio : IDisposable
             // Salida ya cerrada.
         }
 
-        // No disponer la salida dentro de su propio callback:
-        // se libera al abrir lo siguiente o al Dispose.
-        _salida?.Dispose();
+        try
+        {
+            _salida?.Dispose();
+        }
+        catch
+        {
+            // Driver roto: best-effort, no enmascara el flujo del cambio.
+        }
+
         _salida = null;
-        _lector?.Dispose();
+        try
+        {
+            _lector?.Dispose();
+        }
+        catch
+        {
+            // Lector ya liberado.
+        }
+
         _lector = null;
         _volumenMaestro = null;
         _pathActual = string.Empty;

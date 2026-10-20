@@ -1,3 +1,16 @@
+Baby Radio v0.1.14 — tira sin costuras, efectos sin corte seco y fullscreen más firme.
+
+- FIX: los 7 botones de la tira inferior (Config·Operador·Mix·Ganancia·Stop·▲▼) ahora se tocan sin hueco oscuro ni doble filete entre ellos; la barra ocupa el 100 % del ancho en pantallas grandes y Compact.
+- FIX: al terminar un efecto solo (sin pulsar Stop) el audio ya no se corta en seco: baja suave en 120 ms igual que al detener o reemplazar.
+- FIX: el modo operador en pantalla completa siempre se ancla a UNA sola pantalla (aunque la ventana esté a caballo entre dos monitores); si el primer intento no aplica se reintenta y, si vuelve a fallar, queda en ventana registrada en el log en vez de bloqueado. Salir restaura posición y tamaño previos.
+- FIX: ganancia por slot corregida — un valor positivo ya suena también con Mix armado; al cambiar el audio de un slot la ganancia vuelve a 0 (antes se heredaba la del anterior); el editor muestra el valor en vivo (+5.5 dB).
+- FIX: el armado del botón Ganancia persiste al reiniciar (antes volvía desarmado).
+- MEJORA: en Config, al desconectar el dispositivo de audio elegido se vuelve al predeterminado al instante sin resetear la lista ni reescribir la configuración por error.
+- MEJORA: si la salida elegida está ocupada por otra app (p. ej. Serato DJ con el controlador), Baby Radio avisa en Config, usa el respaldo al instante y **vuelve sola** a la salida elegida en cuanto se libere (sin reiniciar).
+- FIX: en salidas multicanal (controladores DJ como el DDJ-FLX4) la música ya no suena "apurada" y raspada: los mp3 (44.1 kHz) se adaptan a la tasa del dispositivo antes de reproducirlos (antes salían ~9 % rápidos con alias en los canales del controlador).
+- NUEVO: la barra de progreso del reproductor es interactiva — haz clic o arrastra para saltar a cualquier punto de la canción (respeta el recorte de la pista y el fin programado).
+- Resto de la consola sin cambios.
+
 Baby Radio v0.1.13 — disparo más ágil, logo al fondo de la paleta y Config más clara.
 
 - FIX: el borde de color de las flechas Arriba/Abajo ya no se queda encendido tras cambiar de página.

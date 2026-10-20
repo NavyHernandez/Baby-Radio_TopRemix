@@ -44,6 +44,12 @@ public sealed class ConsolaConfiguracion
     public double VolumenMaestro { get; set; } = 1.0;
 
     /// <summary>
+    /// Ganancia armada al arrancar (titila): prioriza los efectos de la paleta
+    /// sobre la cola (ducking). Default false = desarmada.
+    /// </summary>
+    public bool GananciaArmada { get; set; }
+
+    /// <summary>
     /// Modo operador en pantalla completa con 2 paletas (false = ventana
     /// redimensionable con 1 paleta, para convivir con otras apps).
     /// </summary>

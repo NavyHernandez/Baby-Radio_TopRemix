@@ -1,26 +1,18 @@
-using System.Numerics;
-using Microsoft.UI.Composition;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media;
 
 namespace BebeRadio.Controls;
 
 /// <summary>
-/// Attached properties y sombra GPU para botones físico 3D estilo consola.
-/// Reposo: blur 10, offset Y 4, negro 30 %. Hover: blur 12. Pressed: offset Y 1,
-/// blur 5, opacidad 12 %. El glow de actividad es XAML (grupo ActivityStates).
+/// Attached properties de los botones físico 3D estilo consola: color de
+/// categoría, variante circular, glow de actividad y geometría de la cara
+/// (esquinas, aro y glow confinado) para que los tiles de la tira se peguen
+/// sin costuras. La sombra GPU vive en <c>BebeButtonHelper.Sombra.cs</c>.
 /// Ver AGENTS.md §3.3 y Themes/ButtonStyles.xaml.
 /// </summary>
-public static class BebeButtonHelper
+public static partial class BebeButtonHelper
 {
-    private const float RestBlur = 10f;
-    private const float HoverBlur = 12f;
-    private const float PressedBlur = 5f;
-    private const float RestOpacity = 0.30f;
-    private const float PressedOpacity = 0.12f;
-
     /// <summary>Color de acento de categoría (tinte + glow en carts).</summary>
     public static readonly DependencyProperty CategoryColorProperty =
         DependencyProperty.RegisterAttached(
@@ -95,179 +87,82 @@ public static class BebeButtonHelper
         }
     }
 
-    private static readonly DependencyProperty ShadowStateProperty =
+    /// <summary>Esquinas del cuerpo físico (<c>SurfaceBorder</c>) del template.</summary>
+    /// <remarks>
+    /// Defecto 6 en las cuatro: idéntico al valor fijo de siempre. Los tiles
+    /// de la tira declaran <c>6,0,0,6</c> (primero) o <c>0,6,6,0</c> (último)
+    /// para que solo redondeen los extremos de la barra.
+    /// </remarks>
+    public static readonly DependencyProperty SurfaceCornersProperty =
         DependencyProperty.RegisterAttached(
-            "ShadowState",
-            typeof(ShadowState),
+            "SurfaceCorners",
+            typeof(CornerRadius),
             typeof(BebeButtonHelper),
-            new PropertyMetadata(null));
+            new PropertyMetadata(new CornerRadius(6)));
 
-    /// <summary>Marca si los manejadores de puntero ya están enganchados al botón.</summary>
-    private static readonly DependencyProperty ShadowWiredProperty =
+    /// <summary>Obtiene las esquinas del cuerpo físico.</summary>
+    /// <param name="element">Botón objetivo.</param>
+    /// <returns>CornerRadius vigente (defecto 6).</returns>
+    public static CornerRadius GetSurfaceCorners(DependencyObject element) =>
+        (CornerRadius)element.GetValue(SurfaceCornersProperty);
+
+    /// <summary>Establece las esquinas del cuerpo físico.</summary>
+    /// <param name="element">Botón objetivo.</param>
+    /// <param name="value">Esquinas a aplicar.</param>
+    public static void SetSurfaceCorners(DependencyObject element, CornerRadius value) =>
+        element.SetValue(SurfaceCornersProperty, value);
+
+    /// <summary>Grosor del aro del cuerpo físico (<c>SurfaceBorder.BorderThickness</c>).</summary>
+    /// <remarks>
+    /// Defecto 2 en los cuatro lados: igual que siempre. En la tira, el lado
+    /// derecho de cada tile va a 0 y el izquierdo de su vecino a 1, de modo que
+    /// dos tiles vecinos comparten UN filete de 1px (sin doble aro ni hueco).
+    /// </remarks>
+    public static readonly DependencyProperty SurfaceBorderThicknessProperty =
         DependencyProperty.RegisterAttached(
-            "ShadowWired",
+            "SurfaceBorderThickness",
+            typeof(Thickness),
+            typeof(BebeButtonHelper),
+            new PropertyMetadata(new Thickness(2)));
+
+    /// <summary>Obtiene el grosor del aro del cuerpo físico.</summary>
+    /// <param name="element">Botón objetivo.</param>
+    /// <returns>Thickness vigente (defecto 2).</returns>
+    public static Thickness GetSurfaceBorderThickness(DependencyObject element) =>
+        (Thickness)element.GetValue(SurfaceBorderThicknessProperty);
+
+    /// <summary>Establece el grosor del aro del cuerpo físico.</summary>
+    /// <param name="element">Botón objetivo.</param>
+    /// <param name="value">Grosor por lado (Izq,Arriba,Derecha,Abajo).</param>
+    public static void SetSurfaceBorderThickness(DependencyObject element, Thickness value) =>
+        element.SetValue(SurfaceBorderThicknessProperty, value);
+
+    /// <summary>
+    /// Pinta el glow de actividad POR ENCIMA de la cara (modo tile) y oculta
+    /// el halo exterior original.
+    /// </summary>
+    /// <remarks>
+    /// El halo vive detrás de la superficie opaca y solo se ve derramándose
+    /// fuera del botón; con los tiles de la tira pegados, el vecino derecho lo
+    /// tapa y el glow sale en "C" abierta. Con esto, el glow se pinta encima
+    /// y queda confinado a la geometría del propio tile (simétrico).
+    /// </remarks>
+    public static readonly DependencyProperty GlowOnSurfaceProperty =
+        DependencyProperty.RegisterAttached(
+            "GlowOnSurface",
             typeof(bool),
             typeof(BebeButtonHelper),
             new PropertyMetadata(false));
 
-    /// <summary>
-    /// Crea y anexa la sombra de elevación GPU al borde del template.
-    /// Debe llamarse desde <c>Loaded</c>; el borde se localiza por nombre
-    /// (<c>SurfaceBorder</c>). Recorta con la geometría redondeada del borde.
-    /// </summary>
-    /// <param name="button">Botón al que anexar la sombra.</param>
-    /// <remarks>
-    /// Reemplaza un estado anterior si el template se recreó. Los manejadores de
-    /// puntero se enganchan una sola vez por botón y consultan el estado vigente,
-    /// así que reanexar no acumula suscripciones.
-    /// </remarks>
-    public static void AttachShadow(FrameworkElement button)
-    {
-        if (button is not Button target)
-        {
-            return;
-        }
+    /// <summary>Obtiene si el glow se pinta sobre la cara.</summary>
+    /// <param name="element">Botón objetivo.</param>
+    /// <returns>True si el glow va encima (modo tile).</returns>
+    public static bool GetGlowOnSurface(DependencyObject element) =>
+        (bool)element.GetValue(GlowOnSurfaceProperty);
 
-        if (FindTemplateChild(button, "SurfaceBorder") is not FrameworkElement face)
-        {
-            target.ClearValue(ShadowStateProperty);
-            return;
-        }
-
-        var hostVisual = ElementCompositionPreview.GetElementVisual(face);
-        var compositor = hostVisual.Compositor;
-
-        var shadow = compositor.CreateDropShadow();
-        shadow.BlurRadius = RestBlur;
-        shadow.Offset = new Vector3(0, 4, 0);
-        shadow.Color = Windows.UI.Color.FromArgb(255, 0, 0, 0);
-        shadow.Opacity = target.IsEnabled ? RestOpacity : 0f;
-
-        var geometry = compositor.CreateRoundedRectangleGeometry();
-        var clip = compositor.CreateGeometricClip(geometry);
-
-        var sprite = compositor.CreateSpriteVisual();
-        sprite.Shadow = shadow;
-        sprite.Clip = clip;
-        ElementCompositionPreview.SetElementChildVisual(face, sprite);
-
-        var state = new ShadowState(shadow, sprite, geometry, face);
-        target.SetValue(ShadowStateProperty, state);
-        ResizeShadow(face, state);
-        face.SizeChanged += (_, _) => ResizeShadow(face, state);
-
-        if (target.GetValue(ShadowWiredProperty) is not true)
-        {
-            target.SetValue(ShadowWiredProperty, true);
-            target.PointerEntered += (_, _) => ConEstado(target, actual => actual.Shadow.BlurRadius = HoverBlur);
-            target.PointerExited += (_, _) => ConEstado(target, actual => actual.Shadow.BlurRadius = RestBlur);
-            target.PointerPressed += (_, _) => ConEstado(target, actual => ApplyPressed(actual, target.IsEnabled));
-            target.PointerReleased += (_, _) => ConEstado(target, actual => ApplyRest(actual, target.IsEnabled));
-            target.PointerCanceled += (_, _) => ConEstado(target, actual => ApplyRest(actual, target.IsEnabled));
-            target.IsEnabledChanged += (_, _) => ConEstado(target, actual => ApplyRest(actual, target.IsEnabled));
-        }
-    }
-
-    /// <summary>
-    /// Reanexa la sombra solo si el template se recreó (borde distinto o ausente).
-    /// </summary>
-    /// <param name="button">Botón a verificar.</param>
-    /// <remarks>Idempotente y barato: si la sombra sigue válida no hace nada.</remarks>
-    public static void EnsureShadow(FrameworkElement button)
-    {
-        if (button.GetValue(ShadowStateProperty) is ShadowState state
-            && FindTemplateChild(button, "SurfaceBorder") is FrameworkElement face
-            && ReferenceEquals(face, state.Face))
-        {
-            return;
-        }
-
-        AttachShadow(button);
-    }
-
-    /// <summary>Ejecuta una acción sobre el estado de sombra vigente del botón.</summary>
-    /// <param name="target">Botón.</param>
-    /// <param name="accion">Acción a aplicar (si hay sombra).</param>
-    private static void ConEstado(DependencyObject target, Action<ShadowState> accion)
-    {
-        if (target.GetValue(ShadowStateProperty) is ShadowState state)
-        {
-            accion(state);
-        }
-    }
-
-    /// <summary>Aplica física de hundido: sombra baja y atenuada.</summary>
-    /// <param name="state">Estado de sombra.</param>
-    /// <param name="enabled">Si el botón está habilitado.</param>
-    private static void ApplyPressed(ShadowState state, bool enabled)
-    {
-        state.Shadow.Offset = new Vector3(0, 1, 0);
-        state.Shadow.BlurRadius = PressedBlur;
-        state.Shadow.Opacity = enabled ? PressedOpacity : 0f;
-    }
-
-    /// <summary>Restaura física de reposo (o sin sombra si deshabilitado).</summary>
-    /// <param name="state">Estado de sombra.</param>
-    /// <param name="enabled">Si el botón está habilitado.</param>
-    private static void ApplyRest(ShadowState state, bool enabled)
-    {
-        state.Shadow.Offset = new Vector3(0, 4, 0);
-        state.Shadow.BlurRadius = RestBlur;
-        state.Shadow.Opacity = enabled ? RestOpacity : 0f;
-    }
-
-    /// <summary>Sincroniza sprite y geometría con el tamaño real de la cara.</summary>
-    /// <param name="face">Borde o elipse del template (aporta tamaño y radio).</param>
-    /// <param name="state">Estado de sombra a actualizar.</param>
-    private static void ResizeShadow(FrameworkElement face, ShadowState state)
-    {
-        var width = (float)face.ActualSize.X;
-        var height = (float)face.ActualSize.Y;
-        if (width <= 0 || height <= 0)
-        {
-            return;
-        }
-
-        state.Sprite.Size = new Vector2(width, height);
-        state.Geometry.Size = new Vector2(width, height);
-
-        // Border: su CornerRadius; Ellipse (pad circular): mitad del lado menor.
-        var radius = face is Border border
-            ? (float)border.CornerRadius.TopLeft
-            : Math.Min(width, height) / 2f;
-        state.Geometry.CornerRadius = new Vector2(radius, radius);
-    }
-
-    /// <summary>Busca un hijo nombrado dentro del template aplicado.</summary>
-    /// <param name="parent">Elemento con template aplicado.</param>
-    /// <param name="name">Nombre del hijo (p. ej. SurfaceBorder).</param>
-    /// <returns>El hijo o null si no existe.</returns>
-    private static DependencyObject? FindTemplateChild(DependencyObject parent, string name)
-    {
-        var count = VisualTreeHelper.GetChildrenCount(parent);
-        for (var i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is FrameworkElement named && named.Name == name)
-            {
-                return child;
-            }
-
-            var nested = FindTemplateChild(child, name);
-            if (nested is not null)
-            {
-                return nested;
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>Recursos Composition de la sombra de un botón (un estado por botón).</summary>
-    /// <param name="Shadow">Sombra de elevación.</param>
-    /// <param name="Sprite">Visual que porta la sombra.</param>
-    /// <param name="Geometry">Geometría redondeada de recorte.</param>
-    /// <param name="Face">Borde del template dueño de la sombra (detección de re-template).</param>
-    private sealed record ShadowState(
-        DropShadow Shadow, SpriteVisual Sprite, CompositionRoundedRectangleGeometry Geometry, FrameworkElement Face);
+    /// <summary>Establece si el glow se pinta sobre la cara.</summary>
+    /// <param name="element">Botón objetivo.</param>
+    /// <param name="value">True para glow encima (modo tile).</param>
+    public static void SetGlowOnSurface(DependencyObject element, bool value) =>
+        element.SetValue(GlowOnSurfaceProperty, value);
 }

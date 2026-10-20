@@ -25,8 +25,15 @@ public sealed partial class PaletaViewModel : ObservableObject
     /// <summary>Carts visibles por página en modo normal (5 columnas × 5 filas).</summary>
     public const int ItemsPorPagina = 25;
 
-    /// <summary>Carts por página de esta instancia (25 normal, 30 en operador).</summary>
-    /// <remarks>Fijarlo antes del primer despliegue; la última página puede quedar parcial.</remarks>
+    /// <summary>
+    /// Carts por página de esta instancia: 25 (5 filas) normal, 30 (6 filas) en
+    /// operador o en pantallas grandes (lo decide <see cref="PaginadoAdaptativo"/>).
+    /// </summary>
+    /// <remarks>
+    /// Fijarlo antes del primer despliegue; en caliente usar
+    /// <see cref="AjustarTamanoPagina"/>, que además refresca páginas e indicador.
+    /// La última página puede quedar parcial.
+    /// </remarks>
     public int TamanoPagina { get; set; } = ItemsPorPagina;
 
     /// <summary>Carts de la página actual.</summary>
@@ -322,10 +329,47 @@ public sealed partial class PaletaViewModel : ObservableObject
         CambiarPagina(PaginaActual - 1);
     }
 
+    /// <summary>
+    /// Cambia el tamaño de página EN CALIENTE (p. ej. 25 ↔ 30 al agrandar la
+    /// ventana) conservando el primer cart visible y refrescando la vista.
+    /// </summary>
+    /// <param name="nuevoTamano">Carts por página (múltiplo de las 5 columnas).</param>
+    /// <remarks>
+    /// Debe llamarse en el hilo de UI (toca <see cref="Items"/>). Sin cambios si
+    /// el tamaño es el mismo o inválido, así que es barato llamarlo en cada resize.
+    /// La página se recalcula desde el primer slot visible para que el operador
+    /// no "salte" de contenido al cambiar entre 5 y 6 filas.
+    /// </remarks>
+    public void AjustarTamanoPagina(int nuevoTamano)
+    {
+        if (nuevoTamano <= 0 || nuevoTamano == TamanoPagina)
+        {
+            return;
+        }
+
+        // Primer slot visible antes del cambio: ancla para no perder el lugar.
+        var primerSlot = PaginaActual * TamanoPagina;
+        TamanoPagina = nuevoTamano;
+
+        // Página que contiene ese slot con el tamaño nuevo (sin pasarse de la última).
+        PaginaActual = Math.Min(primerSlot / nuevoTamano, Math.Max(0, TotalPaginas - 1));
+
+        // TamanoPagina no es [ObservableProperty]: avisar a mano a la vista.
+        OnPropertyChanged(nameof(TamanoPagina));
+        OnPropertyChanged(nameof(TotalPaginas));
+        OnPropertyChanged(nameof(IndicadorPagina));
+        MostrarPagina();
+    }
+
     /// <summary>Carga un audio real en un slot (arrastre o editor).</summary>
     /// <param name="item">Slot destino.</param>
     /// <param name="path">Ruta del archivo de audio.</param>
     /// <returns>True si el archivo es un audio legible.</returns>
+    /// <remarks>
+    /// Al cambiar de archivo se resetean cues y ganancia: heredar la ganancia
+    /// del audio anterior dejaba un ajuste fantasma que no correspondía al nuevo.
+    /// Re-soltar el mismo archivo conserva la ganancia.
+    /// </remarks>
     public bool SoltarAudio(PaletteItem item, string path)
     {
         var entrada = AudioFileInspector.TryInspect(path);
@@ -334,11 +378,17 @@ public sealed partial class PaletaViewModel : ObservableObject
             return false;
         }
 
+        var cambioArchivo = !string.Equals(item.FilePath, path, StringComparison.OrdinalIgnoreCase);
         item.Title = entrada.Title;
         item.Duration = entrada.Duration;
         item.FilePath = path;
         item.CueInicio = TimeSpan.Zero;
         item.CueFin = null;
+        if (cambioArchivo)
+        {
+            item.GananciaDb = 0;
+        }
+
         Persistir();
         return true;
     }
