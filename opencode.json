@@ -1,7 +1,0 @@
-{
-  "$schema": "https://opencode.ai/config.json",
-  "env": {
-    "SHUNT_MIN_LINES": "350",
-    "HF_MODEL": "Qwen/Qwen3.8-27B:ovhcloud"
-  }
-}

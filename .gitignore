@@ -57,3 +57,7 @@ _ReSharper*/
 # Generated files
 Generated\ Files/
 *_wpftmp.csproj
+
+# Config local de opencode (contiene GH_TOKEN y otros secretos): nunca commitear
+opencode.json
+opencode.jsonc
