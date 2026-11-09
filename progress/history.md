@@ -820,3 +820,66 @@ www.top-remix.com movido de la columna del VU a encima de los botones del reprod
 - Commit `68bcb75` + push a `origin/main` (38 archivos; `.opencode/*` excluido: bump de plugin del entorno, ajeno al cambio).
 - Release local 0.1.14 **regenerada**: `releases/` vaciado antes del `vpk pack` (vpk rechaza igual-o-mayor, el dueño pidió sobrescribir manteniendo 0.1.14) → solo queda la versión vigente (full + Portable + Setup + RELEASES; sin delta por no haber 0.1.13 local).
 - CI `Publish release` del run `68bcb75` → `success`: Release **v0.1.14 publicada** en GitHub (5 assets: `BabyRadio-0.1.14-full.nupkg`, `BabyRadio-win-Portable.zip`, `BabyRadio-win-Setup.exe`, `RELEASES`, `releases.win.json`; 2026-10-20T19:45Z). El guard idempotente (feature 59) evita que los pushes de docs posteriores la re-suban.
+
+## 2026-10-21 – Arranque maximizado (feature 67)
+
+1. **Reporte del owner**: "al abrir la app no se abre en pantalla completa, a veces sale minimizado o similar" → confirmado en charla: ocurre **al abrir la app** (modo normal), ve **ventana chica**, y quiere que arranque **maximizada**.
+2. **Causas halladas**:
+   - `MainWindow` hacía `AppWindow.Resize(1366, 768)` pensando en DIPs, pero **`AppWindow` trabaja en píxeles físicos** (XAML en DIPs): en la PC del owner (principal 1920×1080 **@150 %**) eso daba **~911×512 DIP ≈ mitad de pantalla**; en el 2.º monitor (Dell P2017H girado, 900×1600 @100 %) 1366 físicos ni siquiera cabe.
+   - La posición la eligía Windows (sin `Move`) en un equipo con **2 monitores de DPI distinto** ⇒ según desde dónde se lanzara, la ventana caía en un monitor u otro con apariencia distinta ("a veces ... o similar").
+   - Efecto colateral: `AdaptiveTriggerHelper` mide `Window.Bounds` (DIP, umbrales 1200/1600) ⇒ con ~911 DIP el layout arrancaba en **Compact** en vez de Medium.
+   - No existe ninguna ruta que minimice al arranque (solo el botón propio); atajos `.lnk` con `WindowStyle=1`, sin entrada de inicio automático ni tarea. Descartado como causa.
+3. **Solución**:
+   - **Nuevo** `MainWindow.Arranque.cs` (parcial, para no pasar de 250 líneas en `MainWindow.xaml.cs`): `PrepararArranque()` en el constructor aplica `OverlappedPresenter.Maximize()` **antes de** `Activate()` (sin flash) y encola `ReasegurarArranque()`; este, con `_intentosArranque < 3` (anti-bucle, mismo patrón que `ProgramarReintentoOperador`), fija el tamaño restaurado, vuelve a maximizar (`AsegurarMaximizada`, corrige presentador que no tomó o quedó `Minimized`), refresca el glifo y deja trazas por intento en `RegistroErrores`.
+   - Tamaño restaurado en **DIPs reales**: `AplicarTamanoRestauradoDips()` convierte 1366×768 DIP → físicos con la escala del display y lo limita al `WorkArea` del `DisplayArea` del window (`Support/GeometriaVentana.cs`: helper puro `DipsAFisicos` + `LimitarAlWorkArea`). **Hallazgo empírico (WinAppSDK 2.2)**: `AppWindow.Resize` **ignora el resize cuando la ventana está maximizada** (no cambia el tamaño "restaurado", aunque la llamada no lanza) — a diferencia de lo que sugieren las notas de `Window.Width/Height` — ⇒ se sale a Overlapped (`Restore()`), se redimensiona y se vuelve a maximizar **en la misma vuelta de mensajes** (sin frame intermedio ⇒ sin parpadeo visible). Verificado en vivo: antes de este cambio, Restaurar devolvía 1440×727 físicos; ahora devuelve el `WorkArea` clampeado (1920×1008 físicos = 1280×672 DIP en la laptop @150 %, cuyo área de trabajo es menor que 1366×768 DIP).
+   - Escala robusta: `EscalaVentana()` usa primero `Content.XamlRoot.RasterizationScale` y, si el XamlRoot aún no existe, cae al DPI del monitor de la ventana (`MonitorFromWindow` + `GetDpiForMonitor`, shcore).
+   - `MainWindow.xaml.cs`: el `Resize(1366,768)` físico se reemplaza por `PrepararArranque()`.
+   - Intocados: fullscreen del modo operador, `AnclarEnUnaPantalla` y `SalirOperador` (ya operan en físicos de forma consistente).
+4. **Descarte de otras causas**: ninguna ruta de código minimiza al arranque (solo el botón propio); los atajos Inicio/Escritorio tienen `WindowStyle=1`, sin entrada de inicio automático ni tarea programada. Además el crash `BadImageFormatException (0x8007000B)` del runtime de WinAppSDK al lanzar el `.exe` de `bin\ARM64\Debug\...` **es preexistente** (mismo crash del 16/10 en el log de eventos): `dotnet build` sin `-p:Platform` generaba en la carpeta ARM64 (DLLs ARM64 + proceso x64). Verificar siempre con `dotnet build -c Debug -p:Platform=x64`.
+5. **Docs**: feature 67 en `done` + este apéndice + inventario/`§1` de `AGENTS.md`.
+
+### Verificación
+- `dotnet build -c Debug` y `dotnet build -c Debug -p:Platform=x64`: 0 advertencias, 0 errores.
+- Ejecución real (x64, laptop 1920×1080 @150 % + Dell vertical): al abrir `IsZoomed=true` (maximizada); log `Ventana.Arranque: OK maximizada`; `SW_RESTORE` (equivalente al botón Restaurar) ⇒ 1920×1008 físicos = WorkArea clampeado; cierre limpio con el botón rojo.
+- Pendiente funcional del owner: abrir desde cada monitor ⇒ siempre maximizada; en un monitor donde quepa 1366×768 DIP, Restaurar ⇒ ~1366×768 DIP reales; glyph arranca en "Restaurar"; modo Operador fullscreen intacto.
+
+## 2026-10-21 – Reproductor de Windows: asociaciones + apertura por doble clic (feature 68)
+
+1. **Objetivo**: Baby Radio aparece en "Abrir con" y en Configuración → Apps predeterminadas (registro per-user, HKCU, sin admin); doble clic en canciones del Explorador abre la app, las encola y suena la primera; con la app abierta no se abre segunda instancia. Limitación de Windows: la app **no puede** elegirse sola como predeterminada (UserChoice + UCPD); se deja el botón "Elegir en Apps predeterminadas…" (deep link `ms-settings:defaultapps?registeredAppUser=Baby Radio`) y Windows ofrece a Baby Radio al abrir un audio.
+2. **Solución**:
+   - **Nuevo** `Support/AsociadorArchivos.cs`: `Registrar()` (ProgID `BabyRadio.Audio` + `Applications\BabyRadio.exe` + `RegisteredApplications` → `Capabilities` con `FileAssociations` + `OpenWithProgids` por extensión; idempotente, re-apunta al exe vigente), `Desregistrar()` (borra todo lo anterior), `EstaRegistrado()`. Extensiones desde `AudioFileInspector.AudioExtensions` (9: mp3/wav/m4a/wma/aiff/aif/flac/aac/ogg). `Registrar` se lanza **solo** desde ganchos Velopack (`OnFirstRun`/`OnRestarted`); `Desregistrar` en `OnBeforeUninstallFastCallback`. Debug/portable **nunca** registra (verificado en vivo: sin claves HKCU tras arrancar el exe debug).
+   - **Nuevo** `Support/ActivacionArchivos.cs`: `ExtraerRutas(AppActivationArguments)` (kinds File/Launch, filtra audio existente), `ExtraerDeCommandLine()` (fallback: `Environment.GetCommandLineArgs()`), `DividirArgumentos()` (parser de comillas).
+   - **Nuevo** `Support/LectorAudio.cs`: fábrica de lectores compartida (motor + mezclador): `.ogg` → `VorbisWaveReader` (NAudio.Vorbis **1.5.0**, compatible con NAudio 2.x); resto → `AudioFileReader` con fallback `MediaFoundationReader` (flac/aac nativos en 19041+).
+   - `BebeRadio.csproj`: + `NAudio.Vorbis` 1.5.0.
+   - `Services/MotorAudio.cs` y `Services/MezcladorEfectos.cs`: `CrearLector` delega a `LectorAudio.Crear`.
+   - `Support/AudioFileInspector.cs`: whitelist ampliada a 9 extensiones.
+   - **Nuevo** `MainWindow.Activacion.cs` (parcial): `AbrirArchivosActivados(rutas)` → `AddFiles` en la consola + `PlayCommand` de la primera del lote + `TraerAlFrente()` (Show + Activate + `SetForegroundWindow` best-effort).
+   - `App.xaml.cs`: instancia única (`AppInstance.FindOrRegisterForKey("baby-radio")` → segunda lanza redirige y `Environment.Exit(0)`); hooks Velopack (`OnFirstRun`/`OnRestarted` → `Registrar()`, `OnBeforeUninstallFastCallback` → `Desregistrar()`); activación inicial y redirigida → `ProcesarArchivosActivados` → `MainWindow.AbrirArchivosActivados`.
+   - `ViewModels/Console/ConfiguracionViewModel.cs`: `AsociacionDisponible` (solo instalado vía VelopackLocator), `EstadoAsociacion`, `[RelayCommand] AbrirAppsPredeterminadas` (registra si hace falta + deep link, fallback `ms-settings:defaultapps`).
+   - `Controls/Console/ConfiguracionDialog.xaml`: tarjeta 5 "Reproductor de Windows" (fila inferior, ancho completo): icono MusicNote1, nota de limitación de Windows, estado + botón estilo `BebeLightButtonStyle`.
+3. **Casos borde**: sin audio en args → solo trae la ventana al frente; arg inexistente → ignorado (inspector filtra); segunda instancia con música sonando → redirige, encola y reproduce sin duplicar ventana; desinstalar → limpia claves; actualizar desde versión vieja → `OnRestarted` re-registra (auto-sanación al arrancar si instalado y sin registrar).
+4. **Docs**: feature 68 en `done` + este apéndice + inventario/`§1` de `AGENTS.md` (nuevos: AsociadorArchivos, ActivacionArchivos, LectorAudio, MainWindow.Activacion.cs).
+
+### Verificación
+- `dotnet build -c Debug -p:Platform=x64`: 0 advertencias, 0 errores.
+- Live (x64 debug): arranque limpio; arranque con arg de audio inexistente no crashea; **segunda lanza redirige y sale** (instancia única OK); debug **no** escribe claves HKCU (`reg query` limpio en RegisteredApplications/Applications/ProgID).
+- Pendiente funcional del owner (requiere instalar la próxima release, porque el registro solo lo hacen los ganchos Velopack): doble clic en .mp3/.ogg con app cerrada → abre y suena; con app abierta → encola y trae al frente; aparece en "Abrir con" y Apps predeterminadas; desinstalar limpia claves.
+
+
+## 2026-11-09 – Salida de audio: transición huérfana, resample y primer disparo sin retardo (feature 69)
+
+1. **Objetivo**: revisar la salida de audio y corregir los hallazgos, además de eliminar la demora del primer disparo de paleta (sin disparar el consumo).
+2. **Correcciones**:
+   - **Transición huérfana** (`ViewModels/PlayerViewModel.Cue.cs`): `SolicitarReproduccion` ahora llama a `CancelarTransicion()` antes de mover `CurrentEntry`. Antes, elegir otra pista durante el fundido de `Next` dejaba corriendo la rampa de `AvanzarConTransicion`, que seguía bajando `_transicionLineal` sobre el `_volumenMaestro` de la pista **nueva** (la dejaba en silencio) y al terminar ejecutaba `_cola.ConsumirActual()` (consumía una entrada no pedida). Defensa extra en `Services/MotorAudio.cs`: `TransicionAsync` captura `_generacion` y aborta si otra pista abrió en medio (`_generacion` marcada `volatile`).
+   - **Resample / distorsión en salida estéreo** (`Support/AdaptadorSalidaAudio.cs`): se probó primero "resamplear siempre a la tasa del mix", pero en la ruta estéreo (audífonos/altavoces de laptop-PC) eso forzaba el resampler WDL de NAudio (`SetMode(true, 2, false)`, pocos taps) y aliaseaba al reducir de 48k a 44.1k → **sonaba distorsionado**. Verificado en el código de `NAudio.Wasapi`: `WasapiOut.Init` en shared mode usa `AutoConvertPcm | SrcDefaultQuality`, es decir el propio motor de Windows hace la conversión de tasa con un filtro anti-alias de mejor calidad. Solución final: `TryIntento` resamplea **solo** cuando se pide (`resamplear`), la ruta multiplex (controladores DJ) resamplea siempre (obligatorio: el multiplex reléa 1:1 pero declara el MixFormat), la ruta estéreo **no** resamplea (deja la conversión a WASAPI) y solo resamplea como último recurso (`C estereo resample`).
+   - **Sonda `EstaLibre`** (`AdaptadorSalidaAudio.cs`): traza el motivo cuando el Init falla por `DEVICE_IN_USE` (antes devolvía `false` en silencio ante cualquier fallo); con el resample garantizado, la sonda usa ya la misma cadena que la reproducción real, así que la recuperación no se queda colgada por un fallo de formato.
+3. **Primer disparo de paleta rápido**:
+   - **Nuevo calentador residente** `AdaptadorSalidaAudio.Precalentar(id, latencia, contexto)`: crea una salida silenciosa (`FuenteSilencio`) que se **mantiene viva** (`Play`) para conservar inicializado el motor de audio compartido de WASAPI del endpoint. Un calentamiento puntual no basta porque WASAPI apaga el motor al liberar el último cliente tras un rato de inactividad. Se recrea automáticamente cuando cambia el dispositivo. Costo mínimo (buffer 200 ms ⇒ pocos despertares por segundo).
+   - Expuesto como `Services/MotorAudio.Precalentar()` y `Services/MezcladorEfectos.Precalentar()` (idempotentes por dispositivo, fire-and-forget en background); se reinvocan al final de `EstablecerDispositivo` y en el arranque (`App.xaml.cs`), también para el dispositivo predeterminado (id vacío).
+   - Diagnóstico: `Services/MezcladorEfectos.cs` (`Voz.Montar`) traza solo aperturas lentas (> 80 ms) con el desglose lector/salida.
+4. **Diagnóstico documentado / no tocado en esta pasada**: la arquitectura sigue sin bus único de mezcla (`MotorAudio` + hasta 6 voces de `MezcladorEfectos` abren `WasapiOut` independientes; el VU combinado es `Math.Max` de ambas fuentes) y el multiplex fija máster a canales 0/1 (sin selección de canales por driver). Fuera de alcance de esta corrección.
+5. **Docs**: feature 69 en `done` + este apéndice + `§1`/inventario de `AGENTS.md`.
+
+### Verificación
+- `dotnet build -c Debug -p:Platform=x64`: 0 advertencias, 0 errores.
+- Pendiente funcional del owner: pulsar un cart en frío (primer clic tras abrir) ⇒ suena casi al instante; elegir otra pista durante un fundido de Next ⇒ suena a volumen normal y no salta una entrada extra; cambiar de dispositivo ⇒ el calentador sigue el nuevo endpoint.

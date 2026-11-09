@@ -61,6 +61,7 @@ public sealed class MezcladorEfectos
     private long _ultimoAvisoTicks;
     private float _maestroLineal = 1f;
     private string _dispositivoId = string.Empty;
+    private bool _precalentado;
 
     /// <summary>Voces sonando ahora.</summary>
     public int VocesActivas
@@ -343,6 +344,7 @@ public sealed class MezcladorEfectos
             // Fijar ANTES del snapshot: un Disparar concurrente debe montar ya
             // en el dispositivo nuevo (o al menos ser incluido en el snapshot).
             _dispositivoId = deviceId;
+            _precalentado = false;
             vocesActivas = _voces.Values.ToList();
         }
 
@@ -374,6 +376,37 @@ public sealed class MezcladorEfectos
 
             OnVozTerminada(voz.Id);
         }
+
+        // Deja el motor del dispositivo nuevo caliente para el próximo disparo.
+        Precalentar();
+    }
+
+    /// <summary>
+    /// Precalienta el motor de audio del dispositivo actual (una sola vez por
+    /// dispositivo) para que el primer disparo de paleta no arrastre el retardo
+    /// del arranque en frío del endpoint.
+    /// </summary>
+    /// <remarks>
+    /// Fire-and-forget en background: crea y libera una salida silenciosa
+    /// descartable (no suena). Idempotente hasta que cambie el dispositivo.
+    /// Costo insignificante; el bucle de disparo nunca espera a este trabajo.
+    /// </remarks>
+    public void Precalentar()
+    {
+        string dispositivoId;
+        lock (_candado)
+        {
+            if (_precalentado)
+            {
+                return;
+            }
+
+            _precalentado = true;
+            dispositivoId = _dispositivoId;
+        }
+
+        _ = Task.Run(() =>
+            AdaptadorSalidaAudio.Precalentar(dispositivoId, LatenciaVozMs, "MezcladorEfectos.Precalentar"));
     }
 
     /// <summary>Libera los recursos de una voz ya terminada.</summary>
@@ -435,20 +468,10 @@ public sealed class MezcladorEfectos
         }
     }
 
-    /// <summary>Abre el lector adecuado (directo o MediaFoundation).</summary>
+    /// <summary>Abre el lector adecuado (directo, Vorbis o MediaFoundation).</summary>
     /// <param name="path">Ruta.</param>
     /// <returns>Lector posicionable.</returns>
-    internal static WaveStream CrearLector(string path)
-    {
-        try
-        {
-            return new AudioFileReader(path);
-        }
-        catch
-        {
-            return new MediaFoundationReader(path);
-        }
-    }
+    internal static WaveStream CrearLector(string path) => LectorAudio.Crear(path);
 
     /// <summary>Una voz del mezclador (salida propia + auto-stop).</summary>
     /// <param name="id">Identificador de la voz.</param>
@@ -578,8 +601,10 @@ public sealed class MezcladorEfectos
         /// <remarks>Lanza si el dispositivo no puede abrir; el llamador decide el cleanup.</remarks>
         private void Montar(string path, TimeSpan desde, TimeSpan? hasta, double gananciaDb, float maestroLineal, string dispositivoId)
         {
+            var cron = System.Diagnostics.Stopwatch.StartNew();
             var lector = CrearLector(path);
             lector.CurrentTime = desde < TimeSpan.Zero ? TimeSpan.Zero : desde;
+            var msLector = cron.ElapsedMilliseconds;
 
             // Ganancia uniforme (también para MediaFoundation) + etapa maestra
             // del fader total: multiplica sin tocar la ganancia de jugada.
@@ -600,6 +625,15 @@ public sealed class MezcladorEfectos
             // Latencia mínima para disparo inmediato (LatenciaVozMs). El adaptador
             // inicializa la salida (Init) adaptada al dispositivo elegido.
             _salida = CrearSalida(dispositivoId, LatenciaVozMs, medidor);
+            var msSalida = cron.ElapsedMilliseconds - msLector;
+            if (cron.ElapsedMilliseconds > 80)
+            {
+                // Diagnóstico sin inundar: solo aperturas lentas (arranque en frío
+                // del endpoint o decode pesado) quedan en el log.
+                RegistroErrores.Traza("Mezclador.Voz.Montar",
+                    $"{Path.GetFileName(path)} lector={msLector}ms salida={msSalida}ms");
+            }
+
             _generacion++;
             var generacion = _generacion;
             _salida.PlaybackStopped += (_, _) =>

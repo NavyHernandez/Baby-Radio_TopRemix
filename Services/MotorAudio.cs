@@ -27,11 +27,13 @@ public sealed class MotorAudio : IDisposable
     private System.Threading.Timer? _parada;
     private bool _disposed;
     private bool _cierreManual;
-    private int _generacion;
+    private volatile int _generacion;
     private string _dispositivoId = string.Empty;
     private string _pathActual = string.Empty;
     private TimeSpan? _finEfectivoActual;
     private double _gananciaDbActual;
+    private bool _precalentado;
+    private readonly object _precalentadoCandado = new();
 
     /// <summary>Modo actual de reproducción.</summary>
     public ModoMotor Modo { get; private set; } = ModoMotor.Detenido;
@@ -100,11 +102,19 @@ public sealed class MotorAudio : IDisposable
         const int pasosPorSegundo = 20;
         var pasos = Math.Max(1, (int)(duracion.TotalSeconds * pasosPorSegundo));
         var inicio = _transicionLineal;
+        var generacion = _generacion;
         try
         {
             for (var i = 1; i <= pasos; i++)
             {
                 await Task.Delay(duracion / pasos, cancelacion);
+                if (generacion != _generacion)
+                {
+                    // Otra pista abrió en medio del fundido: la rampa es del
+                    // audio viejo y no debe tocar el volumen del nuevo.
+                    return;
+                }
+
                 _transicionLineal = inicio + ((destino - inicio) * i / pasos);
                 AplicarCombinado();
             }
@@ -160,6 +170,8 @@ public sealed class MotorAudio : IDisposable
             var enPausa = EnPausa;
 
             _dispositivoId = deviceId;
+            _precalentado = false;
+            Precalentar();
 
             if (string.IsNullOrEmpty(path))
             {
@@ -178,6 +190,39 @@ public sealed class MotorAudio : IDisposable
         {
             RegistroErrores.Registrar(ex, "MotorAudio.EstablecerDispositivo");
         }
+    }
+
+    /// <summary>
+    /// Precalienta el motor de audio del dispositivo actual (una sola vez por
+    /// dispositivo) para que la primera reproducción no arrastre el retardo del
+    /// arranque en frío del endpoint.
+    /// </summary>
+    /// <remarks>
+    /// Fire-and-forget en background: crea y libera una salida silenciosa
+    /// descartable (no suena). Idempotente hasta que cambie el dispositivo.
+    /// Costo insignificante; nunca bloquea ni lanza.
+    /// </remarks>
+    public void Precalentar()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        string dispositivoId;
+        lock (_precalentadoCandado)
+        {
+            if (_precalentado)
+            {
+                return;
+            }
+
+            _precalentado = true;
+            dispositivoId = _dispositivoId;
+        }
+
+        _ = Task.Run(() =>
+            AdaptadorSalidaAudio.Precalentar(dispositivoId, 150, "MotorAudio.Precalentar"));
     }
 
     /// <summary>Salta a una posición de la pista cargada (seek).</summary>
@@ -404,20 +449,10 @@ public sealed class MotorAudio : IDisposable
         }
     }
 
-    /// <summary>Abre el lector adecuado (directo o MediaFoundation).</summary>
+    /// <summary>Abre el lector adecuado (directo, Vorbis o MediaFoundation).</summary>
     /// <param name="path">Ruta.</param>
     /// <returns>Lector posicionable.</returns>
-    private static WaveStream CrearLector(string path)
-    {
-        try
-        {
-            return new AudioFileReader(path);
-        }
-        catch
-        {
-            return new MediaFoundationReader(path);
-        }
-    }
+    private static WaveStream CrearLector(string path) => LectorAudio.Crear(path);
 
     /// <summary>Avisa el fin natural (manual no avisa).</summary>
     /// <remarks>Solo la generación vigente avisa (tardíos se ignoran).</remarks>

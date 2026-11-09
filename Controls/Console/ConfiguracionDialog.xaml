@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
     ConfiguracionDialog — ajustes de la app (popup moderno).
-    Rejilla horizontal 2×2 de tarjetas (menos alto que la pila vertical):
+    Rejilla horizontal 2×2 de tarjetas + fila inferior ancha (menos alto que la pila vertical):
       · Transición suave  → toggle a la derecha + duración 3/5/7 s en fila
       · Modo operador     → 2 opciones en fila
       · Salida de audio   → combo de dispositivos + aviso si está ocupada (Serato/ASIO)
       · Personalización   → píldora PRO (badge con acento CategoryPromo)
+      · Reproductor de Windows → estado de asociación + botón Apps predeterminadas (ancho)
     Cada tarjeta: encabezado (icono Fluent coloreado + título) + control + nota.
     Persistencia inmediata en el ViewModel (sin lógica en la vista).
 -->
@@ -33,6 +34,7 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -266,6 +268,55 @@
                     Foreground="{StaticResource TextSecondary}"
                     Text="Colores, tipografías y fondo de la consola llegan en una versión futura."
                     TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <!-- Tarjeta 5 · Reproductor de Windows (ancho completo, fila inferior) -->
+        <Border
+            Grid.Row="2"
+            Grid.Column="0"
+            Grid.ColumnSpan="2"
+            Padding="14,12"
+            AutomationProperties.Name="Reproductor de Windows: asociar Baby Radio como predeterminado"
+            Background="{StaticResource BackgroundCard}"
+            BorderBrush="{StaticResource BorderSubtle}"
+            BorderThickness="1"
+            CornerRadius="12">
+            <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <fluent:SymbolIcon
+                        VerticalAlignment="Center"
+                        FontSize="15"
+                        Foreground="{StaticResource CategoryMusic}"
+                        Symbol="MusicNote1" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource TextPrimary}"
+                        Text="Reproductor de Windows" />
+                </StackPanel>
+
+                <TextBlock
+                    FontSize="11"
+                    Foreground="{StaticResource TextSecondary}"
+                    Text="Doble clic en canciones del Explorador abre Baby Radio, las encola y suena la primera. En Windows solo tú puedes elegir el reproductor predeterminado; esto lo deja listo para elegir."
+                    TextWrapping="Wrap" />
+
+                <TextBlock
+                    FontSize="10"
+                    Foreground="{StaticResource TextSecondary}"
+                    Text="{x:Bind ViewModel.EstadoAsociacion, Mode=OneWay}"
+                    TextWrapping="Wrap" />
+
+                <Button
+                    MinWidth="220"
+                    HorizontalAlignment="Left"
+                    AutomationProperties.Name="Abrir Apps predeterminadas para elegir Baby Radio"
+                    Command="{x:Bind ViewModel.AbrirAppsPredeterminadasCommand}"
+                    Content="Elegir en Apps predeterminadas…"
+                    IsEnabled="{x:Bind ViewModel.AsociacionDisponible, Mode=OneWay}"
+                    Style="{StaticResource BebeLightButtonStyle}" />
             </StackPanel>
         </Border>
     </Grid>

@@ -19,8 +19,10 @@
 ```text
 BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 ├── AGENTS.md                 ← este archivo (leer antes de codificar)
-├── App.xaml(.cs)              ← fusiona Themes/*, backdrop Mica
-├── MainWindow.xaml(.cs)       ← Title fijo "Baby Radio" + fullscreen operador anclado a UNA pantalla (AnclarEnUnaPantalla + reintento) + confirma cierre con música + RootFrame → showcase
+├── App.xaml(.cs)              ← fusiona Themes/*, backdrop Mica + hooks Velopack (asociaciones) + instancia única + activación por archivo
+├── MainWindow.xaml(.cs)       ← Title fijo "Baby Radio" + arranque MAXIMIZADO (parcial Arranque) + fullscreen operador anclado a UNA pantalla (AnclarEnUnaPantalla + reintento) + confirma cierre con música + RootFrame → showcase
+├── MainWindow.Arranque.cs     ← parcial: Maximize antes de Activate + ReasegurarArranque (retry) + tamaño restaurado 1366x768 DIP→físicos
+├── MainWindow.Activacion.cs   ← parcial: AbrirArchivosActivados (doble clic Explorador → AddFiles + Play 1.ª + TraerAlFrente/SetForegroundWindow)
 ├── MainWindow.BotonesVentana.cs ← parcial: handlers clic min/max/close + glifo Maximize/Restaurar
 ├── Themes/
 │   ├── ColorPalette.xaml      ← tokens de color (Paleta A-Studio Console)
@@ -45,7 +47,7 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 │   ├── SelectorCategoriaViewModel.cs  ← selección independiente por banco (operador)
 │   └── ConsolaViewModel.cs            ← orquestador + bancos operador (PaletaA/B, SelectorA/B) + salir + modo operador
 ├── Support/
-│   ├── AudioFileInspector.cs    ← metadatos de arrastrados (TagLibSharp)
+│   ├── AudioFileInspector.cs    ← metadatos de arrastrados (TagLibSharp) + whitelist de 9 extensiones
 │   ├── IconoVentana.cs          ← icono ventana/taskbar vía HICON (PNG transparente 16/32 + fallback ico)
 │   ├── AnalizadorLoudness.cs    ← LUFS BS.1770 (48k, filtros-K, gating)
 │   ├── LoudnessCache.cs         ← caché baby-radio-loudness.json + ganancia ±12dB
@@ -55,9 +57,13 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 │   ├── FormatosArrastre.cs      ← formato privado Lista→Paleta (FilePath)
 │   ├── RegistroErrores.cs       ← log baby-radio-error.log (blindaje diálogos)
 │   ├── ChromeVentana.cs         ← oculta botones del sistema + Passthrough para los redondos
-│   ├── AdaptadorSalidaAudio.cs  ← WasapiOut adaptado a controladores DJ (resample a la tasa del mix ANTES del multiplex + estéreo + reintentos + fallback endpoints + fail-fast DEVICE_IN_USE + sonda EstaLibre)
+│   ├── AdaptadorSalidaAudio.cs  ← WasapiOut adaptado a controladores DJ (resample a la tasa del mix solo en la ruta multiplex; estéreo deja la conversión a WASAPI/AutoConvertPcm para evitar aliasing + multiplex master L/R + estéreo directo + reintentos + fallback endpoints + fail-fast DEVICE_IN_USE + sonda EstaLibre + calentador residente Precalentar para que el primer disparo no tenga retardo)
 │   ├── RecuperacionSalidaAudio.cs ← si el preferido quedó ocupado (Serato/ASIO), sondea cada 5 s y vuelve sola al liberarse (aviso a la UI)
+│   ├── LectorAudio.cs           ← fábrica de lectores (.ogg → VorbisWaveReader; resto AudioFileReader + fallback MF)
+│   ├── AsociadorArchivos.cs     ← registro HKCU (ProgID + RegisteredApplications, 9 extensiones) vía hooks Velopack
+│   ├── ActivacionArchivos.cs    ← extrae rutas de audio de activación (File/Launch) + CommandLine
 │   ├── RutaPortable.cs          ← rutas relativas/absolutas del JSON portable (puras, sin I/O)
+│   ├── GeometriaVentana.cs      ← DIPs→píxeles físicos + clamp al WorkArea (puras; AppWindow.Resize usa físicos)
 │   └── Telemetria/              ← Firebase sin SDK (HttpClient + REST)
 │       ├── DatosInstalacion.cs  ← DTO + JSON Firestore (updateMask)
 │       └── TelemetriaFirebase.cs ← ID único + IP/país + PATCH por arranque
@@ -80,7 +86,7 @@ BebeRadio/ (app visible: Baby Radio; namespace raíz BebeRadio sin cambios)
 │       ├── PaletaPanel.xaml(.cs)            ← centro: 50 carts 81px + guía + titileo (sin header)
 │       ├── CategoriasRailPanel.xaml(.cs)    ← der: 7 esqueleto/color 3D + ayuda (cuenta/soporte/acerca/portable) + aviso update
 │       └── AccionesConsolaStrip.xaml(.cs)   ← abajo: 7 aluminio A HUESO (sin espacios, costura 1px) + Mix/Ganancia titilan (abre Config)
-│       ├── ConfiguracionDialog.xaml(.cs)    ← ajustes: toggle transición + 3/5/7 s (inyecta su VM) + aviso salida ocupada
+│       ├── ConfiguracionDialog.xaml(.cs)    ← ajustes: toggle transición + 3/5/7 s (inyecta su VM) + aviso salida ocupada + tarjeta Reproductor de Windows
 │       ├── TitileoArmado.cs                 ← titileo de armado reutilizable
 │   ├── BancoOperadorPanel.xaml(.cs)     ← banco 5×N + selector + páginas propias + Stop propio (riel der sin Stop en 1 banco)
 │       └── OperadorConsolaPanel.xaml(.cs)   ← modo operador: 1-2 bancos + fader maestro amplio arriba + tira + salir + Esc
@@ -239,9 +245,11 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 
 | Archivo | Hace |
 |---|---|
-| `App.xaml(.cs)` | Recursos globales + apertura de `MainWindow` + aplica `DispositivoSalidaId` guardado (fire-and-forget) |
+| `App.xaml(.cs)` | Recursos globales + apertura de `MainWindow` + aplica `DispositivoSalidaId` guardado (fire-and-forget) + hooks Velopack (asociaciones HKCU) + instancia única + activación por archivo |
 | `MainWindow.xaml(.cs)` | Title fijo + fullscreen operador anclado a UNA pantalla (`AnclarEnUnaPantalla` + `SetPresenter` con reintento y restauración de posición/tamaño) + confirma cierre con música + `RootFrame` → showcase |
 | `MainWindow.BotonesVentana.cs` | Handlers clic min/max/close + glifo `Maximize`/`Copy` (Restaurar) |
+| `MainWindow.Arranque.cs` | Arranque **maximizado** + `ReasegurarArranque` (retry) + tamaño restaurado 1366×768 **DIP → físicos** |
+| `MainWindow.Activacion.cs` | `AbrirArchivosActivados` (doble clic Explorador → AddFiles + Play 1.ª + `TraerAlFrente`) |
 | `Themes/ColorPalette.xaml` | Todos los colores/tokens + brush `AluminumTop` (único hex) |
 | `Themes/ButtonStyles.xaml` | Templates 3D: transporte×6, carts, aluminio, categoría maciza, cart claro, botones de ventana redondos (macOS) |
 | `Controls/BebeButtonHelper.cs` | Attached props + sombra GPU + `IsActive` + `EnsureShadow` |
@@ -269,30 +277,34 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `ViewModels/Console/PaletaViewModel.cs` | 50 slots + páginas (25/30 por `TamanoPagina`) + mezcla + voces + Sonando |
 | `ViewModels/Console/CategoriasRailViewModel.cs` | Categorías + 7 fijas + conteos + vacío |
 | `ViewModels/Console/AccionesConsolaViewModel.cs` | Toggles + ganchos paleta |
-| `ViewModels/Console/ConfiguracionViewModel.cs` | Ajustes Config (transición 3/5/7 + modo operador) + guardado inmediato; aplica dispositivo en background (serie anti-reentrancia); aviso de salida ocupada (eventos de `RecuperacionSalidaAudio`) |
+| `ViewModels/Console/ConfiguracionViewModel.cs` | Ajustes Config (transición 3/5/7 + modo operador) + guardado inmediato; aplica dispositivo en background (serie anti-reentrancia); aviso de salida ocupada (eventos de `RecuperacionSalidaAudio`); estado de asociación + deep link Apps predeterminadas |
 | `ViewModels/Console/ConsolaViewModel.cs` | Orquestador + bancos operador (PaletaA/B, SelectorA/B) + salir + modo operador |
 | `ViewModels/Console/OpcionCategoria.cs` | Opción de categoría por banco (operador) |
 | `ViewModels/Console/SelectorCategoriaViewModel.cs` | Selección independiente por banco (operador) |
 | `Support/TimeFormatter.cs` | `m:ss` puro |
 | `Support/VuDynamics.cs` | Escala dB + balística + picos (puro) |
 | `Support/MockLevelsProvider.cs` | Niveles mock (seno + ruido) |
-| `Services/MezcladorEfectos.cs` | Singleton 6 voces (Mix), niveles 20 Hz, latencia 80 ms |
-| `Services/MotorAudio.cs` | Salida única cola/tramo + normalización + maestro en vivo + transición + anti-tardíos + seek (`IrA` con rearma de parada) |
+| `Services/MezcladorEfectos.cs` | Singleton 6 voces (Mix), niveles 20 Hz, latencia 30 ms/voz + `Precalentar` (calentador residente) |
+| `Services/MotorAudio.cs` | Salida única cola/tramo + normalización + maestro en vivo + transición (aborta si cambia la generación) + anti-tardíos + seek (`IrA` con rearma de parada) + `Precalentar` |
 | `Support/MockQueueBuilder.cs` | Lista inicial de 12 |
 | `Support/FormatosArrastre.cs` | Formato privado Lista→Paleta (FilePath) |
 | `Support/Telemetria/DatosInstalacion.cs` | DTO + JSON Firestore (updateMask) |
 | `Support/Telemetria/TelemetriaFirebase.cs` | ID único + IP/país + PATCH por arranque |
 | `Support/RegistroErrores.cs` | Log + trazas (blindaje diálogos y motor) |
 | `Support/ChromeVentana.cs` | Oculta botones del sistema + regiones Passthrough para los redondos |
-| `Support/AdaptadorSalidaAudio.cs` | WasapiOut adaptado a controladores DJ (resample a la tasa del mix ANTES del multiplex + mix con MixFormat del dispositivo + estéreo directo + reintentos + fallback a otros endpoints + logging con mix format y HRESULT) + fail-fast `DEVICE_IN_USE` (ocupado por otra app) con evento `RespaldoPorOcupacion` + sonda `EstaLibre` |
+| `Support/AdaptadorSalidaAudio.cs` | WasapiOut adaptado a controladores DJ (resample a la tasa del mix en la ruta multiplex + mix con MixFormat del dispositivo + estéreo directo (conversión de tasa a cargo de WASAPI) + reintentos + fallback a otros endpoints + logging con mix format y HRESULT) + fail-fast `DEVICE_IN_USE` (ocupado por otra app) con evento `RespaldoPorOcupacion` + sonda `EstaLibre` + calentador residente `Precalentar` |
 | `Support/RecuperacionSalidaAudio.cs` | Vigila la liberación del dispositivo preferido ocupado (Serato/ASIO): sondeo cada 5 s + reaplicado a los motores + eventos de aviso/recuperación para la UI |
-| `Support/AudioFileInspector.cs` | Metadatos de arrastrados (TagLibSharp) |
+| `Support/LectorAudio.cs` | Fábrica de lectores: `.ogg` → `VorbisWaveReader`; resto `AudioFileReader` + fallback MF |
+| `Support/AsociadorArchivos.cs` | Registro HKCU (ProgID + RegisteredApplications, 9 extensiones) vía hooks Velopack |
+| `Support/ActivacionArchivos.cs` | Extrae rutas de audio de activación (File/Launch) + CommandLine |
+| `Support/AudioFileInspector.cs` | Metadatos de arrastrados (TagLibSharp) + whitelist de 9 extensiones (fuente única) |
 | `Support/IconoVentana.cs` | Icono ventana/taskbar vía HICON (PNG transparente 16/32 + fallback ico) |
 | `Support/AnalizadorLoudness.cs` | LUFS BS.1770 (48k, filtros-K, gating) |
 | `Support/LoudnessCache.cs` | Caché baby-radio-loudness.json + ganancia ±12dB |
 | `Support/ServicioAnalisisAudio.cs` | Worker único BelowNormal + Channel dedup |
 | `Support/ConsolaStore.cs` | JSON portable + caché en memoria + sesión portable (export relativiza, import confirma+activa) |
 | `Support/RutaPortable.cs` | Rutas relativas/absolutas del portable (puras, sin I/O) |
+| `Support/GeometriaVentana.cs` | DIPs→píxeles físicos + clamp al WorkArea (puras; `AppWindow.Resize` usa físicos) |
 | `Support/TemaConsola.cs` | Tema único oscuro + alias + `Cambio` |
 | `Support/ValidadorRecursos.cs` | Valida tokens de paleta al arrancar |
 | `Controls/Console/ConsolaSombraHelper.cs` | Flash 300ms + sombras + FindDescendants |
@@ -301,7 +313,7 @@ dotnet run   # requiere identidad MSIX (VS o winapp CLI); si falla, ejecutar des
 | `Controls/Console/OndaEfectoControl.xaml(.cs)` | Onda blindada + cues + pre-escucha (no pausa cola) |
 | `Controls/Console/CategoriasRailPanel.xaml(.cs)` | Der: 7 esqueleto/color 3D + crear + ayuda/portable + aviso update |
 | `Controls/Console/AccionesConsolaStrip.xaml(.cs)` | Abajo: 7 aluminio a hueso (sin espacios, costura 1px) + Mix/Ganancia titilan (abre Config) |
-| `Controls/Console/ConfiguracionDialog.xaml(.cs)` | Ajustes: toggle transición + 3/5/7 s (inyecta su VM) + aviso de salida ocupada (tarjeta Salida de audio) |
+| `Controls/Console/ConfiguracionDialog.xaml(.cs)` | Ajustes: toggle transición + 3/5/7 s (inyecta su VM) + aviso de salida ocupada (tarjeta Salida de audio) + tarjeta Reproductor de Windows |
 | `Controls/Console/TitileoArmado.cs` | Titileo de armado reutilizable |
 | `Controls/Console/BancoOperadorPanel.xaml(.cs)` | Banco 5×N + selector + páginas propias + Stop propio (riel der sin Stop en 1 banco) |
 | `Controls/Console/OperadorConsolaPanel.xaml(.cs)` | Modo operador: 1-2 bancos + fader maestro amplio arriba (mismo Reproductor) + tira + salir + Esc |

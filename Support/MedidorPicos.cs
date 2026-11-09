@@ -5,12 +5,13 @@ namespace BebeRadio.Support;
 
 /// <summary>
 /// Toma niveles estéreo de la cadena de audio para el VU.
-/// Envuelve al proveedor real y reporta picos por bloque (tope 20 Hz).
+/// Envuelve al proveedor real y reporta picos por bloque (tope ~40 Hz; el
+/// consumidor —el ticker de UI a 20 Hz— remuestrea solo lo que necesita).
 /// Función de medición pura: no altera las muestras.
 /// </summary>
 public sealed class MedidorPicos : ISampleProvider
 {
-    /// <summary>Intervalo mínimo entre reportes en ticks del reloj de alta resolución.</summary>
+    /// <summary>Intervalo mínimo entre reportes en ticks del reloj de alta resolución (~40 Hz).</summary>
     private static readonly long IntervaloTicks = Stopwatch.Frequency / 40;
 
     private readonly ISampleProvider _fuente;

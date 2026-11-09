@@ -6,9 +6,13 @@ namespace BebeRadio.Support;
 /// </summary>
 public static class AudioFileInspector
 {
-    /// <summary>Solo tipos que NAudio reproduce seguro (directo o MediaFoundation).</summary>
+    /// <summary>
+    /// Solo tipos que NAudio reproduce seguro (directo o MediaFoundation;
+    /// .ogg va por NAudio.Vorbis en <see cref="LectorAudio"/>). Es la lista
+    /// única: cola, asociaciones de Windows y validaciones la leen de aquí.
+    /// </summary>
     public static readonly string[] AudioExtensions =
-        { ".mp3", ".wav", ".m4a", ".wma", ".aiff", ".aif" };
+        { ".mp3", ".wav", ".m4a", ".wma", ".aiff", ".aif", ".flac", ".aac", ".ogg" };
 
     /// <summary>Artista mostrado cuando el archivo no trae (null o blanco).</summary>
     public const string ArtistaDesconocido = "Archivo local";

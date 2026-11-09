@@ -884,6 +884,50 @@
         "dotnet build -c Debug con 0 advertencias y 0 errores."
       ],
       "status": "done"
+    },
+    {
+      "id": 67,
+      "name": "arranque-maximizada",
+      "title": "La app arranca maximizada (y el tamaño restaurado se calcula en DIPs reales)",
+      "description": "El arranque abria la ventana chica: MainWindow hac AppWindow.Resize(1366,768), pero AppWindow trabaja en PIXELS FISICOS (XAML en DIPs) - a 150% eso es ~911x512 DIP = mitad de pantalla - y la posicion la eligia Windows (2 monitores: principal 1920x1080@150% + Dell vertical 900x1600@100%), por eso 'a veces' cambiaba segun el monitor. Ademas AdaptiveTriggerHelper (Window.Bounds en DIP, umbrales 1200/1600) veia ~911 DIP y el layout arrancaba en Compact. Solucion: nuevo parcial MainWindow.Arranque.cs - PrepararArranque() en el constructor aplica OverlappedPresenter.Maximize() antes de Activate() y ReasegurarArranque() (por DispatcherQueue, max 3 intentos anti-bucle) fija el tamano restaurado 1366x768 DIP convertidos a fisicos con la escala del display (XamlRoot.RasterizationScale, fallback GetDpiForMonitor) y limitado al WorkArea del DisplayArea (nuevo helper puro Support/GeometriaVentana.cs: DipsAFisicos + LimitarAlWorkArea), vuelve a maximizar (AsegurarMaximizada) y deja trazas. HALLAZGO empirico WinAppSDK 2.2: AppWindow.Resize IGNORA el resize con la ventana maximizada (no cambia el tamano restaurado), asi que se sale a Overlapped, se redimensiona y se vuelve a maximizar en la MISMA vuelta de mensajes (sin parpadeo). Verificado: abre maximizada y Restaurar devuelve el WorkArea clampeado (1920x1008 fisicos = 1280x672 DIP a 150%, cuyo area de trabajo es menor que 1366x768 DIP). El fullscreen del modo Operador y AnclarEnUnaPantalla no se tocan. Descarte: ninguna ruta minimiza al arranque; el crash BadImageFormatException al correr el .exe de bin\\ARM64\\Debug es preexistente (dotnet build sin -p:Platform generaba ARM64; verificar con -p:Platform=x64).",
+      "acceptance": [
+        "Al abrir la app (doble clic en el atajo, desde cualquier monitor) la ventana aparece MAXIMIZADA.",
+        "El boton redondo Restaurar devuelve el tamano 1366x768 DIP clampeado al WorkArea del display (no la mitad de pantalla a 150%).",
+        "En el monitor vertical de 900 px el tamano restaurado se limita al WorkArea (no se sale de pantalla).",
+        "El glyph del boton maximizar/restaurar arranca en 'Restaurar' (ventana maximizada).",
+        "El modo Operador (fullscreen anclado) sigue funcionando igual.",
+        "dotnet build -c Debug (y -p:Platform=x64) con 0 advertencias y 0 errores."
+      ],
+      "status": "done"
+    },
+    {
+      "id": 68,
+      "name": "reproductor-por-defecto",
+      "title": "Baby Radio como reproductor de Windows (asociaciones + apertura por doble clic)",
+      "description": "Registro HKCU per-user (ProgID BabyRadio.Audio + RegisteredApplications/Capabilities + OpenWithProgids, 9 extensiones) via ganchos Velopack (OnFirstRun/OnRestarted/OnBeforeUninstall). Instancia unica (AppInstance): segunda lanza redirige, encola y suena la primera. .ogg via NAudio.Vorbis 1.5.0. Tarjeta en Config con deep link ms-settings:defaultapps?registeredAppUser.",
+      "status": "done",
+      "acceptance": [
+        "Registro HKCU (ProgID BabyRadio.Audio + RegisteredApplications + Capabilities) para las 9 extensiones; Baby Radio aparece en 'Abrir con' y en Configuracion > Apps predeterminadas.",
+        "Doble clic en canciones con la app cerrada: abre, encola y reproduce la primera.",
+        "Con la app abierta: no abre segunda instancia; encola el lote, reproduce la primera y trae la ventana al frente.",
+        ".ogg suena via NAudio.Vorbis (VorbisWaveReader).",
+        "Desinstalar (Velopack) limpia las claves HKCU.",
+        "dotnet build -c Debug -p:Platform=x64 con 0 advertencias y 0 errores."
+      ]
+    },
+    {
+      "id": 69,
+      "name": "salida-audio-sin-retardo-y-transicion",
+      "title": "Salida de audio: transición huérfana, resample del fallback y primer disparo sin retardo",
+      "description": "Revisión de la salida de audio y correcciones. (1) Transición huérfana: PlayerViewModel.SolicitarReproduccion no cancelaba el fundido de Next, así que elegir otra pista durante el fade dejaba la rampa bajando el volumen de la pista nueva y al terminar consumía una entrada no pedida; ahora cancela y MotorAudio.TransicionAsync aborta si la generación cambió. (2) Distorsión en salida estéreo (audífonos/altavoces de laptop-PC): el 'resample siempre' forzaba el resampler WDL de NAudio (pocos taps) en la ruta estéreo, que aliasea al bajar de 48k a 44.1k = distorsión; ahora la ruta estéreo deja la conversión de tasa al motor shared de WASAPI (AutoConvertPcm | SrcDefaultQuality, mejor anti-alias) y el resample queda solo en la ruta multiplex (controladores DJ, obligatorio) y como recurso estéreo. (3) EstaLibre traza la ocupación. (4) Primer disparo de paleta rápido: calentador residente en AdaptadorSalidaAudio.Precalentar (salida silenciosa viva que mantiene inicializado el motor WASAPI del endpoint; se recrea al cambiar de dispositivo), expuesto como MotorAudio.Precalentar/MezcladorEfectos.Precalentar y aplicado al arrancar; costo mínimo (buffer 200 ms, pocos despertares/s). Traza de aperturas lentas (>80 ms) en MezcladorEfectos.Voz.Montar.",
+      "acceptance": [
+        "Elegir otra pista durante un fundido de Next no la deja muda ni consume una entrada no pedida.",
+        "La salida estéreo (audífonos/altavoces de laptop-PC) no distorsiona; la ruta multiplex (DJ) sigue resampleando.",
+        "El primer disparo de paleta (y el primer Play) no arrastra el arranque en frío del endpoint.",
+        "El calentador se recrea al cambiar de dispositivo de salida.",
+        "dotnet build -c Debug -p:Platform=x64 con 0 advertencias y 0 errores."
+      ],
+      "status": "done"
     }
   ]
 }

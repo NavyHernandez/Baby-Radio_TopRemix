@@ -1,6 +1,7 @@
 using BebeRadio.Services;
 using BebeRadio.Support;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Dispatching;
 
 namespace BebeRadio.ViewModels.Console;
@@ -56,6 +57,14 @@ public sealed partial class ConfiguracionViewModel : ObservableObject, IDisposab
     /// <summary>Aviso de salida ocupada (vacío = oculto; enlazado en el diálogo).</summary>
     [ObservableProperty]
     public partial string AvisoDispositivo { get; set; } = string.Empty;
+
+    /// <summary>True si la copia está instalada (no portable/debug): puede asociar archivos.</summary>
+    [ObservableProperty]
+    public partial bool AsociacionDisponible { get; set; }
+
+    /// <summary>Estado de las asociaciones de audio (texto enlazado en la tarjeta).</summary>
+    [ObservableProperty]
+    public partial string EstadoAsociacion { get; set; } = string.Empty;
 
     /// <summary>Índice 0-2 de la duración (puente TwoWay para RadioButtons).</summary>
     public int TransicionIndice
@@ -155,6 +164,7 @@ public sealed partial class ConfiguracionViewModel : ObservableObject, IDisposab
             OperadorPantallaCompleta = config.OperadorPantallaCompleta;
             CargarDispositivos();
             EstablecerDispositivoIndice(config.DispositivoSalidaId);
+            RefrescarEstadoAsociacion();
         }
         catch (Exception ex)
         {
@@ -343,6 +353,66 @@ public sealed partial class ConfiguracionViewModel : ObservableObject, IDisposab
         var recuperacion = RecuperacionSalidaAudio.Instancia;
         recuperacion.SalidaOcupada -= OnSalidaOcupada;
         recuperacion.SalidaRecuperada -= OnSalidaRecuperada;
+    }
+
+    /// <summary>Actualiza el estado de las asociaciones de audio (tarjeta Windows).</summary>
+    /// <remarks>
+    /// Solo la copia instalada (Velopack, no portable) puede asociarse: en
+    /// debug/portable el texto invita a instalar el Setup.
+    /// </remarks>
+    private void RefrescarEstadoAsociacion()
+    {
+        var instalado = false;
+        try
+        {
+            var locator = Velopack.Locators.VelopackLocator.Current;
+            instalado = locator is { IsPortable: false, CurrentlyInstalledVersion: not null };
+        }
+        catch
+        {
+            // Sin locator (debug/portable): se asume no instalado.
+        }
+
+        AsociacionDisponible = instalado;
+        EstadoAsociacion = !instalado
+            ? "Disponible tras instalar el Setup de Baby Radio."
+            : AsociadorArchivos.EstaRegistrado()
+                ? "Registrado: Baby Radio aparece en 'Abrir con' y en Apps predeterminadas."
+                : "Sin registrar aún. Windows podrá ofrecerlo al abrir un audio.";
+    }
+
+    /// <summary>Abre Apps predeterminadas en la página de Baby Radio (deep link).</summary>
+    /// <remarks>
+    /// Windows 11 (21H2+ con CU) salta a la página de la app; versiones sin
+    /// soporte del parámetro abren la lista general. Solo registra/abre si la
+    /// copia está instalada (nunca asocia un exe portable/debug).
+    /// </remarks>
+    [RelayCommand]
+    private async Task AbrirAppsPredeterminadas()
+    {
+        try
+        {
+            if (!AsociacionDisponible)
+            {
+                return;
+            }
+
+            // Refresca la asociación por si el usuario actualizó a una versión
+            // anterior a esta feature (OnFirstRun ya no volverá a correr).
+            AsociadorArchivos.Registrar();
+            RefrescarEstadoAsociacion();
+
+            var profundo = new Uri(
+                $"ms-settings:defaultapps?registeredAppUser={Uri.EscapeDataString(AsociadorArchivos.NombreApp)}");
+            if (!await Windows.System.Launcher.LaunchUriAsync(profundo))
+            {
+                await Windows.System.Launcher.LaunchUriAsync(new Uri("ms-settings:defaultapps"));
+            }
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, "Config.AppsPredeterminadas");
+        }
     }
 
     /// <summary>Índice 0-2 de unos segundos normalizados.</summary>

@@ -22,6 +22,9 @@ public sealed partial class PlayerViewModel
     /// Si la entrada ya es la actual, suena de inmediato; si no, arma
     /// <c>_sonidoSolicitado</c> y mueve <c>CurrentEntry</c> (el cambio
     /// dispara <c>AlCambiarActual</c>, que consume el flag y suena).
+    /// Cancela cualquier fundido de "siguiente" en curso: si no, la rampa
+    /// seguiría bajando el volumen sobre la pista recién abierta y al terminar
+    /// consumiría una entrada que el usuario no pidió.
     /// </remarks>
     public void SolicitarReproduccion(QueueEntry entry)
     {
@@ -30,6 +33,7 @@ public sealed partial class PlayerViewModel
             return;
         }
 
+        CancelarTransicion();
         _sonidoSolicitado = true;
         if (!ReferenceEquals(_cola.CurrentEntry, entry))
         {

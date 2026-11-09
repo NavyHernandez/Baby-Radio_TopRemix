@@ -1,3 +1,11 @@
+Baby Radio v0.1.15 — salida nítida en audífonos, primer disparo inmediato y transición sin fallos.
+
+- FIX audio: por los audífonos/altavoces de la laptop o PC (salida estéreo) la música suena nítida otra vez. La conversión de tasa se la deja al motor de Windows (que tiene un mejor filtro anti-alias); antes se forzaba un remuestreador propio que podía distorsionar al bajar de 48 kHz a 44.1 kHz. En controladores DJ (multicanal) se conserva el remuestreo obligatorio del canal master.
+- FIX: elegir otra canción con la flecha Siguiente en transición ya no deja la pista nueva muda ni salta una canción de más (el fundido se cancela al instante).
+- NUEVO: el primer disparo de una paleta (y el primer Play) suena casi al instante; el motor de audio queda "calentado" en el dispositivo elegido sin gasto relevante de CPU.
+- FIX: si una salida está ocupada (p. ej. Serato DJ retiene el controlador), la app avisa, usa el respaldo y vuelve sola al liberarse (se mantiene y ahora es más robusto).
+- Se conserva la normalización de volumen (−14 LUFS) y el fader maestral tal como están.
+
 Baby Radio v0.1.14 — tira sin costuras, efectos sin corte seco y fullscreen más firme.
 
 - FIX: los 7 botones de la tira inferior (Config·Operador·Mix·Ganancia·Stop·▲▼) ahora se tocan sin hueco oscuro ni doble filete entre ellos; la barra ocupa el 100 % del ancho en pantallas grandes y Compact.

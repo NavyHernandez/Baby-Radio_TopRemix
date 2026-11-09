@@ -17,9 +17,13 @@ namespace BebeRadio.Support;
 /// IAudioClient.Initialize con E_INVALIDARG —p. ej. DDJ-FLX4—), reintenta
 /// con estéreo directo (el motor shared hace el upmix) y, si el dispositivo
 /// pedido y el predeterminado fallan, prueba los demás endpoints activos
-/// antes de rendirse. Siempre resamplea la fuente a la tasa del dispositivo
-/// ANTES del multiplex (un mp3 44.1 kHz reléado 1:1 al mix 48 kHz del FLX4 se
-/// reproduciría rápido y con alias = mala calidad). Si el fallo es
+/// antes de rendirse. En la ruta multiplex resamplea SIEMPRE la fuente a la
+/// tasa del dispositivo ANTES del multiplex (un mp3 44.1 kHz reléado 1:1 al
+/// mix 48 kHz del FLX4 se reproduciría rápido y con alias = mala calidad);
+/// en la ruta estéreo deja la conversión de tasa al motor shared de WASAPI
+/// (AutoConvertPcm | SrcDefaultQuality), cuyo filtro anti-alias suena mejor
+/// que el resampler WDL de NAudio en estéreo (evita aliasing = distorsión al
+/// bajar de 48k a 44.1k en audífonos/altavoces). Si el fallo es
 /// AUDCLNT_E_DEVICE_IN_USE (otra app —p. ej.
 /// Serato DJ— retiene el endpoint en modo exclusivo) aborta al instante los
 /// formatos restantes y avisa con <see cref="RespaldoPorOcupacion"/> para que
@@ -46,10 +50,12 @@ internal static class AdaptadorSalidaAudio
     /// <param name="registrarFallos">False = no escribir en el log (sondeos periódicos; evita spam).</param>
     /// <returns>Salida inicializada lista para <c>Play()</c>.</returns>
     /// <remarks>
-    /// Orden de intentos: multiplex extensible (event-sync, polling, resample)
-    /// y después estéreo directo (event-sync, polling). Si todos fallan lanza
-    /// <see cref="InvalidOperationException"/> con la última excepción como
-    /// InnerException.
+    /// Orden de intentos: multiplex extensible (event-sync, polling) y después
+    /// estéreo directo (event-sync, polling); en estéreo puro solo estéreo con
+    /// y sin resample de recurso. La fuente se resamplea a la tasa del mix en
+    /// la ruta multiplex (obligatorio) y como recurso estéreo. Si todos fallan
+    /// lanza <see cref="InvalidOperationException"/> con la última excepción
+    /// como InnerException.
     /// </remarks>
     public static IWavePlayer CrearInicializada(
         MMDevice dispositivo, ISampleProvider fuente, int latenciaMs, string contexto,
@@ -74,6 +80,7 @@ internal static class AdaptadorSalidaAudio
         var canalesMezcla = Math.Max(2, mixFormat.Channels);
         var descripcion = $"{nombre} mix={mixFormat.SampleRate}Hz/{mixFormat.Channels}ch";
         var formatoMultiplex = canalesMezcla > 2 ? FormatoMultiplex(mixFormat, canalesMezcla) : null;
+        var tasaDestino = mixFormat.SampleRate > 0 ? mixFormat.SampleRate : 48000;
         Exception? ultimo = null;
 
         // Aborta al instante si el endpoint está retenido por otra aplicación:
@@ -88,46 +95,20 @@ internal static class AdaptadorSalidaAudio
             }
         }
 
-        // Intentos A-C: multiplex master L/R a canales 0/1 (formato extensible
-        // del mix: el channel mask evita E_INVALIDARG en endpoints multicanal).
-        var salida = TryIntento(dispositivo, fuente, formatoMultiplex, latenciaMs,
-            useEventSync: true, resamplear: false, $"{contexto}[A event-sync {descripcion}]",
-            ref ultimo, registrarFallos);
-        if (salida is not null)
-        {
-            return salida;
-        }
-
-        AbortarSiOcupado(ultimo);
-
-        salida = TryIntento(dispositivo, fuente, formatoMultiplex, latenciaMs,
-            useEventSync: false, resamplear: false, $"{contexto}[B polling {descripcion}]",
-            ref ultimo, registrarFallos);
-        if (salida is not null)
-        {
-            return salida;
-        }
-
-        AbortarSiOcupado(ultimo);
-
-        salida = TryIntento(dispositivo, fuente, formatoMultiplex, latenciaMs,
-            useEventSync: false, resamplear: true, $"{contexto}[C resample {descripcion}]",
-            ref ultimo, registrarFallos);
-        if (salida is not null)
-        {
-            return salida;
-        }
-
-        AbortarSiOcupado(ultimo);
-
-        // Intentos D-E: estéreo directo SIN multiplex. El motor shared
-        // (AutoConvertPcm) upmixea 2ch al mix del dispositivo (canales front
-        // = master en la mayoría de controladores DJ). Cobertura para
-        // endpoints donde el Init multicanal sigue fallando.
+        // Ruta multicanal (controladores DJ): el multiplex declara el MixFormat
+        // pero reléa tramas 1:1, así que la fuente SE RESAMPLEA a la tasa del
+        // mix antes del multiplex (sin esto un mp3 44.1k sonaría rápido y con
+        // alias). Ruta estéreo (audífonos/altavoces de la laptop/PC): NO se
+        // resamplea; el motor shared de WASAPI (AutoConvertPcm | SrcDefaultQuality)
+        // hace la conversión de tasa con su filtro anti-alias, que suena mejor
+        // que el resampler WDL de NAudio en estéreo (evita el aliasing =
+        // distorsión al reducir de 48k a 44.1k). El resample estéreo queda
+        // solo como último recurso.
+        IWavePlayer? salida;
         if (formatoMultiplex is not null)
         {
-            salida = TryIntento(dispositivo, fuente, formatoMultiplex: null, latenciaMs,
-                useEventSync: true, resamplear: false, $"{contexto}[D estereo event-sync {descripcion}]",
+            salida = TryIntento(dispositivo, fuente, formatoMultiplex, resamplear: true, tasaDestino,
+                latenciaMs, useEventSync: true, $"{contexto}[A multiplex event-sync {descripcion}]",
                 ref ultimo, registrarFallos);
             if (salida is not null)
             {
@@ -136,8 +117,64 @@ internal static class AdaptadorSalidaAudio
 
             AbortarSiOcupado(ultimo);
 
-            salida = TryIntento(dispositivo, fuente, formatoMultiplex: null, latenciaMs,
-                useEventSync: false, resamplear: false, $"{contexto}[E estereo polling {descripcion}]",
+            salida = TryIntento(dispositivo, fuente, formatoMultiplex, resamplear: true, tasaDestino,
+                latenciaMs, useEventSync: false, $"{contexto}[B multiplex polling {descripcion}]",
+                ref ultimo, registrarFallos);
+            if (salida is not null)
+            {
+                return salida;
+            }
+
+            AbortarSiOcupado(ultimo);
+
+            // Fallback: estéreo directo SIN multiplex (el motor shared upmixea
+            // 2ch a los canales front/master).
+            salida = TryIntento(dispositivo, fuente, formatoMultiplex: null, resamplear: true, tasaDestino,
+                latenciaMs, useEventSync: true, $"{contexto}[C estereo event-sync {descripcion}]",
+                ref ultimo, registrarFallos);
+            if (salida is not null)
+            {
+                return salida;
+            }
+
+            AbortarSiOcupado(ultimo);
+
+            salida = TryIntento(dispositivo, fuente, formatoMultiplex: null, resamplear: true, tasaDestino,
+                latenciaMs, useEventSync: false, $"{contexto}[D estereo polling {descripcion}]",
+                ref ultimo, registrarFallos);
+            if (salida is not null)
+            {
+                return salida;
+            }
+
+            AbortarSiOcupado(ultimo);
+        }
+        else
+        {
+            salida = TryIntento(dispositivo, fuente, formatoMultiplex: null, resamplear: false, tasaDestino,
+                latenciaMs, useEventSync: true, $"{contexto}[A estereo event-sync {descripcion}]",
+                ref ultimo, registrarFallos);
+            if (salida is not null)
+            {
+                return salida;
+            }
+
+            AbortarSiOcupado(ultimo);
+
+            salida = TryIntento(dispositivo, fuente, formatoMultiplex: null, resamplear: false, tasaDestino,
+                latenciaMs, useEventSync: false, $"{contexto}[B estereo polling {descripcion}]",
+                ref ultimo, registrarFallos);
+            if (salida is not null)
+            {
+                return salida;
+            }
+
+            AbortarSiOcupado(ultimo);
+
+            // Último recurso: resamplear nosotros (por si el driver no acepta
+            // la conversión de tasa del motor shared).
+            salida = TryIntento(dispositivo, fuente, formatoMultiplex: null, resamplear: true, tasaDestino,
+                latenciaMs, useEventSync: false, $"{contexto}[C estereo resample {descripcion}]",
                 ref ultimo, registrarFallos);
             if (salida is not null)
             {
@@ -318,12 +355,100 @@ internal static class AdaptadorSalidaAudio
                 registrarFallos: false);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
-            // Ocupado, desconectado o formato no admitido: para la sonda basta con "no".
+            // Ocupado, desconectado o formato no admitido: para la sonda basta
+            // con "no". Se traza solo el motivo de ocupación (diagnóstico sin
+            // inundar el log en cada sondeo).
+            if (EsDispositivoOcupado(ex))
+            {
+                RegistroErrores.Traza("SondeoDispositivo", $"'{SafeName(mm)}' ocupado por otra app.");
+            }
+
             return false;
         }
     }
+
+    /// <summary>
+    /// Precalienta y MANTIENE caliente el motor de audio del endpoint elegido:
+    /// deja una salida silenciosa residente (sin audio audible) para que el
+    /// primer <c>IAudioClient.Initialize</c> real —primer Play o primer disparo
+    /// de paleta— no arrastre el arranque en frío del motor compartido.
+    /// </summary>
+    /// <param name="dispositivoId">ID WASAPI del dispositivo (vacío = predeterminado).</param>
+    /// <param name="latenciaMs">Latencia del buffer (se ignora: el calentador usa una fija amplia).</param>
+    /// <param name="contexto">Etiqueta para el log.</param>
+    /// <remarks>
+    /// El motor de audio compartido de WASAPI se apaga cuando se libera el
+    /// último cliente, así que un calentamiento puntual no basta tras un rato
+    /// de inactividad: por eso se conserva UNA salida silenciosa viva (se
+    /// recrea si cambia el dispositivo). El costo es mínimo (un cliente de
+    /// silencio con buffer amplio y pocos despertares por segundo); si el
+    /// dispositivo está ocupado dispara igual el respaldo y la vigilancia de
+    /// recuperación. Nunca lanza y nunca bloquea (completar en background).
+    /// </remarks>
+    public static void Precalentar(string dispositivoId, int latenciaMs, string contexto)
+    {
+        var id = dispositivoId ?? string.Empty;
+        lock (_calentadorCandado)
+        {
+            if (_calentador is not null &&
+                string.Equals(_calentadorDispositivo, id, StringComparison.OrdinalIgnoreCase))
+            {
+                // Ya hay un calentador vivo en este mismo dispositivo.
+                return;
+            }
+        }
+
+        const int latenciaCalentadorMs = 200;
+        IWavePlayer? nuevo = null;
+        try
+        {
+            var fuente = new FuenteSilencio();
+            nuevo = CrearInicializadaConFallback(id, fuente, latenciaCalentadorMs, contexto);
+            nuevo.Play();
+        }
+        catch (Exception ex)
+        {
+            RegistroErrores.Registrar(ex, contexto);
+            try
+            {
+                nuevo?.Dispose();
+            }
+            catch
+            {
+                // Ya falló: el Dispose best-effort no debe enmascarar el error real.
+            }
+
+            return;
+        }
+
+        IWavePlayer? viejo;
+        lock (_calentadorCandado)
+        {
+            viejo = _calentador;
+            _calentador = nuevo;
+            _calentadorDispositivo = id;
+        }
+
+        try
+        {
+            viejo?.Dispose();
+        }
+        catch
+        {
+            // Calentador previo ya liberado por el driver.
+        }
+    }
+
+    /// <summary>Candado del calentador residente.</summary>
+    private static readonly object _calentadorCandado = new();
+
+    /// <summary>Salida silenciosa residente que mantiene vivo el motor del endpoint.</summary>
+    private static IWavePlayer? _calentador;
+
+    /// <summary>Dispositivo que calienta actualmente <see cref="_calentador"/>.</summary>
+    private static string _calentadorDispositivo = string.Empty;
 
     /// <summary>Fuente silenciosa estéreo 48 kHz para sondas de dispositivo (sin Play no suena).</summary>
     private sealed class FuenteSilencio : ISampleProvider
@@ -372,16 +497,23 @@ internal static class AdaptadorSalidaAudio
     /// <param name="dispositivo">Dispositivo de destino.</param>
     /// <param name="fuente">Cadena estéreo de origen.</param>
     /// <param name="formatoMultiplex">Formato multicanal del multiplex; null = estéreo directo.</param>
+    /// <param name="resamplear">True = resamplear la fuente a <paramref name="tasaDestino"/> antes del Init.</param>
+    /// <param name="tasaDestino">Tasa de muestreo del mix del dispositivo.</param>
     /// <param name="latenciaMs">Latencia del buffer.</param>
     /// <param name="useEventSync">True = event-sync; false = polling.</param>
-    /// <param name="resamplear">True = resamplear también sin multiplex (estéreo directo).</param>
     /// <param name="etiqueta">Contexto del log.</param>
     /// <param name="ultimo">Última excepción vista (se acumula).</param>
     /// <param name="registrarFallos">False = no escribir en el log (sondeo silencioso).</param>
     /// <returns>Salida inicializada o null si el intento falló.</returns>
+    /// <remarks>
+    /// El resample se pide solo en la ruta multiplex (obligatorio: el multiplex
+    /// reléa tramas 1:1 pero declara el MixFormat) o como recurso estéreo. En
+    /// la ruta estéreo normal se deja la conversión de tasa al motor shared de
+    /// WASAPI (filtro anti-alias de mejor calidad que el WDL de NAudio).
+    /// </remarks>
     private static IWavePlayer? TryIntento(
-        MMDevice dispositivo, ISampleProvider fuente, WaveFormat? formatoMultiplex, int latenciaMs,
-        bool useEventSync, bool resamplear, string etiqueta, ref Exception? ultimo,
+        MMDevice dispositivo, ISampleProvider fuente, WaveFormat? formatoMultiplex, bool resamplear,
+        int tasaDestino, int latenciaMs, bool useEventSync, string etiqueta, ref Exception? ultimo,
         bool registrarFallos = true)
     {
         WasapiOut? salida = null;
@@ -389,19 +521,11 @@ internal static class AdaptadorSalidaAudio
         {
             var cadena = (ISampleProvider)fuente;
 
-            // Resamplear la fuente a la tasa del dispositivo ANTES del multiplex
-            // (y antes del Init si se pidió resamplear): el multiplex reléa tramas
-            // 1:1 pero declara el MixFormat (p. ej. 48 kHz del FLX4); con una
-            // fuente a 44.1 kHz se reproduciría ~8,8 % rápida y con alias.
-            if (formatoMultiplex is not null || resamplear)
+            if (resamplear && tasaDestino > 0 && tasaDestino != cadena.WaveFormat.SampleRate)
             {
                 try
                 {
-                    var rate = dispositivo.AudioClient.MixFormat.SampleRate;
-                    if (rate > 0 && rate != cadena.WaveFormat.SampleRate)
-                    {
-                        cadena = new WdlResamplingSampleProvider(cadena, rate);
-                    }
+                    cadena = new WdlResamplingSampleProvider(cadena, tasaDestino);
                 }
                 catch (Exception ex)
                 {
